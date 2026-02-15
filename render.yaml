@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: wantokjobs
+    env: static
+    buildCommand: echo "No build needed"
+    staticPublishPath: ./public
