@@ -109,6 +109,7 @@ app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/blog', require('./routes/blog'));
 app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api', require('./routes/reviews')); // Note: reviews uses /api directly
+app.use('/api/email-templates', require('./routes/email-templates'));
 
 // New metadata and stats routes
 app.use('/api', require('./routes/metadata')); // Provides /api/locations and /api/industries

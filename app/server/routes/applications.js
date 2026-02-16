@@ -270,4 +270,129 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
   }
 });
 
+// Add tag to application (employer)
+router.post('/tag', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    const { applicationId, tag, color = 'blue' } = req.body;
+
+    if (!applicationId || !tag) {
+      return res.status(400).json({ error: 'Application ID and tag required' });
+    }
+
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(applicationId);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Add tag to applicant_tags table
+    db.prepare(`
+      INSERT INTO applicant_tags (application_id, tag, color, created_by)
+      VALUES (?, ?, ?, ?)
+    `).run(applicationId, tag, color, req.user.id);
+
+    // Update tags JSON array in applications table
+    const existingTags = application.tags ? JSON.parse(application.tags) : [];
+    existingTags.push({ tag, color });
+    
+    db.prepare(`
+      UPDATE applications SET tags = ?, updated_at = datetime('now') WHERE id = ?
+    `).run(JSON.stringify(existingTags), applicationId);
+
+    res.json({ success: true, message: 'Tag added' });
+  } catch (error) {
+    console.error('Add tag error:', error);
+    res.status(500).json({ error: 'Failed to add tag' });
+  }
+});
+
+// Rate applicant (employer)
+router.post('/rate', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    const { applicationId, rating } = req.body;
+
+    if (!applicationId || rating === undefined) {
+      return res.status(400).json({ error: 'Application ID and rating required' });
+    }
+
+    if (rating < 0 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 0 and 5' });
+    }
+
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(applicationId);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    db.prepare(`
+      UPDATE applications SET rating = ?, updated_at = datetime('now') WHERE id = ?
+    `).run(rating, applicationId);
+
+    res.json({ success: true, rating });
+  } catch (error) {
+    console.error('Rate applicant error:', error);
+    res.status(500).json({ error: 'Failed to rate applicant' });
+  }
+});
+
+// Save employer notes (employer)
+router.post('/notes', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    const { applicationId, notes } = req.body;
+
+    if (!applicationId) {
+      return res.status(400).json({ error: 'Application ID required' });
+    }
+
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(applicationId);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    db.prepare(`
+      UPDATE applications SET employer_notes = ?, updated_at = datetime('now') WHERE id = ?
+    `).run(notes, applicationId);
+
+    // Also log in applicant_notes table for history
+    db.prepare(`
+      INSERT INTO applicant_notes (application_id, note, created_by)
+      VALUES (?, ?, ?)
+    `).run(applicationId, notes, req.user.id);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Save notes error:', error);
+    res.status(500).json({ error: 'Failed to save notes' });
+  }
+});
+
 module.exports = router;
