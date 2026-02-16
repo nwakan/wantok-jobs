@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: wantokjobs
+    runtime: node
+    buildCommand: npm install && cd client && npm install && npm run build
+    startCommand: NODE_ENV=production node server/index.js
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production

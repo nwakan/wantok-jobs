@@ -1,6 +1,9 @@
 services:
   - type: web
     name: wantokjobs
-    env: static
-    buildCommand: echo "No build needed"
-    staticPublishPath: ./public
+    runtime: node
+    buildCommand: cd app && npm install && cd client && npm install && npx vite build
+    startCommand: cd app && NODE_ENV=production node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
