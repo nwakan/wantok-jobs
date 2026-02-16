@@ -1,5 +1,6 @@
 const { validate, schemas } = require("../middleware/validate");
 const { sendJobPostedEmail } = require('../lib/email');
+const { canPostJob } = require('../lib/billing');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -166,6 +167,17 @@ router.get('/:id', (req, res) => {
 // Create job (employer only)
 router.post('/', authenticateToken, requireRole('employer'), validate(schemas.postJob), (req, res) => {
   try {
+    // Check plan limits
+    const planCheck = canPostJob(req.user.id);
+    if (!planCheck.allowed) {
+      return res.status(403).json({
+        error: planCheck.reason || 'Job posting limit reached',
+        plan: planCheck.plan?.name || 'Free',
+        usage: planCheck.usage,
+        upgradeUrl: '/pricing',
+      });
+    }
+
     const {
       title,
       description,

@@ -107,7 +107,7 @@ const messageSchema = z.object({
 // === Order schema ===
 const orderSchema = z.object({
   plan_id: z.number().int().positive('Plan is required'),
-  payment_method: z.enum(['bank_transfer', 'mobile_money', 'card']).default('bank_transfer'),
+  payment_method: z.enum(['bank_transfer']).default('bank_transfer'),
   notes: z.string().max(500).optional(),
 });
 

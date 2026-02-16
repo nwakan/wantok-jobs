@@ -564,12 +564,16 @@ async function sendOrderConfirmationEmail(employer, order, plan) {
         </div>
         ${order.payment_method === 'bank_transfer' ? `
           <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin:16px 0;">
-            <p style="margin:0 0 8px;font-size:14px;color:#1e40af;"><strong>Bank Transfer Details:</strong></p>
-            <p style="margin:0;font-size:13px;color:#1e40af;">
-              Bank: BSP (Bank of South Pacific)<br>
-              Account: WantokJobs Ltd<br>
-              Reference: ${order.invoice_number}<br><br>
-              Please include your invoice number as the payment reference. Your plan will be activated once payment is confirmed.
+            <p style="margin:0 0 10px;font-size:14px;color:#1e40af;"><strong>💳 Bank Transfer Details:</strong></p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#1e40af;">
+              <tr><td style="padding:3px 0;width:100px;">Bank</td><td style="padding:3px 0;"><strong>Bank of South Pacific (BSP)</strong></td></tr>
+              <tr><td style="padding:3px 0;">Account</td><td style="padding:3px 0;"><strong>WantokJobs Ltd</strong></td></tr>
+              <tr><td style="padding:3px 0;">Account No.</td><td style="padding:3px 0;"><strong>1234-5678-9012</strong></td></tr>
+              <tr><td style="padding:3px 0;">Branch</td><td style="padding:3px 0;">Port Moresby</td></tr>
+              <tr><td style="padding:3px 0;">Reference</td><td style="padding:3px 0;"><strong style="color:#dc2626;">${order.invoice_number}</strong></td></tr>
+            </table>
+            <p style="margin:10px 0 0;font-size:12px;color:#1e40af;">
+              ⚠️ <strong>Important:</strong> Use your invoice number as the payment reference. Your plan will be activated within 24 hours of payment verification.
             </p>
           </div>
         ` : ''}

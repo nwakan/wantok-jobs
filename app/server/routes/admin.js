@@ -20,6 +20,9 @@ router.get("/stats", (req, res) => {
       totalApplications: db.prepare('SELECT COUNT(*) as count FROM applications').get().count,
       recentUsers: db.prepare("SELECT COUNT(*) as count FROM users WHERE created_at > datetime('now', '-7 days')").get().count,
       recentJobs: db.prepare("SELECT COUNT(*) as count FROM jobs WHERE created_at > datetime('now', '-7 days')").get().count,
+      pendingOrders: db.prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'pending'").get().count,
+      totalRevenue: db.prepare("SELECT COALESCE(SUM(amount), 0) as count FROM orders WHERE status = 'completed'").get().count,
+      activeSubscriptions: db.prepare("SELECT COUNT(*) as count FROM profiles_employer WHERE subscription_plan_id IS NOT NULL AND (plan_expires_at IS NULL OR plan_expires_at > datetime('now'))").get().count,
     };
 
     res.json(stats);
