@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { jobs as jobsAPI } from '../api';
 import JobCard from '../components/JobCard';
 import SearchFilters from '../components/SearchFilters';
+import { Flame, Sparkles, Globe } from 'lucide-react';
 
 export default function JobSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,12 +17,30 @@ export default function JobSearch() {
     experience: searchParams.get('experience') || '',
     industry: searchParams.get('industry') || '',
     salary_min: searchParams.get('salary_min') || '',
+    salary_max: searchParams.get('salary_max') || '',
+    date_posted: searchParams.get('date_posted') || '',
+    remote: searchParams.get('remote') || '',
+    company: searchParams.get('company') || '',
   });
   const [sortBy, setSortBy] = useState('relevance');
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef(null);
 
   useEffect(() => {
     searchJobs();
+  }, []);
+
+  useEffect(() => {
+    // Close suggestions when clicking outside
+    const handleClickOutside = (e) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const searchJobs = async (page = 1, newFilters = filters, newSort = sortBy) => {
@@ -57,6 +76,34 @@ export default function JobSearch() {
     }
   };
 
+  const fetchSuggestions = async (query) => {
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/jobs/suggestions?q=${encodeURIComponent(query)}&type=keyword`);
+      const data = await response.json();
+      setSuggestions(data.data || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Suggestions failed:', error);
+      setSuggestions([]);
+    }
+  };
+
+  const handleKeywordChange = (value) => {
+    setFilters({ ...filters, keyword: value });
+    fetchSuggestions(value);
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setFilters({ ...filters, keyword: suggestion });
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
   const handlePageChange = (newPage) => {
     searchJobs(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -78,7 +125,7 @@ export default function JobSearch() {
   };
 
   const handleClearFilters = () => {
-    setFilters({
+    const clearedFilters = {
       keyword: '',
       location: '',
       category: '',
@@ -86,17 +133,35 @@ export default function JobSearch() {
       experience: '',
       industry: '',
       salary_min: '',
-    });
+      salary_max: '',
+      date_posted: '',
+      remote: '',
+      company: '',
+    };
+    setFilters(clearedFilters);
     setSearchParams(new URLSearchParams());
-    searchJobs(1, {
-      keyword: '',
-      location: '',
-      category: '',
-      job_type: '',
-      experience: '',
-      industry: '',
-      salary_min: '',
-    });
+    searchJobs(1, clearedFilters);
+  };
+
+  const applyQuickFilter = (filterType) => {
+    let newFilters = { ...filters };
+    
+    if (filterType === 'hot') {
+      newFilters.date_posted = '1'; // Last 24 hours
+    } else if (filterType === 'new') {
+      newFilters.date_posted = '7'; // Last 7 days
+    } else if (filterType === 'remote') {
+      newFilters.remote = newFilters.remote === 'true' ? '' : 'true';
+    }
+    
+    setFilters(newFilters);
+    searchJobs(1, newFilters);
+  };
+
+  const removeFilter = (key) => {
+    const newFilters = { ...filters, [key]: '' };
+    setFilters(newFilters);
+    searchJobs(1, newFilters);
   };
 
   return (
@@ -108,18 +173,34 @@ export default function JobSearch() {
           <p className="text-gray-600">Discover jobs across Papua New Guinea and the Pacific</p>
         </div>
         
-        {/* Search Bar */}
+        {/* Search Bar with Autocomplete */}
         <div className="mb-6 bg-white rounded-xl shadow-sm p-4 border border-gray-100">
           <div className="flex gap-3">
-            <div className="flex-1">
+            <div className="flex-1 relative" ref={suggestionsRef}>
               <input
                 type="text"
                 value={filters.keyword || ''}
-                onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                onChange={(e) => handleKeywordChange(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleFiltersApply()}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 placeholder="🔍 Search by job title, keyword, or company..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
+              
+              {/* Autocomplete Suggestions */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-gray-700 border-b border-gray-100 last:border-0"
+                    >
+                      🔍 {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               onClick={handleFiltersApply}
@@ -128,6 +209,45 @@ export default function JobSearch() {
               Search
             </button>
           </div>
+        </div>
+
+        {/* Quick Filters */}
+        <div className="mb-6 flex flex-wrap gap-3">
+          <button
+            onClick={() => applyQuickFilter('hot')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
+              filters.date_posted === '1'
+                ? 'bg-red-100 text-red-700 border-2 border-red-300'
+                : 'bg-white text-gray-700 border border-gray-300 hover:border-red-300 hover:bg-red-50'
+            }`}
+          >
+            <Flame className="w-4 h-4" />
+            Hot Jobs
+          </button>
+          
+          <button
+            onClick={() => applyQuickFilter('new')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
+              filters.date_posted === '7'
+                ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-300 hover:bg-blue-50'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            New This Week
+          </button>
+          
+          <button
+            onClick={() => applyQuickFilter('remote')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
+              filters.remote === 'true'
+                ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                : 'bg-white text-gray-700 border border-gray-300 hover:border-green-300 hover:bg-green-50'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            Remote Only
+          </button>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -177,65 +297,71 @@ export default function JobSearch() {
               </div>
 
               {/* Active Filters */}
-              {(filters.location || filters.job_type || filters.experience || filters.industry || filters.salary_min) && (
+              {Object.entries(filters).some(([k, v]) => k !== 'keyword' && v) && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm text-gray-600">Active filters:</span>
+                    
                     {filters.location && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         📍 {filters.location}
-                        <button
-                          onClick={() => setFilters({ ...filters, location: '' })}
-                          className="ml-1 hover:text-primary-900"
-                        >
-                          ×
-                        </button>
+                        <button onClick={() => removeFilter('location')} className="ml-1 hover:text-primary-900">×</button>
                       </span>
                     )}
+                    
+                    {filters.category && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
+                        📂 {filters.category}
+                        <button onClick={() => removeFilter('category')} className="ml-1 hover:text-primary-900">×</button>
+                      </span>
+                    )}
+                    
                     {filters.job_type && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
-                        💼 {filters.job_type}
-                        <button
-                          onClick={() => setFilters({ ...filters, job_type: '' })}
-                          className="ml-1 hover:text-primary-900"
-                        >
-                          ×
-                        </button>
+                        💼 {filters.job_type.split(',').join(', ')}
+                        <button onClick={() => removeFilter('job_type')} className="ml-1 hover:text-primary-900">×</button>
                       </span>
                     )}
+                    
                     {filters.experience && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         📈 {filters.experience}
-                        <button
-                          onClick={() => setFilters({ ...filters, experience: '' })}
-                          className="ml-1 hover:text-primary-900"
-                        >
-                          ×
-                        </button>
+                        <button onClick={() => removeFilter('experience')} className="ml-1 hover:text-primary-900">×</button>
                       </span>
                     )}
-                    {filters.industry && (
+                    
+                    {filters.company && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
-                        🏢 {filters.industry}
-                        <button
-                          onClick={() => setFilters({ ...filters, industry: '' })}
-                          className="ml-1 hover:text-primary-900"
-                        >
-                          ×
-                        </button>
+                        🏢 {filters.company}
+                        <button onClick={() => removeFilter('company')} className="ml-1 hover:text-primary-900">×</button>
                       </span>
                     )}
-                    {filters.salary_min && (
+                    
+                    {(filters.salary_min || filters.salary_max) && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
-                        💰 Min {filters.salary_min}
-                        <button
-                          onClick={() => setFilters({ ...filters, salary_min: '' })}
-                          className="ml-1 hover:text-primary-900"
-                        >
-                          ×
-                        </button>
+                        💰 {filters.salary_min && `Min ${filters.salary_min}`}{filters.salary_min && filters.salary_max && ' - '}{filters.salary_max && `Max ${filters.salary_max}`}
+                        <button onClick={() => {
+                          const newFilters = { ...filters, salary_min: '', salary_max: '' };
+                          setFilters(newFilters);
+                          searchJobs(1, newFilters);
+                        }} className="ml-1 hover:text-primary-900">×</button>
                       </span>
                     )}
+                    
+                    {filters.date_posted && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
+                        🕒 Last {filters.date_posted === '1' ? '24h' : filters.date_posted === '7' ? '7 days' : '30 days'}
+                        <button onClick={() => removeFilter('date_posted')} className="ml-1 hover:text-primary-900">×</button>
+                      </span>
+                    )}
+                    
+                    {filters.remote === 'true' && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
+                        🌏 Remote
+                        <button onClick={() => removeFilter('remote')} className="ml-1 hover:text-primary-900">×</button>
+                      </span>
+                    )}
+                    
                     <button
                       onClick={handleClearFilters}
                       className="text-sm text-primary-600 hover:text-primary-700 font-medium"

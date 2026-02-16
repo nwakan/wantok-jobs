@@ -9,6 +9,47 @@ const { events: notifEvents } = require('../lib/notifications');
 
 const router = express.Router();
 
+// GET /suggestions - Autocomplete for keywords and companies
+router.get('/suggestions', (req, res) => {
+  try {
+    const { q, type = 'keyword' } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.json({ data: [] });
+    }
+
+    let suggestions = [];
+    const searchTerm = `%${q}%`;
+
+    if (type === 'keyword') {
+      // Get job title suggestions
+      const titles = db.prepare(`
+        SELECT DISTINCT title FROM jobs 
+        WHERE status = 'active' AND title LIKE ? 
+        ORDER BY views_count DESC 
+        LIMIT 10
+      `).all(searchTerm);
+      suggestions = titles.map(t => t.title);
+    } else if (type === 'company') {
+      // Get company name suggestions
+      const companies = db.prepare(`
+        SELECT DISTINCT COALESCE(j.company_display_name, pe.company_name) as company_name
+        FROM jobs j
+        LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
+        WHERE j.status = 'active' AND COALESCE(j.company_display_name, pe.company_name) LIKE ?
+        ORDER BY (SELECT COUNT(*) FROM jobs WHERE employer_id = j.employer_id) DESC
+        LIMIT 10
+      `).all(searchTerm);
+      suggestions = companies.map(c => c.company_name).filter(Boolean);
+    }
+
+    res.json({ data: suggestions });
+  } catch (error) {
+    console.error('Get suggestions error:', error);
+    res.json({ data: [] });
+  }
+});
+
 // GET /featured - Top 6 most-viewed active jobs (public)
 router.get('/featured', (req, res) => {
   try {
@@ -44,6 +85,9 @@ router.get('/', (req, res) => {
       experience,
       salary_min,
       salary_max,
+      date_posted,
+      remote,
+      company,
       sort = 'date',
       page = 1,
       limit = 20
@@ -97,8 +141,16 @@ router.get('/', (req, res) => {
     }
 
     if (job_type) {
-      query += ' AND j.job_type = ?';
-      params.push(job_type);
+      // Support multiple job types (comma-separated or single value)
+      const types = job_type.split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length === 1) {
+        query += ' AND j.job_type = ?';
+        params.push(types[0]);
+      } else if (types.length > 1) {
+        const placeholders = types.map(() => '?').join(',');
+        query += ` AND j.job_type IN (${placeholders})`;
+        params.push(...types);
+      }
     }
 
     if (industry) {
@@ -120,6 +172,26 @@ router.get('/', (req, res) => {
     if (salary_max) {
       query += ' AND (j.salary_min <= ? OR j.salary_min IS NULL)';
       params.push(parseFloat(salary_max));
+    }
+
+    if (date_posted) {
+      // Filter by days since posting (e.g., '1', '7', '30')
+      const days = parseInt(date_posted);
+      if (!isNaN(days) && days > 0) {
+        query += ` AND j.created_at >= datetime('now', '-${days} days')`;
+      }
+    }
+
+    if (remote) {
+      // Filter for remote jobs (location contains 'remote' or job_type indicates remote)
+      query += ` AND (j.location LIKE '%remote%' OR j.location LIKE '%Remote%' OR j.location LIKE '%REMOTE%')`;
+    }
+
+    if (company) {
+      // Filter by company name
+      query += ` AND (COALESCE(j.company_display_name, pe.company_name) LIKE ? OR u.name LIKE ?)`;
+      const companyParam = `%${company}%`;
+      params.push(companyParam, companyParam);
     }
 
     // Count total
