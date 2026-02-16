@@ -9,8 +9,9 @@ export default function JobSearch() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    keyword: searchParams.get('keyword') || '',
+    keyword: searchParams.get('keyword') || searchParams.get('q') || '',
     location: searchParams.get('location') || '',
+    category: searchParams.get('category') || '',
     job_type: searchParams.get('job_type') || '',
     experience: searchParams.get('experience') || '',
     industry: searchParams.get('industry') || '',
@@ -80,6 +81,7 @@ export default function JobSearch() {
     setFilters({
       keyword: '',
       location: '',
+      category: '',
       job_type: '',
       experience: '',
       industry: '',
@@ -89,6 +91,7 @@ export default function JobSearch() {
     searchJobs(1, {
       keyword: '',
       location: '',
+      category: '',
       job_type: '',
       experience: '',
       industry: '',

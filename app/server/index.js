@@ -48,6 +48,14 @@ const contactLimiter = rateLimit({
 
 app.use(express.json({ limit: '1mb' }));
 
+// Cache static assets aggressively
+app.use((req, res, next) => {
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  next();
+});
+
 // Initialize database
 require('./database');
 
