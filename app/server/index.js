@@ -137,7 +137,7 @@ app.get('/sitemap.xml', (req, res) => {
     const db = require('./database');
     const baseUrl = 'https://wantokjobs.com';
     const jobs = db.prepare("SELECT id, updated_at FROM jobs WHERE status = 'active' ORDER BY updated_at DESC LIMIT 1000").all();
-    const articles = db.prepare("SELECT slug, updated_at FROM articles WHERE status = 'published' ORDER BY updated_at DESC").all();
+    const articles = db.prepare("SELECT slug, COALESCE(published_at, created_at) as last_mod FROM articles WHERE status = 'published' ORDER BY created_at DESC").all();
     const categories = db.prepare("SELECT slug FROM categories").all();
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -159,7 +159,7 @@ app.get('/sitemap.xml', (req, res) => {
       xml += `\n  <url><loc>${baseUrl}/jobs?category=${cat.slug}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`;
     }
     for (const article of articles) {
-      xml += `\n  <url><loc>${baseUrl}/blog/${article.slug}</loc><lastmod>${article.updated_at ? article.updated_at.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`;
+      xml += `\n  <url><loc>${baseUrl}/blog/${article.slug}</loc><lastmod>${article.last_mod ? article.last_mod.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`;
     }
 
     xml += '\n</urlset>';
