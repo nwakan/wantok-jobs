@@ -385,15 +385,18 @@ router.patch('/:id/status', authenticateToken, requireRole('employer', 'admin'),
 // Create job (employer only)
 router.post('/', authenticateToken, requireRole('employer'), validate(schemas.postJob), (req, res) => {
   try {
-    // Check plan limits
-    const planCheck = canPostJob(req.user.id);
-    if (!planCheck.allowed) {
-      return res.status(403).json({
-        error: planCheck.reason || 'Job posting limit reached',
-        plan: planCheck.plan?.name || 'Free',
-        usage: planCheck.usage,
-        upgradeUrl: '/pricing',
-      });
+    // Check plan limits (only for active jobs, not drafts)
+    const status = req.body.status || 'active';
+    if (status === 'active') {
+      const planCheck = canPostJob(req.user.id);
+      if (!planCheck.allowed) {
+        return res.status(403).json({
+          error: planCheck.reason || 'Job posting limit reached',
+          plan: planCheck.plan?.name || 'Free',
+          usage: planCheck.usage,
+          upgradeUrl: '/pricing',
+        });
+      }
     }
 
     const {
@@ -405,45 +408,71 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
       job_type,
       experience_level,
       industry,
+      category_slug,
+      skills,
+      remote_work,
       salary_min,
       salary_max,
       salary_currency,
       application_deadline,
-      status
+      application_method,
+      application_url,
+      application_email,
+      screening_questions,
     } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ error: 'Title and description required' });
     }
+    if (!category_slug) {
+      return res.status(400).json({ error: 'Category is required' });
+    }
+
+    // Get category_id from slug
+    const category = db.prepare('SELECT id FROM categories WHERE slug = ?').get(category_slug);
+    const category_id = category?.id || null;
 
     const result = db.prepare(`
       INSERT INTO jobs (
         employer_id, title, description, requirements, location, country,
-        job_type, experience_level, industry, salary_min, salary_max,
-        salary_currency, application_deadline, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        job_type, experience_level, industry, category_slug, category_id, 
+        skills, remote_work, salary_min, salary_max, salary_currency, 
+        application_deadline, application_method, application_url, 
+        application_email, screening_questions, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.user.id,
       title,
       description,
-      JSON.stringify(requirements || []),
-      location,
-      country,
-      job_type,
-      experience_level,
-      industry,
-      salary_min,
-      salary_max,
+      requirements || null,
+      location || null,
+      country || 'Papua New Guinea',
+      job_type || 'full-time',
+      experience_level || null,
+      industry || null,
+      category_slug,
+      category_id,
+      skills || null,
+      remote_work ? 1 : 0,
+      salary_min || null,
+      salary_max || null,
       salary_currency || 'PGK',
-      application_deadline,
-      status || 'active'
+      application_deadline || null,
+      application_method || 'internal',
+      application_url || null,
+      application_email || null,
+      screening_questions || null,
+      status
     );
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
 
-    // Consume a job posting credit (unless on trial or free slot)
-    if (!planCheck.trial && !planCheck.freeSlot) {
-      consumeEmployerServiceCredit(req.user.id, 'job_posting');
+    // Consume a job posting credit ONLY if publishing active job (not drafts, not editing)
+    if (status === 'active') {
+      const planCheck = canPostJob(req.user.id);
+      if (!planCheck.trial && !planCheck.freeSlot) {
+        consumeEmployerServiceCredit(req.user.id, 'job_posting');
+      }
     }
 
     // Notify admins about new job
@@ -457,12 +486,12 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
     }
 
     // Log activity
-    try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'job_posted', 'job', job.id, JSON.stringify({ title })); } catch(e) {}
+    try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'job_posted', 'job', job.id, JSON.stringify({ title, status })); } catch(e) {}
 
-    res.status(201).json(job);
+    res.status(201).json({ data: job, id: job.id });
   } catch (error) {
     console.error('Create job error:', error);
-    res.status(500).json({ error: 'Failed to create job' });
+    res.status(500).json({ error: 'Failed to create job: ' + error.message });
   }
 });
 
@@ -488,32 +517,57 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
       job_type,
       experience_level,
       industry,
+      category_slug,
+      skills,
+      remote_work,
       salary_min,
       salary_max,
       salary_currency,
       application_deadline,
+      application_method,
+      application_url,
+      application_email,
+      screening_questions,
       status
     } = req.body;
+
+    // Get category_id from slug if provided
+    let category_id = job.category_id;
+    if (category_slug) {
+      const category = db.prepare('SELECT id FROM categories WHERE slug = ?').get(category_slug);
+      category_id = category?.id || job.category_id;
+    }
 
     db.prepare(`
       UPDATE jobs SET
         title = ?, description = ?, requirements = ?, location = ?, country = ?,
-        job_type = ?, experience_level = ?, industry = ?, salary_min = ?, salary_max = ?,
-        salary_currency = ?, application_deadline = ?, status = ?, updated_at = datetime('now')
+        job_type = ?, experience_level = ?, industry = ?, category_slug = ?, category_id = ?,
+        skills = ?, remote_work = ?, salary_min = ?, salary_max = ?,
+        salary_currency = ?, application_deadline = ?, application_method = ?, 
+        application_url = ?, application_email = ?, screening_questions = ?,
+        status = ?, updated_at = datetime('now')
       WHERE id = ?
     `).run(
       title || job.title,
       description || job.description,
-      requirements ? JSON.stringify(requirements) : job.requirements,
+      requirements !== undefined ? requirements : job.requirements,
       location !== undefined ? location : job.location,
       country !== undefined ? country : job.country,
       job_type || job.job_type,
-      experience_level || job.experience_level,
-      industry || job.industry,
+      experience_level !== undefined ? experience_level : job.experience_level,
+      industry !== undefined ? industry : job.industry,
+      category_slug !== undefined ? category_slug : job.category_slug,
+      category_id,
+      skills !== undefined ? skills : job.skills,
+      remote_work !== undefined ? (remote_work ? 1 : 0) : job.remote_work,
       salary_min !== undefined ? salary_min : job.salary_min,
       salary_max !== undefined ? salary_max : job.salary_max,
       salary_currency || job.salary_currency,
-      application_deadline || job.application_deadline,
+      application_deadline !== undefined ? application_deadline : job.application_deadline,
+      application_method !== undefined ? application_method : job.application_method,
+      application_url !== undefined ? application_url : job.application_url,
+      application_email !== undefined ? application_email : job.application_email,
+      screening_questions !== undefined ? screening_questions : job.screening_questions,
       status || job.status,
       req.params.id
     );
