@@ -2,8 +2,8 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
+// Ensure data directory exists — use DATA_DIR env for persistent volumes (Fly.io etc)
+const dataDir = process.env.DATA_DIR ? path.join(process.env.DATA_DIR) : path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }

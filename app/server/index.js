@@ -83,11 +83,15 @@ app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/blog', require('./routes/blog'));
 
 // Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
+const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  const clientDist = path.join(__dirname, '../client/dist');
+  // Try server/public (Docker build) then client/dist (local dev)
+  const clientDist = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
+    ? path.join(__dirname, 'public')
+    : path.join(__dirname, '..', 'client', 'dist');
   app.use(express.static(clientDist));
   app.get('*', (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 }

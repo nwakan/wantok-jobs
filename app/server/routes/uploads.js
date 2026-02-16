@@ -19,7 +19,8 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'uploads');
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const UPLOAD_DIR = path.join(dataDir, 'uploads');
 
 // Ensure upload dirs exist
 ['avatars', 'logos', 'cvs', 'banners'].forEach(dir => {
