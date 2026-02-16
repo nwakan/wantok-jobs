@@ -413,6 +413,19 @@ function initializeDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS newsletter_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL,
+      subject TEXT NOT NULL,
+      content TEXT NOT NULL,
+      target_audience TEXT DEFAULT 'all' CHECK(target_audience IN ('all', 'employers', 'jobseekers')),
+      recipient_count INTEGER DEFAULT 0,
+      sent_count INTEGER DEFAULT 0,
+      failed_count INTEGER DEFAULT 0,
+      sent_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS admin_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       from_user_id INTEGER NOT NULL,
@@ -488,6 +501,7 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_activity_log_user_action ON activity_log(user_id, action, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
     CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_email ON newsletter_subscribers(email, subscribed);
+    CREATE INDEX IF NOT EXISTS idx_newsletter_history_admin ON newsletter_history(admin_id, sent_at DESC);
     CREATE INDEX IF NOT EXISTS idx_banners_placement ON banners(placement, active);
     CREATE INDEX IF NOT EXISTS idx_company_reviews_approved ON company_reviews(company_id, approved, created_at DESC);
   `);

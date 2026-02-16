@@ -20,8 +20,23 @@ ssh $VPS "cd /opt/wantokjobs/app/client && npm install 2>&1 | tail -1 && npx vit
 echo "🔄 Restarting service..."
 ssh $VPS "systemctl restart wantokjobs"
 
-echo "✅ Checking health..."
-sleep 2
-ssh $VPS "curl -sf http://127.0.0.1:3001/health && echo ''"
+echo "⏳ Waiting for server to start (5s)..."
+sleep 5
 
-echo "🚀 Deploy complete!"
+echo "✅ Health check..."
+if ssh $VPS "curl -sf http://127.0.0.1:3001/health" > /dev/null 2>&1; then
+  echo "✅ Server is healthy!"
+  ssh $VPS "curl -sf http://127.0.0.1:3001/health" | head -3
+  echo "🚀 Deploy complete!"
+else
+  echo "❌ Health check FAILED - server did not start properly"
+  echo "🔙 Attempting rollback..."
+  ssh $VPS "cd /opt/wantokjobs && git checkout HEAD~1 -- . && systemctl restart wantokjobs"
+  sleep 3
+  if ssh $VPS "curl -sf http://127.0.0.1:3001/health" > /dev/null 2>&1; then
+    echo "✅ Rollback successful - server restored"
+  else
+    echo "⚠️  Rollback complete but health check still failing - manual intervention needed"
+  fi
+  exit 1
+fi

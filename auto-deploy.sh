@@ -47,19 +47,39 @@ ssh $VPS "cd /opt/wantokjobs/app/client && npm install 2>&1 | tail -1 && npx vit
 echo "📊 Syncing database..."
 scp /data/.openclaw/workspace/data/wantok/app/server/data/wantokjobs.db $VPS:/opt/wantokjobs/app/server/data/wantokjobs.db 2>&1 | tail -1
 
-echo "🔧 Testing server startup..."
-ssh $VPS "cd /opt/wantokjobs/app && timeout 5 node -e \"require('./server/index.js')\" 2>&1 | head -5" || {
-  echo "❌ Server startup test FAILED — rolling back"
-  ssh $VPS "cd /opt/wantokjobs && git checkout HEAD~1 -- ."
-  ssh $VPS "systemctl restart wantokjobs"
-  exit 1
-}
-
 echo "🔄 Restarting service..."
 ssh $VPS "systemctl restart wantokjobs"
 
-sleep 2
-echo "✅ Checking health..."
-ssh $VPS "curl -sf http://127.0.0.1:3001/health && echo ' OK'" || echo "⚠️ Health check failed"
+echo "⏳ Waiting for server to start (5s)..."
+sleep 5
 
-echo "🚀 Deploy complete — $CHANGES files @ $TIMESTAMP"
+echo "✅ Health check..."
+if ssh $VPS "curl -sf http://127.0.0.1:3001/health" > /dev/null 2>&1; then
+  echo "✅ Server is healthy!"
+  ssh $VPS "curl -sf http://127.0.0.1:3001/health" | grep -o '"status":"ok"' || echo "Server running"
+  echo "🚀 Deploy complete — $CHANGES files @ $TIMESTAMP"
+else
+  echo "❌ Health check FAILED - server did not start after deploy"
+  echo "🔙 Rolling back to previous version..."
+  
+  # Rollback: checkout previous commit
+  ssh $VPS "cd /opt/wantokjobs && git checkout HEAD~1 -- ."
+  
+  # Restore previous build
+  ssh $VPS "cd /opt/wantokjobs/app && npm install --production 2>&1 | tail -2"
+  ssh $VPS "cd /opt/wantokjobs/app/client && npx vite build --outDir ../server/public 2>&1 | tail -3"
+  
+  # Restart with old code
+  ssh $VPS "systemctl restart wantokjobs"
+  sleep 5
+  
+  # Verify rollback worked
+  if ssh $VPS "curl -sf http://127.0.0.1:3001/health" > /dev/null 2>&1; then
+    echo "✅ Rollback successful - server restored to previous version"
+  else
+    echo "⚠️  Rollback complete but health check still failing - MANUAL INTERVENTION NEEDED"
+    echo "⚠️  Server may be down - check logs: ssh $VPS 'journalctl -u wantokjobs -n 50'"
+  fi
+  
+  exit 1
+fi

@@ -294,9 +294,9 @@ router.delete('/articles/:id', (req, res) => {
   }
 });
 
-// ─── Public article endpoints ─────────────────────────────────────
+// ─── Newsletter Admin Routes ──────────────────────────────────────
 
-// These are on the admin router but we need public ones too
-// They're handled by the blog route below
+// These are mounted at /api/admin/newsletter
+router.use('/newsletter', require('./newsletter'));
 
 module.exports = router;

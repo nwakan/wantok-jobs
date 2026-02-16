@@ -519,6 +519,14 @@ export const banners = {
 
 // Reviews
 export const reviews = {
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetch(`${API_URL}/reviews?${queryString}`).then(handleResponse);
+  },
+
+  get: (id) =>
+    fetch(`${API_URL}/reviews/${id}`).then(handleResponse),
+
   getForCompany: (companyId) =>
     fetch(`${API_URL}/companies/${companyId}/reviews`).then(handleResponse),
 
@@ -527,6 +535,19 @@ export const reviews = {
       method: 'POST',
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify(reviewData),
+    }).then(handleResponse),
+
+  update: (id, reviewData) =>
+    fetch(`${API_URL}/reviews/${id}`, {
+      method: 'PUT',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(reviewData),
+    }).then(handleResponse),
+
+  delete: (id) =>
+    fetch(`${API_URL}/reviews/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
     }).then(handleResponse),
 };
 

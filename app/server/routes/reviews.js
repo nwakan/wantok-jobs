@@ -3,6 +3,69 @@ const router = express.Router();
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
+// GET /reviews — Get all reviews (with optional filters)
+router.get('/reviews', (req, res) => {
+  try {
+    const { company_id, user_id, limit = 50, offset = 0 } = req.query;
+    
+    let query = `
+      SELECT 
+        r.*,
+        u.name as reviewer_name,
+        c.name as company_name
+      FROM company_reviews r
+      LEFT JOIN users u ON r.reviewer_id = u.id
+      LEFT JOIN users c ON r.company_id = c.id
+      WHERE r.approved = 1
+    `;
+    
+    const params = [];
+    if (company_id) {
+      query += ' AND r.company_id = ?';
+      params.push(company_id);
+    }
+    if (user_id) {
+      query += ' AND r.reviewer_id = ?';
+      params.push(user_id);
+    }
+    
+    query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const reviews = db.prepare(query).all(...params);
+    
+    res.json({ reviews, count: reviews.length });
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+// GET /reviews/:id — Get a single review
+router.get('/reviews/:id', (req, res) => {
+  try {
+    const review = db.prepare(`
+      SELECT 
+        r.*,
+        u.name as reviewer_name,
+        c.name as company_name
+      FROM company_reviews r
+      LEFT JOIN users u ON r.reviewer_id = u.id
+      LEFT JOIN users c ON r.company_id = c.id
+      WHERE r.id = ?
+    `).get(req.params.id);
+    
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    
+    res.json({ review });
+  } catch (error) {
+    console.error('Get review error:', error);
+    res.status(500).json({ error: 'Failed to fetch review' });
+  }
+});
+
 // GET /company/:id/summary — Get review summary for a company (for job detail page)
 router.get('/company/:id/summary', (req, res) => {
   try {
@@ -374,6 +437,70 @@ router.post('/interviews', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Submit interview error:', error);
     res.status(500).json({ error: 'Failed to submit interview review' });
+  }
+});
+
+// PUT /reviews/:id — Update a review
+router.put('/reviews/:id', authenticateToken, (req, res) => {
+  try {
+    const review = db.prepare('SELECT * FROM company_reviews WHERE id = ?').get(req.params.id);
+    
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    
+    // Only the review author or admin can update
+    if (review.reviewer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized to update this review' });
+    }
+    
+    const { rating, title, pros, cons, advice, is_current_employee } = req.body;
+    
+    if (rating && (rating < 1 || rating > 5)) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+    
+    db.prepare(`
+      UPDATE company_reviews
+      SET 
+        rating = COALESCE(?, rating),
+        title = COALESCE(?, title),
+        pros = COALESCE(?, pros),
+        cons = COALESCE(?, cons),
+        advice = COALESCE(?, advice),
+        is_current_employee = COALESCE(?, is_current_employee)
+      WHERE id = ?
+    `).run(rating, title, pros, cons, advice, is_current_employee, req.params.id);
+    
+    const updatedReview = db.prepare('SELECT * FROM company_reviews WHERE id = ?').get(req.params.id);
+    
+    res.json({ review: updatedReview, message: 'Review updated successfully' });
+  } catch (error) {
+    console.error('Update review error:', error);
+    res.status(500).json({ error: 'Failed to update review' });
+  }
+});
+
+// DELETE /reviews/:id — Delete a review
+router.delete('/reviews/:id', authenticateToken, (req, res) => {
+  try {
+    const review = db.prepare('SELECT * FROM company_reviews WHERE id = ?').get(req.params.id);
+    
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    
+    // Only the review author or admin can delete
+    if (review.reviewer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized to delete this review' });
+    }
+    
+    db.prepare('DELETE FROM company_reviews WHERE id = ?').run(req.params.id);
+    
+    res.json({ message: 'Review deleted successfully' });
+  } catch (error) {
+    console.error('Delete review error:', error);
+    res.status(500).json({ error: 'Failed to delete review' });
   }
 });
 
