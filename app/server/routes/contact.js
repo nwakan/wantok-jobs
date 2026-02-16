@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
+const { sendContactFormAdminEmail, sendContactFormAutoReply } = require('../lib/email');
 const { requireRole } = require('../middleware/role');
 
 // POST / - Public contact form submission
@@ -18,6 +19,11 @@ router.post('/', validate(schemas.contact), (req, res) => {
       INSERT INTO contact_messages (name, email, subject, message)
       VALUES (?, ?, ?, ?)
     `).run(name, email, subject, message);
+
+    // Send emails (admin notification + auto-reply)
+    const contactData = { name, email, subject, message };
+    sendContactFormAdminEmail(contactData).catch(() => {});
+    sendContactFormAutoReply(contactData).catch(() => {});
 
     res.status(201).json({ 
       message: 'Contact message sent successfully',

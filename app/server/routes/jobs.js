@@ -1,4 +1,5 @@
 const { validate, schemas } = require("../middleware/validate");
+const { sendJobPostedEmail } = require('../lib/email');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -213,6 +214,7 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
     // Notify admins about new job
     const employer = db.prepare('SELECT * FROM profiles_employer WHERE user_id = ?').get(req.user.id);
     notifEvents.onJobPosted(job, employer || { name: req.user.name || 'Unknown' });
+    sendJobPostedEmail({ email: req.user.email, name: req.user.name || employer?.name }, job).catch(() => {});
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'job_posted', 'job', job.id, JSON.stringify({ title })); } catch(e) {}

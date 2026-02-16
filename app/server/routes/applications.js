@@ -4,7 +4,7 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { events: notifEvents } = require('../lib/notifications');
-const { sendApplicationStatusEmail, sendNewApplicationEmail } = require('../lib/email');
+const { sendApplicationStatusEmail, sendNewApplicationEmail, sendApplicationConfirmationEmail } = require('../lib/email');
 
 const router = express.Router();
 
@@ -53,7 +53,12 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
 
     // Email employer about new application
     const employer = db.prepare('SELECT email, name FROM users WHERE id = ?').get(job.employer_id);
-    if (employer) sendNewApplicationEmail(employer, job.title, applicant?.name || 'A jobseeker').catch(() => {});
+    const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(job.id)?.n;
+    if (employer) sendNewApplicationEmail(employer, job.title, applicant?.name || 'A jobseeker', appCount).catch(() => {});
+
+    // Email jobseeker confirmation
+    const companyProfile = db.prepare('SELECT company_name FROM profiles_employer WHERE user_id = ?').get(job.employer_id);
+    sendApplicationConfirmationEmail({ email: req.user.email, name: applicant?.name }, job, companyProfile?.company_name || employer?.name || 'the employer').catch(() => {});
 
     // Log application event
     try {

@@ -1,6 +1,7 @@
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const router = express.Router();
+const { sendOrderConfirmationEmail } = require('../lib/email');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
@@ -26,6 +27,7 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.or
     `).run(employer_id, plan_id, plan.price, plan.currency, payment_method, invoice_number, notes);
 
     const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(result.lastInsertRowid);
+    sendOrderConfirmationEmail({ email: req.user.email, name: req.user.name }, order, plan).catch(() => {});
     res.status(201).json({ order });
   } catch (error) {
     console.error('Error creating order:', error);

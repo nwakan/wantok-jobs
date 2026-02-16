@@ -6,7 +6,7 @@ const db = require('../database');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 const { events: notifEvents } = require('../lib/notifications');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../lib/email');
+const { sendWelcomeEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../lib/email');
 
 const router = express.Router();
 
@@ -244,6 +244,7 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
     db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?").run(newHash, user.id);
 
     notifEvents.onPasswordChanged(user);
+    sendPasswordChangedEmail(user).catch(() => {});
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
