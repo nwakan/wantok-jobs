@@ -41,6 +41,9 @@ ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $VPS "cd /opt/wantokjobs &&
 echo "📦 Installing deps on VPS..."
 ssh $VPS "cd /opt/wantokjobs/app && npm install --production 2>&1 | tail -3"
 
+echo "🔨 Building frontend on VPS..."
+ssh $VPS "cd /opt/wantokjobs/app/client && npm install 2>&1 | tail -1 && npx vite build --outDir ../server/public 2>&1 | tail -5"
+
 echo "🔄 Restarting service..."
 ssh $VPS "systemctl restart wantokjobs"
 
