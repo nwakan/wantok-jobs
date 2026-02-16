@@ -6,6 +6,14 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 
+// Security: Enforce JWT_SECRET in production
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('❌ SECURITY ERROR: JWT_SECRET environment variable is required in production.');
+  console.error('   Set a strong random secret in your .env file:');
+  console.error('   JWT_SECRET=' + require('crypto').randomBytes(48).toString('base64'));
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -75,9 +83,47 @@ app.use((req, res, next) => {
 // Initialize database
 require('./database');
 
-// Health check
+// Health check (enhanced for production monitoring)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const startTime = Date.now();
+  
+  try {
+    const db = require('./database');
+    
+    // Test database connectivity
+    const dbCheck = db.prepare('SELECT 1 as healthy').get();
+    const dbLatency = Date.now() - startTime;
+    
+    // Basic database health metrics
+    const jobCount = db.prepare('SELECT COUNT(*) as count FROM jobs').get().count;
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+    
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024), // MB
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) // MB
+      },
+      database: {
+        status: dbCheck && dbCheck.healthy === 1 ? 'connected' : 'error',
+        latency: `${dbLatency}ms`,
+        jobs: jobCount,
+        users: userCount
+      },
+      version: process.env.npm_package_version || '1.0.0',
+      node: process.version
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      uptime: process.uptime()
+    });
+  }
 });
 
 // Public stats endpoint

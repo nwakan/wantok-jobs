@@ -136,6 +136,16 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_applications_jobseeker ON applications(jobseeker_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id);
+    
+    -- Additional performance indexes (API audit improvements)
+    CREATE INDEX IF NOT EXISTS idx_jobs_employer_status ON jobs(employer_id, status);
+    CREATE INDEX IF NOT EXISTS idx_jobs_category_status ON jobs(category_slug, status);
+    CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_jobs_views_status ON jobs(views_count DESC, status);
+    CREATE INDEX IF NOT EXISTS idx_applications_job_status ON applications(job_id, status);
+    CREATE INDEX IF NOT EXISTS idx_applications_applicant_created ON applications(jobseeker_id, applied_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_saved_jobs_user_created ON saved_jobs(user_id, created_at DESC);
 
     -- Credit packages (replaces old subscription plans)
     CREATE TABLE IF NOT EXISTS packages (
@@ -475,6 +485,11 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_resumes_user ON resumes(user_id);
     CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status);
     CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id);
+    CREATE INDEX IF NOT EXISTS idx_activity_log_user_action ON activity_log(user_id, action, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_email ON newsletter_subscribers(email, subscribed);
+    CREATE INDEX IF NOT EXISTS idx_banners_placement ON banners(placement, active);
+    CREATE INDEX IF NOT EXISTS idx_company_reviews_approved ON company_reviews(company_id, approved, created_at DESC);
   `);
 
   // Add columns to existing tables (safe ALTER TABLE)

@@ -10,6 +10,23 @@ const { sendWelcomeEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = r
 
 const router = express.Router();
 
+// Security: Weak password blocklist
+const WEAK_PASSWORDS = [
+  'password', '123456', '12345678', 'qwerty', 'abc123', 'monkey', 
+  'letmein', 'trustno1', 'dragon', 'baseball', 'iloveyou', 'master',
+  'sunshine', 'ashley', 'bailey', 'shadow', 'superman', 'princess',
+  'wantokjobs', 'wantok', 'papuanewguinea', 'png123', 'portmoresby'
+];
+
+function isWeakPassword(password) {
+  const lower = password.toLowerCase();
+  return WEAK_PASSWORDS.some(weak => lower.includes(weak));
+}
+
+// Security: Maximum failed attempts before lockout
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 15;
+
 // Register
 router.post('/register', validate(schemas.register), async (req, res) => {
   try {
@@ -22,6 +39,11 @@ router.post('/register', validate(schemas.register), async (req, res) => {
 
     if (!['jobseeker', 'employer', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    // Security: Check for weak passwords
+    if (isWeakPassword(password)) {
+      return res.status(400).json({ error: 'Password is too common. Please choose a stronger password.' });
     }
 
     // Check if user exists
@@ -84,6 +106,21 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Security: Check if account is locked
+    if (user.lockout_until) {
+      const lockoutTime = new Date(user.lockout_until);
+      const now = new Date();
+      if (now < lockoutTime) {
+        const minutesRemaining = Math.ceil((lockoutTime - now) / 60000);
+        return res.status(429).json({ 
+          error: `Account locked due to multiple failed login attempts. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.` 
+        });
+      } else {
+        // Lockout expired, clear it
+        db.prepare("UPDATE users SET lockout_until = NULL, failed_attempts = 0 WHERE id = ?").run(user.id);
+      }
+    }
+
     let valid = false;
     let needsRehash = false;
 
@@ -98,7 +135,26 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     }
 
     if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      // Security: Increment failed attempts
+      const newFailedAttempts = (user.failed_attempts || 0) + 1;
+      
+      if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
+        // Lock account
+        const lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000).toISOString();
+        db.prepare("UPDATE users SET failed_attempts = ?, lockout_until = ? WHERE id = ?")
+          .run(newFailedAttempts, lockoutUntil, user.id);
+        
+        return res.status(429).json({ 
+          error: `Too many failed login attempts. Account locked for ${LOCKOUT_DURATION_MINUTES} minutes.` 
+        });
+      } else {
+        // Just increment counter
+        db.prepare("UPDATE users SET failed_attempts = ? WHERE id = ?").run(newFailedAttempts, user.id);
+        const attemptsRemaining = MAX_FAILED_ATTEMPTS - newFailedAttempts;
+        return res.status(401).json({ 
+          error: `Invalid credentials. ${attemptsRemaining} attempt${attemptsRemaining > 1 ? 's' : ''} remaining before account lockout.` 
+        });
+      }
     }
 
     // Migrate legacy password to bcrypt
@@ -109,8 +165,11 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       console.log(`✅ Migrated legacy password for user: ${email}`);
     }
 
-    // Update last login
-    try { db.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").run(user.id); } catch(e) {}
+    // Update last login and reset failed attempts on successful login
+    try { 
+      db.prepare("UPDATE users SET last_login = datetime('now'), failed_attempts = 0, lockout_until = NULL WHERE id = ?")
+        .run(user.id); 
+    } catch(e) {}
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)').run(user.id, 'login', 'user', user.id); } catch(e) {}
@@ -179,13 +238,16 @@ router.post('/forgot-password', validate(schemas.forgotPassword), (req, res) => 
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 3600000).toISOString(); // 1 hour
 
-    // Store token (use a simple approach - store in user record)
+    // Security: Hash token before storing (prevent DB compromise attacks)
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Store hashed token (use a simple approach - store in user record)
     try {
       db.exec("ALTER TABLE users ADD COLUMN reset_token TEXT");
       db.exec("ALTER TABLE users ADD COLUMN reset_token_expires TEXT");
     } catch(e) { /* columns may already exist */ }
 
-    db.prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?').run(token, expires, user.id);
+    db.prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?').run(tokenHash, expires, user.id);
 
     // Send reset email
     sendPasswordResetEmail(user, token).catch(e => console.error('Reset email error:', e.message));
@@ -205,7 +267,14 @@ router.post('/reset-password', validate(schemas.resetPassword), async (req, res)
     if (!token || !password) return res.status(400).json({ error: 'Token and new password required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-    const user = db.prepare("SELECT id, email, name FROM users WHERE reset_token = ? AND reset_token_expires > datetime('now')").get(token);
+    // Security: Check for weak passwords
+    if (isWeakPassword(password)) {
+      return res.status(400).json({ error: 'Password is too common. Please choose a stronger password.' });
+    }
+
+    // Security: Hash the incoming token to compare with stored hash
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const user = db.prepare("SELECT id, email, name FROM users WHERE reset_token = ? AND reset_token_expires > datetime('now')").get(tokenHash);
     if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -226,6 +295,11 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+
+    // Security: Check for weak passwords
+    if (isWeakPassword(newPassword)) {
+      return res.status(400).json({ error: 'Password is too common. Please choose a stronger password.' });
+    }
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });

@@ -1,4 +1,4 @@
-import { Check, X, HelpCircle, Zap, TrendingUp, Building2, Crown, Bell, Sparkles } from 'lucide-react';
+import { Check, X, HelpCircle, Zap, TrendingUp, Building2, Crown, Bell, Sparkles, Shield, Smartphone, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHead from '../components/PageHead';
 import { useState, useEffect } from 'react';
@@ -67,7 +67,7 @@ const employerPackages = [
     icon: Crown,
     price: '7,500',
     period: 'one-time',
-    description: 'For large organizations with high-volume hiring',
+    description: 'For large organizations — custom pricing available for 200+ job posts',
     credits: ['100 job posting credits', 'Unlimited AI matching', 'Unlimited candidate search'],
     features: [
       { text: '100 job posting credits', included: true },
@@ -80,7 +80,7 @@ const employerPackages = [
       { text: 'Dedicated account manager', included: true },
       { text: 'API access', included: true },
     ],
-    cta: 'Buy Enterprise Pack',
+    cta: 'Contact Sales',
     popular: false,
   },
 ];
@@ -129,8 +129,8 @@ const faqs = [
     a: 'Credits are prepaid — buy a package, get credits instantly (after payment verification). Use 1 credit per job posting. Credits never expire until the annual reset. No recurring charges.',
   },
   {
-    q: 'What is the annual credit reset?',
-    a: 'Unused credits reset to zero once per year (January 1st). This encourages active use of the platform. Premium trial users are exempt from resets.',
+    q: 'Do credits really never expire?',
+    a: 'Credits persist for 24 months of account inactivity. As long as you log in or use the platform at least once every 2 years, your credits never expire. Premium trial users have unlimited credit persistence.',
   },
   {
     q: 'Can I try before I buy?',
@@ -267,8 +267,33 @@ export default function Pricing() {
                 <span>No credit card required</span>
               </div>
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                <Shield className="w-5 h-5" />
+                <span>14-day money-back guarantee</span>
+              </div>
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
                 <Check className="w-5 h-5" />
-                <span>Credits never expire*</span>
+                <span>Credits persist for 24 months</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Social Proof */}
+        <div className="bg-white py-12 border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p className="text-gray-500 mb-8">Trusted by PNG's leading employers</p>
+            <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+              <div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">330+</div>
+                <p className="text-gray-600">Active Employers</p>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">30,000+</div>
+                <p className="text-gray-600">Job Seekers</p>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">5X</div>
+                <p className="text-gray-600">More Applications</p>
               </div>
             </div>
           </div>
@@ -327,6 +352,70 @@ export default function Pricing() {
                   </div>
                   <h4 className="font-semibold text-gray-900 mb-2">Use When Ready</h4>
                   <p className="text-gray-600 text-sm">Use 1 credit per job post. Credits persist until used — buy more anytime you need them.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* ROI Comparison */}
+            <div className="mt-12 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-8">
+              <h3 className="text-2xl font-bold text-center text-gray-900 mb-2">Cost Comparison</h3>
+              <p className="text-center text-gray-600 mb-8">See how much you save with WantokJobs</p>
+              <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div className="bg-white rounded-lg p-6 text-center shadow-md ring-2 ring-primary-500">
+                  <p className="text-sm text-gray-600 mb-2 font-semibold">WantokJobs Pro</p>
+                  <p className="text-5xl font-bold text-primary-600 mb-2">K90</p>
+                  <p className="text-xs text-gray-500 mb-4">per job post</p>
+                  <div className="inline-flex items-center gap-1 text-green-600 text-sm font-semibold">
+                    <Check className="w-4 h-4" />
+                    Best value
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-6 text-center opacity-75">
+                  <p className="text-sm text-gray-600 mb-2 font-semibold">Other PNG Job Boards</p>
+                  <p className="text-5xl font-bold text-gray-700 mb-2">K150+</p>
+                  <p className="text-xs text-gray-500 mb-4">per job post</p>
+                  <p className="text-red-600 text-sm font-semibold">67% more expensive</p>
+                </div>
+                <div className="bg-white rounded-lg p-6 text-center opacity-75">
+                  <p className="text-sm text-gray-600 mb-2 font-semibold">Recruitment Agency</p>
+                  <p className="text-5xl font-bold text-gray-700 mb-2">K3,500+</p>
+                  <p className="text-xs text-gray-500 mb-4">per hire (15% salary)</p>
+                  <p className="text-red-600 text-sm font-semibold">40X more expensive</p>
+                </div>
+              </div>
+              <p className="text-center text-sm text-gray-600 mt-6">
+                <strong>Save up to 97%</strong> compared to traditional recruitment agencies
+              </p>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="mt-12 bg-white rounded-xl shadow-sm p-8">
+              <h3 className="text-2xl font-bold text-center text-gray-900 mb-2">Flexible Payment Options</h3>
+              <p className="text-center text-gray-600 mb-8">Pay the way that works for you</p>
+              <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Building2 className="w-8 h-8 text-primary-600" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Bank Transfer</h4>
+                  <p className="text-sm text-gray-600">BSP, Westpac, ANZ</p>
+                  <p className="text-xs text-gray-500 mt-1">Verified within 24 hours</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Smartphone className="w-8 h-8 text-primary-600" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Mobile Money</h4>
+                  <p className="text-sm text-gray-600">Moni Plus, True Money</p>
+                  <p className="text-xs text-gray-500 mt-1">Instant confirmation</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-primary-600" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Company Invoice</h4>
+                  <p className="text-sm text-gray-600">NET30 for businesses</p>
+                  <p className="text-xs text-gray-500 mt-1">Registered companies only</p>
                 </div>
               </div>
             </div>
@@ -446,7 +535,7 @@ export default function Pricing() {
               <FAQItem key={idx} question={faq.q} answer={faq.a} />
             ))}
           </div>
-          <p className="text-center text-xs text-gray-400 mt-4">* Credits reset annually on January 1st. Premium trial users are exempt.</p>
+          <p className="text-center text-xs text-gray-400 mt-4">Credits persist for 24 months of inactivity. Active users keep credits indefinitely.</p>
         </div>
 
         {/* CTA */}

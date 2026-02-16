@@ -2,6 +2,7 @@ const { validate, schemas } = require("../middleware/validate");
 const { sendJobPostedEmail, sendNewJobAlerts } = require('../lib/email');
 const { canPostJob, consumeEmployerServiceCredit } = require('../lib/billing');
 const { addPaginationHeaders } = require('../utils/pagination');
+const { containsPattern } = require('../utils/sanitize');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -20,13 +21,13 @@ router.get('/suggestions', (req, res) => {
     }
 
     let suggestions = [];
-    const searchTerm = `%${q}%`;
+    const searchTerm = containsPattern(q); // ✅ Sanitized LIKE pattern
 
     if (type === 'keyword') {
       // Get job title suggestions
       const titles = db.prepare(`
         SELECT DISTINCT title FROM jobs 
-        WHERE status = 'active' AND title LIKE ? 
+        WHERE status = 'active' AND title LIKE ? ESCAPE '\\'
         ORDER BY views_count DESC 
         LIMIT 10
       `).all(searchTerm);
@@ -37,7 +38,7 @@ router.get('/suggestions', (req, res) => {
         SELECT DISTINCT COALESCE(j.company_display_name, pe.company_name) as company_name
         FROM jobs j
         LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
-        WHERE j.status = 'active' AND COALESCE(j.company_display_name, pe.company_name) LIKE ?
+        WHERE j.status = 'active' AND COALESCE(j.company_display_name, pe.company_name) LIKE ? ESCAPE '\\'
         ORDER BY (SELECT COUNT(*) FROM jobs WHERE employer_id = j.employer_id) DESC
         LIMIT 10
       `).all(searchTerm);
@@ -118,26 +119,26 @@ router.get('/', (req, res) => {
           query += ' AND 0'; // No FTS matches
         }
       } catch {
-        // Fallback to LIKE if FTS fails
-        query += ' AND (j.title LIKE ? OR j.description LIKE ?)';
-        const keywordParam = `%${keyword}%`;
+        // Fallback to LIKE if FTS fails (✅ sanitized)
+        query += ' AND (j.title LIKE ? ESCAPE \'\\\' OR j.description LIKE ? ESCAPE \'\\\')';
+        const keywordParam = containsPattern(keyword);
         params.push(keywordParam, keywordParam);
       }
     }
 
     if (category) {
-      // Support category filter via job_categories join
+      // Support category filter via job_categories join (✅ sanitized)
       query += ` AND EXISTS (
         SELECT 1 FROM job_categories jc 
         INNER JOIN categories c ON jc.category_id = c.id 
-        WHERE jc.job_id = j.id AND (c.slug = ? OR c.name LIKE ?)
+        WHERE jc.job_id = j.id AND (c.slug = ? OR c.name LIKE ? ESCAPE '\\')
       )`;
-      params.push(category, `%${category}%`);
+      params.push(category, containsPattern(category));
     }
 
     if (location) {
-      query += ' AND (j.location LIKE ? OR j.country LIKE ?)';
-      const locationParam = `%${location}%`;
+      query += ' AND (j.location LIKE ? ESCAPE \'\\\' OR j.country LIKE ? ESCAPE \'\\\')';
+      const locationParam = containsPattern(location);
       params.push(locationParam, locationParam);
     }
 
@@ -155,8 +156,8 @@ router.get('/', (req, res) => {
     }
 
     if (industry) {
-      query += ' AND (j.industry LIKE ? OR pe.industry LIKE ?)';
-      const industryParam = `%${industry}%`;
+      query += ' AND (j.industry LIKE ? ESCAPE \'\\\' OR pe.industry LIKE ? ESCAPE \'\\\')';
+      const industryParam = containsPattern(industry);
       params.push(industryParam, industryParam);
     }
 
@@ -189,9 +190,9 @@ router.get('/', (req, res) => {
     }
 
     if (company) {
-      // Filter by company name
-      query += ` AND (COALESCE(j.company_display_name, pe.company_name) LIKE ? OR u.name LIKE ?)`;
-      const companyParam = `%${company}%`;
+      // Filter by company name (✅ sanitized)
+      query += ` AND (COALESCE(j.company_display_name, pe.company_name) LIKE ? ESCAPE '\\' OR u.name LIKE ? ESCAPE '\\')`;
+      const companyParam = containsPattern(company);
       params.push(companyParam, companyParam);
     }
 
