@@ -1,6 +1,6 @@
 const { validate, schemas } = require("../middleware/validate");
 const { sendJobPostedEmail } = require('../lib/email');
-const { canPostJob } = require('../lib/billing');
+const { canPostJob, consumeEmployerServiceCredit } = require('../lib/billing');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -222,6 +222,11 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
     );
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
+
+    // Consume a job posting credit (unless on trial or free slot)
+    if (!planCheck.trial && !planCheck.freeSlot) {
+      consumeEmployerServiceCredit(req.user.id, 'job_posting');
+    }
 
     // Notify admins about new job
     const employer = db.prepare('SELECT * FROM profiles_employer WHERE user_id = ?').get(req.user.id);

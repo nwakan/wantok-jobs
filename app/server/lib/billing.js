@@ -1,12 +1,12 @@
 /**
- * WantokJobs Billing & Subscription Engine
+ * WantokJobs Credit-Based Billing Engine
  * 
- * Manual bank transfer flow:
- * 1. Employer selects plan → order created (status: pending)
- * 2. Employer transfers to bank account
- * 3. Admin verifies payment → marks order as paid
- * 4. System activates plan on employer profile
- * 5. Cron checks for expired plans daily
+ * Prepaid credit model for PNG/Pacific markets:
+ * - Employers buy credit packages (job posting, AI matching, candidate search)
+ * - Jobseekers buy alert credit packages
+ * - Credits persist until used (annual reset)
+ * - Standard trial (14-day, one-time) and Premium Indefinite Trial (admin-granted)
+ * - Manual bank transfer with admin approval
  */
 
 const db = require('../database');
@@ -21,388 +21,573 @@ const BANK_DETAILS = {
   reference: '(Your Invoice Number)',
 };
 
+// ─── Credit Operations ─────────────────────────────────────────────
+
 /**
- * Check if employer can post a job based on their plan
- * Returns { allowed: bool, reason: string, plan: object|null, usage: object }
+ * Log a credit transaction and return the new balance
  */
-function canPostJob(employerId) {
-  const profile = db.prepare(`
-    SELECT subscription_plan_id, plan_expires_at, total_jobs_posted 
-    FROM profiles_employer WHERE user_id = ?
-  `).get(employerId);
-
-  if (!profile) {
-    return { allowed: false, reason: 'Employer profile not found' };
-  }
-
-  const planId = profile.subscription_plan_id;
-  const expiresAt = profile.plan_expires_at;
-
-  // No plan = free tier
-  if (!planId) {
-    const freePlan = db.prepare('SELECT * FROM plans WHERE name = ? AND active = 1').get('Free');
-    const activeJobCount = db.prepare(
-      'SELECT COUNT(*) as n FROM jobs WHERE employer_id = ? AND status = ?'
-    ).get(employerId, 'active').n;
-
-    if (!freePlan) return { allowed: true, plan: null, usage: { active: activeJobCount, limit: 1 } };
-
-    return {
-      allowed: activeJobCount < freePlan.job_limit,
-      reason: activeJobCount >= freePlan.job_limit
-        ? `Free plan allows ${freePlan.job_limit} active job${freePlan.job_limit > 1 ? 's' : ''}. Upgrade your plan to post more.`
-        : null,
-      plan: freePlan,
-      usage: { active: activeJobCount, limit: freePlan.job_limit },
-    };
-  }
-
-  // Has plan — check expiry
-  if (expiresAt && new Date(expiresAt) < new Date()) {
-    // Plan expired — reset to free
-    db.prepare('UPDATE profiles_employer SET subscription_plan_id = NULL, plan_expires_at = NULL WHERE user_id = ?').run(employerId);
-    return canPostJob(employerId); // Recurse with free tier
-  }
-
-  // Active plan — check limit
-  const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(planId);
-  if (!plan) return { allowed: true, plan: null, usage: {} };
-
-  const activeJobCount = db.prepare(
-    'SELECT COUNT(*) as n FROM jobs WHERE employer_id = ? AND status = ?'
-  ).get(employerId, 'active').n;
-
-  const limit = plan.job_limit === 999 ? Infinity : plan.job_limit;
-
-  return {
-    allowed: activeJobCount < limit,
-    reason: activeJobCount >= limit
-      ? `Your ${plan.name} plan allows ${plan.job_limit} active jobs. You have ${activeJobCount}. Upgrade to post more.`
-      : null,
-    plan,
-    usage: { active: activeJobCount, limit: plan.job_limit },
-  };
+function logCreditTransaction(userId, creditType, amount, reason, referenceType, referenceId) {
+  // Get current balance
+  const balanceField = getCreditField(creditType, userId);
+  const table = balanceField.table;
+  const field = balanceField.field;
+  
+  const profile = db.prepare(`SELECT ${field} FROM ${table} WHERE user_id = ?`).get(userId);
+  if (!profile) throw new Error(`Profile not found for user ${userId}`);
+  
+  const currentBalance = profile[field] || 0;
+  const newBalance = currentBalance + amount;
+  
+  // Update balance
+  db.prepare(`UPDATE ${table} SET ${field} = ? WHERE user_id = ?`).run(newBalance, userId);
+  
+  // Log transaction
+  db.prepare(`
+    INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type, reference_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(userId, creditType, amount, newBalance, reason, referenceType || null, referenceId || null);
+  
+  return newBalance;
 }
 
 /**
- * Activate a plan for an employer (called when admin approves payment)
+ * Map credit type to the correct profile table and field
  */
-function activatePlan(orderId) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
-  if (!order) return { success: false, error: 'Order not found' };
-  if (order.status === 'completed') return { success: false, error: 'Order already completed' };
+function getCreditField(creditType, userId) {
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  if (!user) throw new Error(`User ${userId} not found`);
+  
+  if (user.role === 'employer') {
+    const map = {
+      'job_posting': 'current_job_posting_credits',
+      'ai_matching': 'current_ai_matching_credits',
+      'candidate_search': 'current_candidate_search_credits',
+    };
+    return { table: 'profiles_employer', field: map[creditType] };
+  } else if (user.role === 'jobseeker') {
+    const map = { 'alert': 'current_alert_credits' };
+    return { table: 'profiles_jobseeker', field: map[creditType] };
+  }
+  throw new Error(`Invalid role for credits: ${user.role}`);
+}
 
-  const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(order.plan_id);
-  if (!plan) return { success: false, error: 'Plan not found' };
+// ─── Trial System ───────────────────────────────────────────────────
 
-  const expiresAt = plan.duration_days > 0
-    ? new Date(Date.now() + plan.duration_days * 86400000).toISOString()
-    : null;
+/**
+ * Check if user has an active trial (standard or premium indefinite)
+ */
+function hasActiveTrial(userId) {
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  if (!user) return { active: false };
+  
+  const table = user.role === 'employer' ? 'profiles_employer' : 'profiles_jobseeker';
+  const profile = db.prepare(`
+    SELECT has_premium_indefinite_trial, has_standard_trial_activated, standard_trial_end_date
+    FROM ${table} WHERE user_id = ?
+  `).get(userId);
+  
+  if (!profile) return { active: false };
+  
+  // Premium indefinite trial — always active
+  if (profile.has_premium_indefinite_trial) {
+    return { active: true, type: 'premium_indefinite' };
+  }
+  
+  // Standard trial — check expiry
+  if (profile.has_standard_trial_activated && profile.standard_trial_end_date) {
+    if (new Date(profile.standard_trial_end_date) > new Date()) {
+      return { active: true, type: 'standard', expiresAt: profile.standard_trial_end_date };
+    }
+  }
+  
+  return { active: false };
+}
 
-  // Update employer profile with plan
+/**
+ * Activate standard trial for an employer (one-time only)
+ */
+function activateEmployerStandardTrial(employerId) {
+  const profile = db.prepare(
+    'SELECT has_standard_trial_activated FROM profiles_employer WHERE user_id = ?'
+  ).get(employerId);
+  
+  if (!profile) return { success: false, error: 'Employer profile not found' };
+  if (profile.has_standard_trial_activated) return { success: false, error: 'Trial already used — each account gets one free trial' };
+  
+  // Get trial package
+  const trialPkg = db.prepare("SELECT * FROM packages WHERE slug = 'employer-trial' AND active = 1").get();
+  const durationDays = trialPkg?.trial_duration_days || 14;
+  const endDate = new Date(Date.now() + durationDays * 86400000).toISOString();
+  
   db.prepare(`
     UPDATE profiles_employer 
-    SET subscription_plan_id = ?, plan_expires_at = ?
+    SET has_standard_trial_activated = 1, standard_trial_end_date = ?, feature_tier = 'basic'
     WHERE user_id = ?
-  `).run(plan.id, expiresAt, order.employer_id);
-
-  // Mark order as completed
-  db.prepare(`
-    UPDATE orders SET status = 'completed', completed_at = datetime('now')
-    WHERE id = ?
-  `).run(orderId);
-
+  `).run(endDate, employerId);
+  
+  // Grant trial credits
+  if (trialPkg) {
+    if (trialPkg.job_posting_credits > 0)
+      logCreditTransaction(employerId, 'job_posting', trialPkg.job_posting_credits, 'trial_activation', 'package', trialPkg.id);
+    if (trialPkg.ai_matching_credits > 0)
+      logCreditTransaction(employerId, 'ai_matching', trialPkg.ai_matching_credits, 'trial_activation', 'package', trialPkg.id);
+    if (trialPkg.candidate_search_credits > 0)
+      logCreditTransaction(employerId, 'candidate_search', trialPkg.candidate_search_credits, 'trial_activation', 'package', trialPkg.id);
+  }
+  
   return {
     success: true,
-    plan: plan.name,
-    expiresAt,
-    employerId: order.employer_id,
-  };
-}
-
-/**
- * Reject/cancel an order
- */
-function rejectOrder(orderId, reason) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
-  if (!order) return { success: false, error: 'Order not found' };
-
-  db.prepare("UPDATE orders SET status = 'rejected', notes = ? WHERE id = ?")
-    .run(reason || 'Payment not received', orderId);
-
-  return { success: true };
-}
-
-/**
- * Check expired plans → auto-create renewal invoices
- * Run daily via cron. Flow:
- *   Plan expires → create renewal order (status: pending) → email invoice
- *   If unpaid after 3/7/14 days → send reminders
- *   If unpaid after 21 days → downgrade to Free + final notice
- */
-function checkExpiredPlans() {
-  const results = { renewed: 0, reminded: 0, downgraded: 0, details: [] };
-
-  // 1. Plans expiring today or already expired (with active plan) → auto-renew
-  const expired = db.prepare(`
-    SELECT pe.user_id, pe.subscription_plan_id, pe.plan_expires_at, 
-           u.email, u.name, p.id as plan_id, p.name as plan_name, p.price, p.currency
-    FROM profiles_employer pe
-    JOIN users u ON pe.user_id = u.id
-    JOIN plans p ON pe.subscription_plan_id = p.id
-    WHERE pe.plan_expires_at IS NOT NULL 
-    AND pe.plan_expires_at < datetime('now')
-    AND pe.subscription_plan_id IS NOT NULL
-    AND p.price > 0
-  `).all();
-
-  for (const emp of expired) {
-    // Check if there's already a pending renewal order
-    const existingOrder = db.prepare(
-      "SELECT id FROM orders WHERE employer_id = ? AND plan_id = ? AND status = 'pending' AND notes LIKE '%renewal%'"
-    ).get(emp.user_id, emp.plan_id);
-
-    if (!existingOrder) {
-      // Create renewal order
-      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const dayCount = db.prepare("SELECT COUNT(*) as n FROM orders WHERE created_at >= date('now')").get().n + 1;
-      const invoice = `WJ-${dateStr}-${String(dayCount).padStart(4, '0')}`;
-
-      db.prepare(`
-        INSERT INTO orders (employer_id, plan_id, amount, currency, status, payment_method, invoice_number, notes)
-        VALUES (?, ?, ?, ?, 'pending', 'bank_transfer', ?, ?)
-      `).run(emp.user_id, emp.plan_id, emp.price, emp.currency, invoice, `Auto-renewal of ${emp.plan_name} plan`);
-
-      // Keep plan active during grace period (21 days)
-      const gracePeriod = new Date(Date.now() + 21 * 86400000).toISOString();
-      db.prepare('UPDATE profiles_employer SET plan_expires_at = ? WHERE user_id = ?')
-        .run(gracePeriod, emp.user_id);
-
-      // Notify employer
-      db.prepare(`
-        INSERT INTO notifications (user_id, type, title, message, data)
-        VALUES (?, 'invoice', 'Subscription Renewal Invoice', ?, ?)
-      `).run(emp.user_id,
-        `Your ${emp.plan_name} plan has been renewed. Invoice ${invoice} for K${emp.price.toLocaleString()} has been generated. Please complete payment via bank transfer to keep your plan active.`,
-        JSON.stringify({ invoice, orderId: null, planName: emp.plan_name })
-      );
-
-      results.renewed++;
-      results.details.push({ action: 'renewed', user: emp.email, plan: emp.plan_name, invoice });
-    }
-  }
-
-  // 2. Send reminders for unpaid invoices (3, 7, 14 days old)
-  const unpaidOrders = db.prepare(`
-    SELECT o.id, o.employer_id, o.invoice_number, o.amount, o.currency, o.created_at, o.notes,
-           u.email, u.name, p.name as plan_name,
-           CAST(julianday('now') - julianday(o.created_at) AS INTEGER) as days_old
-    FROM orders o
-    JOIN users u ON o.employer_id = u.id
-    JOIN plans p ON o.plan_id = p.id
-    WHERE o.status = 'pending'
-    AND o.notes LIKE '%renewal%'
-  `).all();
-
-  for (const order of unpaidOrders) {
-    const daysOld = order.days_old;
-
-    // Send reminders at 3, 7, 14 days
-    if ([3, 7, 14].includes(daysOld)) {
-      const urgency = daysOld >= 14 ? 'URGENT' : daysOld >= 7 ? 'Important' : 'Friendly';
-      const daysLeft = 21 - daysOld;
-
-      db.prepare(`
-        INSERT INTO notifications (user_id, type, title, message, data)
-        VALUES (?, 'payment_reminder', ?, ?, ?)
-      `).run(
-        order.employer_id,
-        `${urgency}: Payment Due — ${order.plan_name}`,
-        daysOld >= 14
-          ? `⚠️ Your invoice ${order.invoice_number} (K${order.amount.toLocaleString()}) is ${daysOld} days overdue. Your plan will be downgraded to Free in ${daysLeft} days if payment is not received. Please transfer to BSP account and use "${order.invoice_number}" as reference.`
-          : daysOld >= 7
-          ? `Your invoice ${order.invoice_number} (K${order.amount.toLocaleString()}) for the ${order.plan_name} plan is now ${daysOld} days old. Please complete your bank transfer to keep your plan active. ${daysLeft} days remaining.`
-          : `Just a reminder — your renewal invoice ${order.invoice_number} (K${order.amount.toLocaleString()}) for the ${order.plan_name} plan is awaiting payment. Transfer to BSP and use "${order.invoice_number}" as reference.`,
-        JSON.stringify({ invoice: order.invoice_number, daysOld, daysLeft })
-      );
-
-      results.reminded++;
-      results.details.push({ action: `reminder_${daysOld}d`, user: order.email, invoice: order.invoice_number });
-    }
-
-    // 3. Downgrade after 21 days unpaid
-    if (daysOld >= 21) {
-      // Downgrade to free
-      db.prepare('UPDATE profiles_employer SET subscription_plan_id = NULL, plan_expires_at = NULL WHERE user_id = ?')
-        .run(order.employer_id);
-
-      // Mark order as overdue
-      db.prepare("UPDATE orders SET status = 'overdue', notes = ? WHERE id = ?")
-        .run(`${order.notes || ''} | Downgraded after 21 days unpaid`, order.id);
-
-      // Notify
-      db.prepare(`
-        INSERT INTO notifications (user_id, type, title, message, data)
-        VALUES (?, 'plan_downgraded', 'Plan Downgraded to Free', ?, ?)
-      `).run(
-        order.employer_id,
-        `Your ${order.plan_name} plan has been downgraded to the Free tier because invoice ${order.invoice_number} (K${order.amount.toLocaleString()}) was not paid within 21 days. You can resubscribe anytime from the Pricing page. If you have already paid, please contact support.`,
-        JSON.stringify({ invoice: order.invoice_number, previousPlan: order.plan_name })
-      );
-
-      results.downgraded++;
-      results.details.push({ action: 'downgraded', user: order.email, plan: order.plan_name, invoice: order.invoice_number });
-    }
-  }
-
-  return results;
-}
-
-/**
- * Send invoice emails for all pending renewal orders
- * Called by the billing cron after checkExpiredPlans()
- */
-function sendRenewalEmails() {
-  const { sendEmail } = require('./email');
-  const results = { sent: 0, errors: 0 };
-
-  // Get all pending renewal orders that haven't had an email today
-  const pendingRenewals = db.prepare(`
-    SELECT o.id, o.employer_id, o.invoice_number, o.amount, o.currency, o.created_at,
-           u.email, u.name, p.name as plan_name,
-           CAST(julianday('now') - julianday(o.created_at) AS INTEGER) as days_old
-    FROM orders o
-    JOIN users u ON o.employer_id = u.id
-    JOIN plans p ON o.plan_id = p.id
-    WHERE o.status = 'pending'
-    AND o.notes LIKE '%renewal%'
-  `).all();
-
-  for (const order of pendingRenewals) {
-    // Only email on creation day (0) and reminder days (3, 7, 14)
-    if (![0, 3, 7, 14].includes(order.days_old)) continue;
-
-    const daysLeft = 21 - order.days_old;
-    const isUrgent = order.days_old >= 14;
-    const isReminder = order.days_old > 0;
-
-    const subject = isUrgent
-      ? `⚠️ URGENT: Invoice ${order.invoice_number} — ${daysLeft} days to pay`
-      : isReminder
-      ? `Reminder: Invoice ${order.invoice_number} — ${order.plan_name} renewal`
-      : `Invoice ${order.invoice_number} — ${order.plan_name} plan renewal`;
-
-    sendEmail({
-      to: order.email, toName: order.name, tags: ['billing', 'renewal'],
-      subject,
-      html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-        <div style="background:${isUrgent ? '#dc2626' : '#16a34a'};padding:24px;text-align:center;">
-          <h1 style="color:white;margin:0;">WantokJobs</h1>
-        </div>
-        <div style="padding:28px;">
-          <p style="font-size:16px;color:#111827;">Hi ${order.name},</p>
-          ${isUrgent ? `
-            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;margin:16px 0;">
-              <p style="margin:0;font-size:14px;color:#991b1b;">
-                ⚠️ <strong>Your plan will be downgraded to Free in ${daysLeft} days</strong> if payment is not received.
-              </p>
-            </div>
-          ` : ''}
-          <p style="font-size:15px;color:#374151;line-height:1.7;">
-            ${isReminder
-              ? `This is a reminder that your <strong>${order.plan_name}</strong> plan renewal invoice is still pending.`
-              : `Your <strong>${order.plan_name}</strong> plan has expired and a renewal invoice has been generated.`}
-          </p>
-          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:18px;margin:20px 0;background:#f9fafb;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-              <tr><td style="padding:4px 0;color:#6b7280;">Invoice</td><td style="padding:4px 0;text-align:right;color:#111827;"><strong>${order.invoice_number}</strong></td></tr>
-              <tr><td style="padding:4px 0;color:#6b7280;">Plan</td><td style="padding:4px 0;text-align:right;color:#111827;">${order.plan_name}</td></tr>
-              <tr><td style="padding:4px 0;color:#6b7280;">Amount Due</td><td style="padding:4px 0;text-align:right;color:#111827;"><strong style="font-size:18px;">K${order.amount.toLocaleString()}</strong></td></tr>
-              <tr><td style="padding:4px 0;color:#6b7280;">Payment Due</td><td style="padding:4px 0;text-align:right;color:${isUrgent ? '#dc2626' : '#111827'};">${daysLeft} days remaining</td></tr>
-            </table>
-          </div>
-          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin:16px 0;">
-            <p style="margin:0 0 8px;font-size:14px;color:#1e40af;"><strong>💳 Bank Transfer Details:</strong></p>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#1e40af;">
-              <tr><td style="padding:3px 0;width:100px;">Bank</td><td style="padding:3px 0;"><strong>${BANK_DETAILS.bank}</strong></td></tr>
-              <tr><td style="padding:3px 0;">Account</td><td style="padding:3px 0;"><strong>${BANK_DETAILS.accountName}</strong></td></tr>
-              <tr><td style="padding:3px 0;">Account No.</td><td style="padding:3px 0;"><strong>${BANK_DETAILS.accountNumber}</strong></td></tr>
-              <tr><td style="padding:3px 0;">Branch</td><td style="padding:3px 0;">${BANK_DETAILS.branch}</td></tr>
-              <tr><td style="padding:3px 0;">Reference</td><td style="padding:3px 0;"><strong style="color:#dc2626;">${order.invoice_number}</strong></td></tr>
-            </table>
-          </div>
-          <p style="text-align:center;margin:24px 0 8px;">
-            <a href="${process.env.APP_URL || 'https://wantokjobs.com'}/dashboard/employer/orders-billing" style="background:#16a34a;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:15px;">View My Orders</a>
-          </p>
-          <p style="font-size:13px;color:#6b7280;margin-top:16px;text-align:center;">
-            Already paid? It can take up to 24 hours for manual verification. Contact support@wantokjobs.com if needed.
-          </p>
-        </div>
-        <div style="background:#f3f4f6;padding:16px;text-align:center;font-size:12px;color:#9ca3af;">
-          WantokJobs — Connecting Papua New Guinea's talent with opportunity
-        </div>
-      </div>`,
-    }).then(() => results.sent++).catch(() => results.errors++);
-  }
-
-  return results;
-}
-
-/**
- * Get employer's current subscription status
- */
-function getSubscriptionStatus(employerId) {
-  const profile = db.prepare(`
-    SELECT pe.subscription_plan_id, pe.plan_expires_at, pe.total_jobs_posted,
-           p.name as plan_name, p.price, p.currency, p.job_limit, p.featured_jobs,
-           p.resume_views, p.ai_screening, p.priority_support, p.duration_days
-    FROM profiles_employer pe
-    LEFT JOIN plans p ON pe.subscription_plan_id = p.id
-    WHERE pe.user_id = ?
-  `).get(employerId);
-
-  if (!profile || !profile.plan_name) {
-    const freePlan = db.prepare('SELECT * FROM plans WHERE name = ? AND active = 1').get('Free');
-    const activeJobs = db.prepare('SELECT COUNT(*) as n FROM jobs WHERE employer_id = ? AND status = ?').get(employerId, 'active').n;
-    return {
-      plan: 'Free',
-      price: 0,
-      currency: 'PGK',
-      expiresAt: null,
-      activeJobs,
-      jobLimit: freePlan?.job_limit || 1,
-      features: { featured_jobs: 0, resume_views: 10, ai_screening: false, priority_support: false },
-    };
-  }
-
-  const activeJobs = db.prepare('SELECT COUNT(*) as n FROM jobs WHERE employer_id = ? AND status = ?').get(employerId, 'active').n;
-  const daysLeft = profile.plan_expires_at
-    ? Math.max(0, Math.ceil((new Date(profile.plan_expires_at) - Date.now()) / 86400000))
-    : null;
-
-  return {
-    plan: profile.plan_name,
-    price: profile.price,
-    currency: profile.currency,
-    expiresAt: profile.plan_expires_at,
-    daysLeft,
-    activeJobs,
-    jobLimit: profile.job_limit,
-    features: {
-      featured_jobs: profile.featured_jobs,
-      resume_views: profile.resume_views,
-      ai_screening: !!profile.ai_screening,
-      priority_support: !!profile.priority_support,
+    trialEndsAt: endDate,
+    credits: {
+      job_posting: trialPkg?.job_posting_credits || 3,
+      ai_matching: trialPkg?.ai_matching_credits || 2,
+      candidate_search: trialPkg?.candidate_search_credits || 5,
     },
   };
 }
 
+/**
+ * Activate standard trial for a jobseeker (one-time only)
+ */
+function activateJobSeekerStandardTrial(jobseekerId) {
+  const profile = db.prepare(
+    'SELECT has_standard_trial_activated FROM profiles_jobseeker WHERE user_id = ?'
+  ).get(jobseekerId);
+  
+  if (!profile) return { success: false, error: 'Jobseeker profile not found' };
+  if (profile.has_standard_trial_activated) return { success: false, error: 'Trial already used' };
+  
+  const trialPkg = db.prepare("SELECT * FROM packages WHERE slug = 'jobseeker-trial' AND active = 1").get();
+  const durationDays = trialPkg?.trial_duration_days || 14;
+  const endDate = new Date(Date.now() + durationDays * 86400000).toISOString();
+  
+  db.prepare(`
+    UPDATE profiles_jobseeker 
+    SET has_standard_trial_activated = 1, standard_trial_end_date = ?
+    WHERE user_id = ?
+  `).run(endDate, jobseekerId);
+  
+  if (trialPkg?.alert_credits > 0)
+    logCreditTransaction(jobseekerId, 'alert', trialPkg.alert_credits, 'trial_activation', 'package', trialPkg.id);
+  if (trialPkg?.auto_apply_enabled)
+    db.prepare('UPDATE profiles_jobseeker SET auto_apply_enabled = 1 WHERE user_id = ?').run(jobseekerId);
+  
+  return { success: true, trialEndsAt: endDate, alertCredits: trialPkg?.alert_credits || 20 };
+}
+
+/**
+ * Admin grants premium indefinite trial
+ */
+function grantPremiumIndefiniteTrial(userId, adminEmail) {
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  if (!user) return { success: false, error: 'User not found' };
+  
+  const table = user.role === 'employer' ? 'profiles_employer' : 'profiles_jobseeker';
+  const tierUpdate = user.role === 'employer' ? ", feature_tier = 'enterprise'" : '';
+  
+  db.prepare(`
+    UPDATE ${table} 
+    SET has_premium_indefinite_trial = 1, premium_trial_override_by = ? ${tierUpdate}
+    WHERE user_id = ?
+  `).run(adminEmail || 'admin', userId);
+  
+  return { success: true, userId, type: 'premium_indefinite' };
+}
+
+/**
+ * Admin revokes premium indefinite trial
+ */
+function revokePremiumIndefiniteTrial(userId) {
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  if (!user) return { success: false, error: 'User not found' };
+  
+  const table = user.role === 'employer' ? 'profiles_employer' : 'profiles_jobseeker';
+  const tierReset = user.role === 'employer' ? ", feature_tier = 'free'" : '';
+  
+  db.prepare(`
+    UPDATE ${table} 
+    SET has_premium_indefinite_trial = 0, premium_trial_override_by = NULL ${tierReset}
+    WHERE user_id = ?
+  `).run(userId);
+  
+  return { success: true };
+}
+
+// ─── Credit Consumption ─────────────────────────────────────────────
+
+/**
+ * Consume an employer credit (returns 402-style error if insufficient)
+ * Smart logic: premium trial → no deduction, active standard trial → no deduction
+ */
+function consumeEmployerServiceCredit(employerId, creditType) {
+  // Check trial status first
+  const trial = hasActiveTrial(employerId);
+  if (trial.active) {
+    // Trial users don't consume credits
+    return { success: true, consumed: false, reason: `${trial.type}_trial_active`, balance: null };
+  }
+  
+  const fieldMap = {
+    'job_posting': 'current_job_posting_credits',
+    'ai_matching': 'current_ai_matching_credits',
+    'candidate_search': 'current_candidate_search_credits',
+  };
+  const field = fieldMap[creditType];
+  if (!field) return { success: false, error: `Invalid credit type: ${creditType}` };
+  
+  const profile = db.prepare(`SELECT ${field} FROM profiles_employer WHERE user_id = ?`).get(employerId);
+  if (!profile) return { success: false, error: 'Employer profile not found' };
+  
+  const current = profile[field] || 0;
+  if (current <= 0) {
+    return { 
+      success: false, 
+      error: `Insufficient ${creditType.replace('_', ' ')} credits. Purchase a credit package to continue.`,
+      balance: 0,
+      code: 402,
+    };
+  }
+  
+  const newBalance = logCreditTransaction(employerId, creditType, -1, 'consumed', null, null);
+  return { success: true, consumed: true, balance: newBalance };
+}
+
+/**
+ * Consume a jobseeker alert credit
+ */
+function consumeJobSeekerAlertCredit(jobseekerId) {
+  const trial = hasActiveTrial(jobseekerId);
+  if (trial.active) {
+    return { success: true, consumed: false, reason: `${trial.type}_trial_active` };
+  }
+  
+  const profile = db.prepare('SELECT current_alert_credits FROM profiles_jobseeker WHERE user_id = ?').get(jobseekerId);
+  if (!profile) return { success: false, error: 'Jobseeker profile not found' };
+  
+  if ((profile.current_alert_credits || 0) <= 0) {
+    return { success: false, error: 'Insufficient alert credits. Purchase an alert pack to continue.', code: 402 };
+  }
+  
+  const newBalance = logCreditTransaction(jobseekerId, 'alert', -1, 'consumed', null, null);
+  return { success: true, consumed: true, balance: newBalance };
+}
+
+// ─── Package Purchase ───────────────────────────────────────────────
+
+/**
+ * Add credits from a purchased package (called when admin approves payment)
+ */
+function addCreditPackage(userId, packageId, orderId) {
+  const pkg = db.prepare('SELECT * FROM packages WHERE id = ?').get(packageId);
+  if (!pkg) return { success: false, error: 'Package not found' };
+  
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  if (!user) return { success: false, error: 'User not found' };
+  
+  if (user.role === 'employer') {
+    if (pkg.job_posting_credits > 0)
+      logCreditTransaction(userId, 'job_posting', pkg.job_posting_credits, 'package_purchase', 'order', orderId);
+    if (pkg.ai_matching_credits > 0)
+      logCreditTransaction(userId, 'ai_matching', pkg.ai_matching_credits, 'package_purchase', 'order', orderId);
+    if (pkg.candidate_search_credits > 0)
+      logCreditTransaction(userId, 'candidate_search', pkg.candidate_search_credits, 'package_purchase', 'order', orderId);
+    
+    // Upgrade feature tier if package tier is higher
+    db.prepare(`
+      UPDATE profiles_employer SET feature_tier = MAX(feature_tier, ?) WHERE user_id = ?
+    `).run(pkg.feature_tier, userId);
+    // SQLite MAX on text won't work — use explicit logic
+    const currentTier = db.prepare('SELECT feature_tier FROM profiles_employer WHERE user_id = ?').get(userId)?.feature_tier || 'free';
+    const tierRank = { free: 0, basic: 1, professional: 2, enterprise: 3 };
+    if ((tierRank[pkg.feature_tier] || 0) > (tierRank[currentTier] || 0)) {
+      db.prepare('UPDATE profiles_employer SET feature_tier = ? WHERE user_id = ?').run(pkg.feature_tier, userId);
+    }
+  } else if (user.role === 'jobseeker') {
+    if (pkg.alert_credits > 0)
+      logCreditTransaction(userId, 'alert', pkg.alert_credits, 'package_purchase', 'order', orderId);
+    if (pkg.auto_apply_enabled)
+      db.prepare('UPDATE profiles_jobseeker SET auto_apply_enabled = 1 WHERE user_id = ?').run(userId);
+    if (pkg.id)
+      db.prepare('UPDATE profiles_jobseeker SET active_package_id = ? WHERE user_id = ?').run(pkg.id, userId);
+  }
+  
+  return {
+    success: true,
+    package: pkg.name,
+    credits: {
+      job_posting: pkg.job_posting_credits,
+      ai_matching: pkg.ai_matching_credits,
+      candidate_search: pkg.candidate_search_credits,
+      alert: pkg.alert_credits,
+    },
+  };
+}
+
+// ─── Job Posting Check ──────────────────────────────────────────────
+
+/**
+ * Check if employer can post a job (credits or trial)
+ */
+function canPostJob(employerId) {
+  const profile = db.prepare(`
+    SELECT current_job_posting_credits, has_premium_indefinite_trial, 
+           has_standard_trial_activated, standard_trial_end_date, feature_tier
+    FROM profiles_employer WHERE user_id = ?
+  `).get(employerId);
+
+  if (!profile) return { allowed: false, reason: 'Employer profile not found' };
+
+  const trial = hasActiveTrial(employerId);
+  
+  // Premium indefinite trial — unlimited
+  if (trial.active && trial.type === 'premium_indefinite') {
+    return { allowed: true, reason: 'Premium trial — unlimited posting', trial: true, credits: null };
+  }
+  
+  // Active standard trial — allowed (no credit cost)
+  if (trial.active && trial.type === 'standard') {
+    return { allowed: true, reason: 'Standard trial active', trial: true, trialEndsAt: trial.expiresAt, credits: profile.current_job_posting_credits || 0 };
+  }
+  
+  // Free tier: 1 active job allowed
+  const credits = profile.current_job_posting_credits || 0;
+  if (credits <= 0) {
+    // Check if they have at least the free tier allowance
+    const activeJobCount = db.prepare(
+      "SELECT COUNT(*) as n FROM jobs WHERE employer_id = ? AND status = 'active'"
+    ).get(employerId).n;
+    
+    if (activeJobCount < 1) {
+      return { allowed: true, reason: 'Free tier — 1 active job', trial: false, credits: 0, freeSlot: true };
+    }
+    
+    return {
+      allowed: false,
+      reason: 'No job posting credits remaining. Purchase a credit package to post more jobs.',
+      credits: 0,
+      trial: false,
+    };
+  }
+  
+  return { allowed: true, credits, trial: false };
+}
+
+// ─── Order Management ───────────────────────────────────────────────
+
+/**
+ * Approve an order → grant credits
+ */
+function approveOrder(orderId, adminId) {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  if (!order) return { success: false, error: 'Order not found' };
+  if (order.status === 'completed') return { success: false, error: 'Order already completed' };
+  if (order.status === 'rejected') return { success: false, error: 'Order was rejected' };
+  
+  // Mark approved
+  db.prepare(`
+    UPDATE orders SET status = 'approved', approved_by = ?, approved_at = datetime('now')
+    WHERE id = ?
+  `).run(adminId, orderId);
+  
+  // If package-based order, grant credits
+  let creditResult = null;
+  if (order.package_id) {
+    creditResult = addCreditPackage(order.user_id || order.employer_id, order.package_id, orderId);
+  }
+  
+  // Mark completed
+  db.prepare(`
+    UPDATE orders SET status = 'completed', completed_at = datetime('now')
+    WHERE id = ?
+  `).run(orderId);
+  
+  return { success: true, orderId, creditResult };
+}
+
+/**
+ * Reject an order
+ */
+function rejectOrder(orderId, reason) {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  if (!order) return { success: false, error: 'Order not found' };
+  
+  db.prepare("UPDATE orders SET status = 'rejected', notes = ? WHERE id = ?")
+    .run(reason || 'Payment not received', orderId);
+  
+  return { success: true };
+}
+
+// ─── Annual Credit Reset ────────────────────────────────────────────
+
+/**
+ * Reset all credits to 0 once per year (skip premium indefinite users)
+ * Run via cron on Jan 1
+ */
+function resetAnnualCredits() {
+  const currentYear = new Date().getFullYear();
+  const results = { employers: 0, jobseekers: 0, skipped: 0 };
+  
+  // Employers
+  const employers = db.prepare(`
+    SELECT user_id, current_job_posting_credits, current_ai_matching_credits, current_candidate_search_credits,
+           has_premium_indefinite_trial, last_annual_credit_reset_year
+    FROM profiles_employer
+    WHERE has_premium_indefinite_trial = 0
+    AND (last_annual_credit_reset_year IS NULL OR last_annual_credit_reset_year < ?)
+  `).all(currentYear);
+  
+  for (const emp of employers) {
+    if (emp.current_job_posting_credits > 0)
+      logCreditTransaction(emp.user_id, 'job_posting', -emp.current_job_posting_credits, 'annual_reset', null, null);
+    if (emp.current_ai_matching_credits > 0)
+      logCreditTransaction(emp.user_id, 'ai_matching', -emp.current_ai_matching_credits, 'annual_reset', null, null);
+    if (emp.current_candidate_search_credits > 0)
+      logCreditTransaction(emp.user_id, 'candidate_search', -emp.current_candidate_search_credits, 'annual_reset', null, null);
+    
+    db.prepare('UPDATE profiles_employer SET last_annual_credit_reset_year = ? WHERE user_id = ?').run(currentYear, emp.user_id);
+    results.employers++;
+  }
+  
+  // Jobseekers
+  const jobseekers = db.prepare(`
+    SELECT user_id, current_alert_credits, has_premium_indefinite_trial, last_annual_credit_reset_year
+    FROM profiles_jobseeker
+    WHERE has_premium_indefinite_trial = 0
+    AND (last_annual_credit_reset_year IS NULL OR last_annual_credit_reset_year < ?)
+  `).all(currentYear);
+  
+  for (const js of jobseekers) {
+    if (js.current_alert_credits > 0)
+      logCreditTransaction(js.user_id, 'alert', -js.current_alert_credits, 'annual_reset', null, null);
+    
+    db.prepare('UPDATE profiles_jobseeker SET last_annual_credit_reset_year = ? WHERE user_id = ?').run(currentYear, js.user_id);
+    results.jobseekers++;
+  }
+  
+  return results;
+}
+
+// ─── Status Queries ─────────────────────────────────────────────────
+
+/**
+ * Get full credit & billing status for a user
+ */
+function getCreditStatus(userId) {
+  const user = db.prepare('SELECT id, role, name, email FROM users WHERE id = ?').get(userId);
+  if (!user) return null;
+  
+  const trial = hasActiveTrial(userId);
+  
+  if (user.role === 'employer') {
+    const profile = db.prepare(`
+      SELECT current_job_posting_credits, current_ai_matching_credits, current_candidate_search_credits,
+             feature_tier, has_standard_trial_activated, standard_trial_end_date,
+             has_premium_indefinite_trial, premium_trial_override_by, last_annual_credit_reset_year,
+             total_jobs_posted
+      FROM profiles_employer WHERE user_id = ?
+    `).get(userId);
+    
+    if (!profile) return null;
+    
+    const activeJobs = db.prepare("SELECT COUNT(*) as n FROM jobs WHERE employer_id = ? AND status = 'active'").get(userId).n;
+    
+    return {
+      role: 'employer',
+      credits: {
+        job_posting: profile.current_job_posting_credits || 0,
+        ai_matching: profile.current_ai_matching_credits || 0,
+        candidate_search: profile.current_candidate_search_credits || 0,
+      },
+      featureTier: profile.feature_tier || 'free',
+      trial: trial.active ? trial : null,
+      trialUsed: !!profile.has_standard_trial_activated,
+      activeJobs,
+      totalJobsPosted: profile.total_jobs_posted || 0,
+      lastAnnualReset: profile.last_annual_credit_reset_year,
+    };
+  } else if (user.role === 'jobseeker') {
+    const profile = db.prepare(`
+      SELECT current_alert_credits, auto_apply_enabled, has_standard_trial_activated,
+             standard_trial_end_date, has_premium_indefinite_trial, last_annual_credit_reset_year
+      FROM profiles_jobseeker WHERE user_id = ?
+    `).get(userId);
+    
+    if (!profile) return null;
+    
+    return {
+      role: 'jobseeker',
+      credits: { alert: profile.current_alert_credits || 0 },
+      autoApply: !!profile.auto_apply_enabled,
+      trial: trial.active ? trial : null,
+      trialUsed: !!profile.has_standard_trial_activated,
+      lastAnnualReset: profile.last_annual_credit_reset_year,
+    };
+  }
+  
+  return { role: user.role, credits: {}, trial: null };
+}
+
+/**
+ * Get credit transaction history for a user
+ */
+function getCreditTransactions(userId, limit = 50, offset = 0) {
+  return db.prepare(`
+    SELECT * FROM credit_transactions
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(userId, limit, offset);
+}
+
+// ─── Legacy Compatibility ───────────────────────────────────────────
+
+/**
+ * Legacy getSubscriptionStatus wrapper (for backward compat)
+ */
+function getSubscriptionStatus(employerId) {
+  const status = getCreditStatus(employerId);
+  if (!status) return { plan: 'Free', price: 0, currency: 'PGK' };
+  
+  return {
+    plan: status.featureTier === 'free' ? 'Free' : status.featureTier.charAt(0).toUpperCase() + status.featureTier.slice(1),
+    credits: status.credits,
+    trial: status.trial,
+    trialUsed: status.trialUsed,
+    activeJobs: status.activeJobs,
+    featureTier: status.featureTier,
+  };
+}
+
+/**
+ * Legacy activatePlan wrapper — maps old plan activation to credit system
+ */
+function activatePlan(orderId) {
+  return approveOrder(orderId, null);
+}
+
 module.exports = {
   BANK_DETAILS,
+  // Core credit operations
+  logCreditTransaction,
+  consumeEmployerServiceCredit,
+  consumeJobSeekerAlertCredit,
+  addCreditPackage,
   canPostJob,
-  activatePlan,
+  // Trial system
+  hasActiveTrial,
+  activateEmployerStandardTrial,
+  activateJobSeekerStandardTrial,
+  grantPremiumIndefiniteTrial,
+  revokePremiumIndefiniteTrial,
+  // Order management
+  approveOrder,
   rejectOrder,
-  checkExpiredPlans,
-  sendRenewalEmails,
+  // Annual reset
+  resetAnnualCredits,
+  // Status queries
+  getCreditStatus,
+  getCreditTransactions,
+  // Legacy compat
   getSubscriptionStatus,
+  activatePlan,
 };

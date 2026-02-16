@@ -137,7 +137,35 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id);
 
-    -- New tables for v2
+    -- Credit packages (replaces old subscription plans)
+    CREATE TABLE IF NOT EXISTS packages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      target_role TEXT NOT NULL CHECK(target_role IN ('employer', 'jobseeker')),
+      package_type TEXT NOT NULL CHECK(package_type IN ('service_package', 'standard_trial', 'premium_indefinite_trial', 'free')),
+      price REAL NOT NULL DEFAULT 0,
+      currency TEXT DEFAULT 'PGK',
+      description TEXT,
+      -- Employer credits
+      job_posting_credits INTEGER DEFAULT 0,
+      ai_matching_credits INTEGER DEFAULT 0,
+      candidate_search_credits INTEGER DEFAULT 0,
+      -- Jobseeker credits
+      alert_credits INTEGER DEFAULT 0,
+      auto_apply_enabled INTEGER DEFAULT 0,
+      -- Feature tier unlocked by this package
+      feature_tier TEXT DEFAULT 'free' CHECK(feature_tier IN ('free', 'basic', 'professional', 'enterprise')),
+      -- Trial duration (days, 0 = not a trial)
+      trial_duration_days INTEGER DEFAULT 0,
+      -- Display
+      sort_order INTEGER DEFAULT 0,
+      popular INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Keep legacy plans table for migration reference (read-only)
     CREATE TABLE IF NOT EXISTS plans (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -156,18 +184,31 @@ function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       employer_id INTEGER NOT NULL,
-      plan_id INTEGER NOT NULL,
+      plan_id INTEGER DEFAULT NULL,
       amount REAL NOT NULL,
       currency TEXT DEFAULT 'PGK',
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'failed', 'refunded')),
+      status TEXT NOT NULL DEFAULT 'pending',
       payment_method TEXT,
       payment_ref TEXT,
       invoice_number TEXT UNIQUE,
       notes TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       completed_at TEXT,
-      FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (plan_id) REFERENCES plans(id)
+      FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    -- Credit transaction ledger
+    CREATE TABLE IF NOT EXISTS credit_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      credit_type TEXT NOT NULL CHECK(credit_type IN ('job_posting', 'ai_matching', 'candidate_search', 'alert')),
+      amount INTEGER NOT NULL,
+      balance_after INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      reference_type TEXT,
+      reference_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS categories (
@@ -451,20 +492,60 @@ function initializeDatabase() {
   addColumn('profiles_jobseeker', 'languages', 'TEXT');
   addColumn('profiles_jobseeker', 'profile_views', 'INTEGER DEFAULT 0');
   addColumn('profiles_jobseeker', 'last_active', 'TEXT');
+  // Jobseeker credit system columns
+  addColumn('profiles_jobseeker', 'current_alert_credits', 'INTEGER DEFAULT 0');
+  addColumn('profiles_jobseeker', 'auto_apply_enabled', 'INTEGER DEFAULT 0');
+  addColumn('profiles_jobseeker', 'has_standard_trial_activated', 'INTEGER DEFAULT 0');
+  addColumn('profiles_jobseeker', 'standard_trial_end_date', 'TEXT');
+  addColumn('profiles_jobseeker', 'has_premium_indefinite_trial', 'INTEGER DEFAULT 0');
+  addColumn('profiles_jobseeker', 'premium_trial_override_by', 'TEXT');
+  addColumn('profiles_jobseeker', 'last_annual_credit_reset_year', 'INTEGER');
+  addColumn('profiles_jobseeker', 'active_package_id', 'INTEGER');
 
   addColumn('profiles_employer', 'phone', 'TEXT');
   addColumn('profiles_employer', 'address', 'TEXT');
   addColumn('profiles_employer', 'city', 'TEXT');
   addColumn('profiles_employer', 'featured', 'INTEGER DEFAULT 0');
-  addColumn('profiles_employer', 'subscription_plan_id', 'INTEGER');
-  addColumn('profiles_employer', 'plan_expires_at', 'TEXT');
+  addColumn('profiles_employer', 'subscription_plan_id', 'INTEGER');  // legacy
+  addColumn('profiles_employer', 'plan_expires_at', 'TEXT');  // legacy
   addColumn('profiles_employer', 'total_jobs_posted', 'INTEGER DEFAULT 0');
+  // Credit system columns
+  addColumn('profiles_employer', 'current_job_posting_credits', 'INTEGER DEFAULT 0');
+  addColumn('profiles_employer', 'current_ai_matching_credits', 'INTEGER DEFAULT 0');
+  addColumn('profiles_employer', 'current_candidate_search_credits', 'INTEGER DEFAULT 0');
+  addColumn('profiles_employer', 'feature_tier', "TEXT DEFAULT 'free'");
+  addColumn('profiles_employer', 'has_standard_trial_activated', 'INTEGER DEFAULT 0');
+  addColumn('profiles_employer', 'standard_trial_end_date', 'TEXT');
+  addColumn('profiles_employer', 'has_premium_indefinite_trial', 'INTEGER DEFAULT 0');
+  addColumn('profiles_employer', 'premium_trial_override_by', 'TEXT');
+  addColumn('profiles_employer', 'last_annual_credit_reset_year', 'INTEGER');
 
   addColumn('jobs', 'featured', 'INTEGER DEFAULT 0');
   addColumn('jobs', 'apply_email', 'TEXT');
   addColumn('jobs', 'apply_url', 'TEXT');
   addColumn('jobs', 'company_name', 'TEXT');
   addColumn('jobs', 'applications_count', 'INTEGER DEFAULT 0');
+  // Orders table migration: add new columns for credit system
+  addColumn('orders', 'package_id', 'INTEGER');
+  addColumn('orders', 'user_id', 'INTEGER');  // alias for employer_id (supports jobseeker orders)
+  addColumn('orders', 'job_id', 'INTEGER');
+  addColumn('orders', 'duration_days', 'INTEGER');
+  addColumn('orders', 'ai_matching_addon', 'INTEGER DEFAULT 0');
+  addColumn('orders', 'candidate_search_addon', 'INTEGER DEFAULT 0');
+  addColumn('orders', 'approved_by', 'INTEGER');
+  addColumn('orders', 'approved_at', 'TEXT');
+
+  addColumn('jobs', 'price_per_day', 'REAL');
+  addColumn('jobs', 'posting_days', 'INTEGER DEFAULT 30');
+  addColumn('jobs', 'credits_used', 'INTEGER DEFAULT 1');
+
+  // Credit transaction indexes
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_credit_transactions_user ON credit_transactions(user_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_credit_transactions_type ON credit_transactions(credit_type)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_packages_role ON packages(target_role, active)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id)`);
+  } catch(e) {}
 
   console.log('✅ Database initialized');
 }
@@ -480,6 +561,36 @@ if (hasAdmin.count === 0) {
     db.prepare('INSERT INTO users (email, password_hash, role, name) VALUES (?, ?, ?, ?)').run('admin@wantokjobs.com', hash, 'admin', 'Admin User');
     console.log('🌱 Admin user seeded: admin@wantokjobs.com / admin123');
   } catch (e) { console.error('Seed error:', e.message); }
+}
+
+// Ensure a legacy plan placeholder exists for new credit-based orders
+try {
+  const hasLegacyPlaceholder = db.prepare('SELECT id FROM plans WHERE id = 0').get();
+  if (!hasLegacyPlaceholder) {
+    db.prepare("INSERT INTO plans (id, name, price, currency, duration_days, job_limit, active) VALUES (0, 'Credit Package', 0, 'PGK', 0, 0, 0)").run();
+  }
+} catch(e) {}
+
+// Seed credit packages if empty
+const hasPackages = db.prepare('SELECT COUNT(*) as count FROM packages').get();
+if (hasPackages.count === 0) {
+  const pkgs = [
+    // Employer packages
+    ['Free Tier', 'employer-free', 'employer', 'free', 0, 'PGK', 'Basic free account — 1 job posting', 1, 0, 0, 0, 0, 'free', 0, 0, 0],
+    ['Starter Pack', 'employer-starter', 'employer', 'service_package', 500, 'PGK', '5 job postings + 3 AI matches + 10 candidate searches', 5, 3, 10, 0, 0, 'basic', 0, 1, 0],
+    ['Pro Pack', 'employer-pro', 'employer', 'service_package', 1800, 'PGK', '20 job postings + 15 AI matches + 50 candidate searches', 20, 15, 50, 0, 0, 'professional', 0, 2, 1],
+    ['Enterprise Pack', 'employer-enterprise', 'employer', 'service_package', 7500, 'PGK', '100 job postings + unlimited AI matching & search', 100, 999, 999, 0, 0, 'enterprise', 0, 3, 0],
+    ['Employer Trial', 'employer-trial', 'employer', 'standard_trial', 0, 'PGK', '14-day free trial with credits', 3, 2, 5, 0, 0, 'basic', 14, 4, 0],
+    // Jobseeker packages
+    ['Free Job Seeker', 'jobseeker-free', 'jobseeker', 'free', 0, 'PGK', 'Basic free account', 0, 0, 0, 0, 0, 'free', 0, 0, 0],
+    ['Starter Alert Pack', 'jobseeker-starter', 'jobseeker', 'service_package', 20, 'PGK', '50 job alert credits', 0, 0, 0, 50, 0, 'basic', 0, 1, 0],
+    ['Pro Alert Pack', 'jobseeker-pro', 'jobseeker', 'service_package', 60, 'PGK', '200 alert credits + auto-apply', 0, 0, 0, 200, 1, 'professional', 0, 2, 1],
+    ['Premium Alert Pack', 'jobseeker-premium', 'jobseeker', 'service_package', 120, 'PGK', '500 alert credits + auto-apply', 0, 0, 0, 500, 1, 'professional', 0, 3, 0],
+    ['Job Seeker Trial', 'jobseeker-trial', 'jobseeker', 'standard_trial', 0, 'PGK', '14-day free trial with alerts', 0, 0, 0, 20, 1, 'basic', 14, 4, 0],
+  ];
+  const insertPkg = db.prepare(`INSERT INTO packages (name, slug, target_role, package_type, price, currency, description, job_posting_credits, ai_matching_credits, candidate_search_credits, alert_credits, auto_apply_enabled, feature_tier, trial_duration_days, sort_order, popular) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  for (const p of pkgs) insertPkg.run(...p);
+  console.log('🌱 Credit packages seeded');
 }
 
 // Full-text search index for jobs

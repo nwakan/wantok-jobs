@@ -1,11 +1,10 @@
-const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const router = express.Router();
 const { sendOrderConfirmationEmail, sendEmail } = require('../lib/email');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
-const { BANK_DETAILS, activatePlan, rejectOrder, getSubscriptionStatus } = require('../lib/billing');
+const { BANK_DETAILS, approveOrder, rejectOrder, getCreditStatus } = require('../lib/billing');
 const { events: notifEvents } = require('../lib/notifications');
 
 // GET /bank-details — Public bank transfer info
@@ -13,34 +12,51 @@ router.get('/bank-details', (req, res) => {
   res.json({ bankDetails: BANK_DETAILS });
 });
 
-// GET /my/subscription — Employer's current subscription status
-router.get('/my/subscription', authenticateToken, requireRole('employer'), (req, res) => {
+// GET /my/credits — User's credit status (convenience alias)
+router.get('/my/credits', authenticateToken, (req, res) => {
   try {
-    const status = getSubscriptionStatus(req.user.id);
+    const status = getCreditStatus(req.user.id);
+    if (!status) return res.status(404).json({ error: 'Profile not found' });
     res.json(status);
   } catch (error) {
-    console.error('Subscription status error:', error);
-    res.status(500).json({ error: 'Failed to fetch subscription' });
+    res.status(500).json({ error: 'Failed to fetch credit status' });
   }
 });
 
-// POST / — Create order (employer only)
-router.post('/', authenticateToken, requireRole('employer'), validate(schemas.order), (req, res) => {
+// Legacy compat: GET /my/subscription
+router.get('/my/subscription', authenticateToken, (req, res) => {
   try {
-    const { plan_id, payment_method, notes } = req.body;
-    const employer_id = req.user.id;
+    const status = getCreditStatus(req.user.id);
+    if (!status) return res.status(404).json({ error: 'Profile not found' });
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch status' });
+  }
+});
 
-    // Validate plan
-    const plan = db.prepare('SELECT * FROM plans WHERE id = ? AND active = 1').get(plan_id);
-    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+// POST / — Create order (purchase a credit package)
+router.post('/', authenticateToken, (req, res) => {
+  try {
+    const { package_id, payment_method, notes } = req.body;
+    if (!package_id) return res.status(400).json({ error: 'package_id required' });
+    
+    const userId = req.user.id;
 
-    // Check for existing pending order for same plan
+    // Validate package
+    const pkg = db.prepare('SELECT * FROM packages WHERE id = ? AND active = 1').get(package_id);
+    if (!pkg) return res.status(404).json({ error: 'Package not found' });
+    if (pkg.target_role !== req.user.role) {
+      return res.status(400).json({ error: `This package is for ${pkg.target_role}s` });
+    }
+    if (pkg.price === 0) return res.status(400).json({ error: 'Cannot purchase a free package' });
+
+    // Check for existing pending order for same package
     const existingPending = db.prepare(
-      'SELECT id FROM orders WHERE employer_id = ? AND plan_id = ? AND status = ?'
-    ).get(employer_id, plan_id, 'pending');
+      'SELECT id FROM orders WHERE COALESCE(user_id, employer_id) = ? AND package_id = ? AND status = ?'
+    ).get(userId, package_id, 'pending');
     if (existingPending) {
       return res.status(409).json({ 
-        error: 'You already have a pending order for this plan',
+        error: 'You already have a pending order for this package',
         orderId: existingPending.id,
       });
     }
@@ -53,22 +69,22 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.or
     const invoice_number = `WJ-${dateStr}-${String(dayCount).padStart(4, '0')}`;
 
     const result = db.prepare(`
-      INSERT INTO orders (employer_id, plan_id, amount, currency, status, payment_method, invoice_number, notes)
-      VALUES (?, ?, ?, ?, 'pending', 'bank_transfer', ?, ?)
-    `).run(employer_id, plan_id, plan.price, plan.currency, invoice_number, notes);
+      INSERT INTO orders (employer_id, user_id, package_id, plan_id, amount, currency, status, payment_method, invoice_number, notes)
+      VALUES (?, ?, ?, 0, ?, ?, 'pending', ?, ?, ?)
+    `).run(userId, userId, package_id, pkg.price, pkg.currency, payment_method || 'bank_transfer', invoice_number, notes);
 
     const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(result.lastInsertRowid);
 
     // Send confirmation email with bank details
-    sendOrderConfirmationEmail({ email: req.user.email, name: req.user.name }, order, plan).catch(() => {});
+    sendOrderConfirmationEmail({ email: req.user.email, name: req.user.name }, order, pkg).catch(() => {});
 
     // Notify admins
-    try { notifEvents.onOrderCreated(order, { id: employer_id, name: req.user.name }, plan); } catch(e) {}
+    try { notifEvents.onOrderCreated(order, { id: userId, name: req.user.name }, pkg); } catch(e) {}
 
     res.status(201).json({
       order,
       bankDetails: BANK_DETAILS,
-      instructions: `Please transfer K${plan.price.toLocaleString()} to ${BANK_DETAILS.bank} and use "${invoice_number}" as your payment reference. Your plan will be activated within 24 hours of payment verification.`,
+      instructions: `Please transfer K${pkg.price.toLocaleString()} to ${BANK_DETAILS.bank} and use "${invoice_number}" as your payment reference. Your credits will be added within 24 hours of payment verification.`,
     });
   } catch (error) {
     console.error('Error creating order:', error);
@@ -76,14 +92,15 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.or
   }
 });
 
-// GET /my — Employer's orders
-router.get('/my', authenticateToken, requireRole('employer'), (req, res) => {
+// GET /my — User's orders
+router.get('/my', authenticateToken, (req, res) => {
   try {
     const orders = db.prepare(`
-      SELECT o.*, p.name as plan_name, p.job_limit, p.duration_days
+      SELECT o.*, p.name as package_name, 
+             p.job_posting_credits, p.ai_matching_credits, p.candidate_search_credits, p.alert_credits
       FROM orders o
-      JOIN plans p ON o.plan_id = p.id
-      WHERE o.employer_id = ?
+      LEFT JOIN packages p ON o.package_id = p.id
+      WHERE COALESCE(o.user_id, o.employer_id) = ?
       ORDER BY o.created_at DESC
     `).all(req.user.id);
 
@@ -98,16 +115,18 @@ router.get('/my', authenticateToken, requireRole('employer'), (req, res) => {
 router.get('/:id', authenticateToken, (req, res) => {
   try {
     const order = db.prepare(`
-      SELECT o.*, p.name as plan_name, p.job_limit, p.duration_days, p.price as plan_price,
-             u.name as employer_name, u.email as employer_email
+      SELECT o.*, p.name as package_name, 
+             p.job_posting_credits, p.ai_matching_credits, p.candidate_search_credits, p.alert_credits,
+             p.description as package_description,
+             u.name as user_name, u.email as user_email, u.role as user_role
       FROM orders o
-      JOIN plans p ON o.plan_id = p.id
-      JOIN users u ON o.employer_id = u.id
+      LEFT JOIN packages p ON o.package_id = p.id
+      JOIN users u ON COALESCE(o.user_id, o.employer_id) = u.id
       WHERE o.id = ?
     `).get(req.params.id);
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    if (order.employer_id !== req.user.id && req.user.role !== 'admin') {
+    if (( order.user_id || order.employer_id ) !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -130,13 +149,13 @@ router.get('/admin/all', authenticateToken, requireRole('admin'), (req, res) => 
     if (status) { where = ' WHERE o.status = ?'; params.push(status); }
 
     const orders = db.prepare(`
-      SELECT o.*, p.name as plan_name, p.job_limit, p.price as plan_price,
-             u.name as employer_name, u.email as employer_email,
+      SELECT o.*, p.name as package_name, p.job_posting_credits, p.alert_credits,
+             u.name as user_name, u.email as user_email, u.role as user_role,
              pe.company_name
       FROM orders o
-      JOIN plans p ON o.plan_id = p.id
-      JOIN users u ON o.employer_id = u.id
-      LEFT JOIN profiles_employer pe ON o.employer_id = pe.user_id
+      LEFT JOIN packages p ON o.package_id = p.id
+      JOIN users u ON COALESCE(o.user_id, o.employer_id) = u.id
+      LEFT JOIN profiles_employer pe ON COALESCE(o.user_id, o.employer_id) = pe.user_id
       ${where}
       ORDER BY o.created_at DESC
       LIMIT ? OFFSET ?
@@ -145,7 +164,6 @@ router.get('/admin/all', authenticateToken, requireRole('admin'), (req, res) => 
     const total = db.prepare('SELECT COUNT(*) as count FROM orders' + (status ? ' WHERE status = ?' : ''))
       .get(...(status ? [status] : []));
 
-    // Summary stats
     const stats = {
       pending: db.prepare("SELECT COUNT(*) as n FROM orders WHERE status = 'pending'").get().n,
       completed: db.prepare("SELECT COUNT(*) as n FROM orders WHERE status = 'completed'").get().n,
@@ -160,55 +178,58 @@ router.get('/admin/all', authenticateToken, requireRole('admin'), (req, res) => 
   }
 });
 
-// PUT /admin/:id/approve — Admin approves payment → activates plan
+// PUT /admin/:id/approve — Admin approves payment → grants credits
 router.put('/admin/:id/approve', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const { payment_ref } = req.body || {};
     const orderId = req.params.id;
 
-    // Save payment reference if provided
     if (payment_ref) {
       db.prepare('UPDATE orders SET payment_ref = ? WHERE id = ?').run(payment_ref, orderId);
     }
 
-    const result = activatePlan(orderId);
+    const result = approveOrder(orderId, req.user.id);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
 
-    // Get full order info for notifications
+    // Get order info for notifications
     const order = db.prepare(`
-      SELECT o.*, u.name, u.email, p.name as plan_name
-      FROM orders o JOIN users u ON o.employer_id = u.id JOIN plans p ON o.plan_id = p.id
+      SELECT o.*, u.name, u.email, p.name as package_name
+      FROM orders o 
+      JOIN users u ON COALESCE(o.user_id, o.employer_id) = u.id 
+      LEFT JOIN packages p ON o.package_id = p.id
       WHERE o.id = ?
     `).get(orderId);
 
-    // Notify employer
     if (order) {
+      const creditInfo = result.creditResult?.credits || {};
+      const creditSummary = Object.entries(creditInfo)
+        .filter(([_, v]) => v > 0)
+        .map(([k, v]) => `${v} ${k.replace('_', ' ')}`)
+        .join(', ');
+
       db.prepare(`
         INSERT INTO notifications (user_id, type, title, message, data)
-        VALUES (?, 'order_approved', 'Plan Activated! 🎉', ?, '/dashboard/employer/orders-billing')
-      `).run(order.employer_id, `Your ${order.plan_name} plan is now active! You can post up to ${result.plan === 'Enterprise' ? 'unlimited' : order.job_limit || 'more'} jobs. Expires: ${result.expiresAt ? new Date(result.expiresAt).toLocaleDateString() : 'Never'}`);
+        VALUES (?, 'order_approved', 'Credits Added! 🎉', ?, '/dashboard/employer/orders-billing')
+      `).run(( order.user_id || order.employer_id ), `Your payment for the ${order.package_name || 'credit'} package has been confirmed. Credits added: ${creditSummary || 'see your dashboard'}.`);
 
       // Send activation email
       sendEmail({
         to: order.email, toName: order.name, tags: ['billing'],
-        subject: `Plan Activated: ${order.plan_name} 🎉`,
+        subject: `Credits Added: ${order.package_name} 🎉`,
         html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
           <div style="background:#16a34a;padding:24px;text-align:center;">
             <h1 style="color:white;margin:0;">WantokJobs</h1>
           </div>
           <div style="padding:24px;">
-            <h2>Your ${order.plan_name} plan is now active!</h2>
+            <h2>Your credits have been added!</h2>
             <p>Hi ${order.name},</p>
-            <p>We have confirmed your payment for the <strong>${order.plan_name}</strong> plan (Invoice: ${order.invoice_number}).</p>
-            <p><strong>What you now have access to:</strong></p>
-            <ul>
-              <li>Post up to ${result.plan === 'Enterprise' ? 'unlimited' : order.job_limit || 'more'} active jobs</li>
-              ${result.expiresAt ? `<li>Plan valid until: ${new Date(result.expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</li>` : ''}
-            </ul>
+            <p>We've confirmed your payment for <strong>${order.package_name}</strong> (Invoice: ${order.invoice_number}).</p>
+            <p><strong>Credits added:</strong></p>
+            <ul>${creditSummary ? creditSummary.split(', ').map(c => `<li>${c} credits</li>`).join('') : '<li>See your dashboard</li>'}</ul>
             <p style="text-align:center;margin-top:24px;">
-              <a href="${process.env.APP_URL || 'https://wantokjobs.com'}/dashboard/employer/post-job" style="background:#16a34a;color:white;padding:14px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;">Post a Job Now</a>
+              <a href="${process.env.APP_URL || 'https://wantokjobs.com'}/dashboard/employer/orders-billing" style="background:#16a34a;color:white;padding:14px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;">View My Credits</a>
             </p>
           </div>
         </div>`,
@@ -218,13 +239,10 @@ router.put('/admin/:id/approve', authenticateToken, requireRole('admin'), (req, 
     // Log activity
     try {
       db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)')
-        .run(req.user.id, 'approve_order', 'order', orderId, JSON.stringify({ plan: result.plan, expiresAt: result.expiresAt }));
+        .run(req.user.id, 'approve_order', 'order', orderId, JSON.stringify(result));
     } catch(e) {}
 
-    res.json({
-      message: 'Payment approved and plan activated',
-      ...result,
-    });
+    res.json({ message: 'Payment approved and credits added', ...result });
   } catch (error) {
     console.error('Error approving order:', error);
     res.status(500).json({ error: 'Failed to approve order' });
@@ -238,14 +256,11 @@ router.put('/admin/:id/reject', authenticateToken, requireRole('admin'), (req, r
     const orderId = req.params.id;
 
     const result = rejectOrder(orderId, reason);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
+    if (!result.success) return res.status(400).json({ error: result.error });
 
-    // Notify employer
     const order = db.prepare(`
-      SELECT o.*, u.name, u.email, p.name as plan_name
-      FROM orders o JOIN users u ON o.employer_id = u.id JOIN plans p ON o.plan_id = p.id
+      SELECT o.*, u.name, u.email, p.name as package_name
+      FROM orders o JOIN users u ON COALESCE(o.user_id, o.employer_id) = u.id LEFT JOIN packages p ON o.package_id = p.id
       WHERE o.id = ?
     `).get(orderId);
 
@@ -253,10 +268,9 @@ router.put('/admin/:id/reject', authenticateToken, requireRole('admin'), (req, r
       db.prepare(`
         INSERT INTO notifications (user_id, type, title, message, data)
         VALUES (?, 'order_rejected', 'Order Update', ?, '/dashboard/employer/orders-billing')
-      `).run(order.employer_id, `Your order for the ${order.plan_name} plan (${order.invoice_number}) could not be processed. Reason: ${reason || 'Payment not received'}. Please contact support if you believe this is an error.`);
+      `).run(( order.user_id || order.employer_id ), `Your order for ${order.package_name || 'credits'} (${order.invoice_number}) could not be processed. Reason: ${reason || 'Payment not received'}. Please contact support if you believe this is an error.`);
     }
 
-    // Log
     try {
       db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)')
         .run(req.user.id, 'reject_order', 'order', orderId, JSON.stringify({ reason }));
@@ -264,7 +278,6 @@ router.put('/admin/:id/reject', authenticateToken, requireRole('admin'), (req, r
 
     res.json({ message: 'Order rejected', reason });
   } catch (error) {
-    console.error('Error rejecting order:', error);
     res.status(500).json({ error: 'Failed to reject order' });
   }
 });
@@ -278,10 +291,20 @@ router.get('/admin/stats', authenticateToken, requireRole('admin'), (req, res) =
       totalOrders: db.prepare('SELECT COUNT(*) as n FROM orders').get().n,
       pendingOrders: db.prepare("SELECT COUNT(*) as n FROM orders WHERE status = 'pending'").get().n,
       completedOrders: db.prepare("SELECT COUNT(*) as n FROM orders WHERE status = 'completed'").get().n,
-      activeSubscriptions: db.prepare('SELECT COUNT(*) as n FROM profiles_employer WHERE subscription_plan_id IS NOT NULL AND (plan_expires_at IS NULL OR plan_expires_at > datetime(?))').get(new Date().toISOString()).n,
-      revenueByPlan: db.prepare(`
+      // Credit stats
+      totalCreditsOutstanding: {
+        job_posting: db.prepare('SELECT COALESCE(SUM(current_job_posting_credits), 0) as n FROM profiles_employer').get().n,
+        ai_matching: db.prepare('SELECT COALESCE(SUM(current_ai_matching_credits), 0) as n FROM profiles_employer').get().n,
+        candidate_search: db.prepare('SELECT COALESCE(SUM(current_candidate_search_credits), 0) as n FROM profiles_employer').get().n,
+        alert: db.prepare('SELECT COALESCE(SUM(current_alert_credits), 0) as n FROM profiles_jobseeker').get().n,
+      },
+      premiumTrials: db.prepare('SELECT COUNT(*) as n FROM profiles_employer WHERE has_premium_indefinite_trial = 1').get().n
+        + db.prepare('SELECT COUNT(*) as n FROM profiles_jobseeker WHERE has_premium_indefinite_trial = 1').get().n,
+      activeTrials: db.prepare("SELECT COUNT(*) as n FROM profiles_employer WHERE standard_trial_end_date > datetime('now')").get().n
+        + db.prepare("SELECT COUNT(*) as n FROM profiles_jobseeker WHERE standard_trial_end_date > datetime('now')").get().n,
+      revenueByPackage: db.prepare(`
         SELECT p.name, COUNT(*) as orders, SUM(o.amount) as revenue
-        FROM orders o JOIN plans p ON o.plan_id = p.id
+        FROM orders o JOIN packages p ON o.package_id = p.id
         WHERE o.status = 'completed'
         GROUP BY p.name ORDER BY revenue DESC
       `).all(),
