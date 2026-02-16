@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
 import JobCard from '../components/JobCard';
+import PageHead from '../components/PageHead';
 import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp, CheckCircle2, ArrowRight, ArrowLeft, FileText, Mail, Phone, MapPin, Upload, AlertCircle, X } from 'lucide-react';
 
 export default function JobDetail() {
@@ -489,6 +490,14 @@ export default function JobDetail() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {job && (
+        <PageHead
+          title={`${job.title}${job.company_name ? ` at ${job.company_name}` : ''} — ${job.location || 'PNG'}`}
+          description={`Apply for ${job.title}${job.company_name ? ` at ${job.company_name}` : ''} in ${job.location || 'Papua New Guinea'}. ${job.job_type || 'Full-time'}${job.salary_min ? ` • ${job.salary_currency || 'PGK'} ${job.salary_min.toLocaleString()}${job.salary_max ? `-${job.salary_max.toLocaleString()}` : ''}` : ''}`}
+          type="article"
+          image={job.logo_url}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Link to="/jobs" className="text-primary-600 hover:text-primary-700 mb-4 inline-flex items-center gap-1 font-medium">
           ← Back to jobs

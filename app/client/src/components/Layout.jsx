@@ -85,47 +85,85 @@ export default function Layout() {
               )}
             </div>
 
-            {/* Mobile menu button */}
+            {/* Mobile menu button - enhanced touch target */}
             <div className="flex items-center sm:hidden">
+              {user && <NotificationDropdown />}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] p-3 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 active:bg-gray-200"
+                aria-label="Toggle mobile menu"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
                 </svg>
               </button>
             </div>
           </div>
 
-          {/* Mobile menu */}
+          {/* Mobile menu - enhanced touch targets (min 44px) */}
           {mobileMenuOpen && (
-            <div className="sm:hidden pb-3">
-              <Link to="/jobs" className="block px-3 py-2 text-gray-900 hover:bg-gray-50">
-                Find Jobs
+            <div className="sm:hidden py-3 border-t border-gray-100">
+              <Link 
+                to="/jobs" 
+                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                🔍 Find Jobs
               </Link>
-              <Link to="/about" className="block px-3 py-2 text-gray-900 hover:bg-gray-50">
-                About
+              <Link 
+                to="/companies" 
+                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                🏢 Companies
+              </Link>
+              <Link 
+                to="/about" 
+                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                ℹ️ About
               </Link>
               {user ? (
                 <>
-                  <Link to={getDashboardLink()} className="block px-3 py-2 text-gray-900 hover:bg-gray-50">
-                    Dashboard
+                  <div className="border-t border-gray-100 my-2"></div>
+                  <div className="px-4 py-2 text-sm text-gray-600">
+                    Signed in as <strong>{user.name}</strong>
+                  </div>
+                  <Link 
+                    to={getDashboardLink()} 
+                    className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    📊 Dashboard
                   </Link>
                   <button
-                    onClick={handleLogout}
-                    className="block w-full text-left px-3 py-2 text-gray-900 hover:bg-gray-50"
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="block w-full text-left px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 active:bg-red-100 min-h-[44px] flex items-center"
                   >
-                    Logout
+                    🚪 Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="block px-3 py-2 text-gray-900 hover:bg-gray-50">
-                    Login
+                  <div className="border-t border-gray-100 my-2"></div>
+                  <Link 
+                    to="/login" 
+                    className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    🔐 Login
                   </Link>
-                  <Link to="/register" className="block px-3 py-2 text-gray-900 hover:bg-gray-50">
-                    Sign Up
+                  <Link 
+                    to="/register" 
+                    className="block mx-4 my-2 px-4 py-3 text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 active:bg-primary-800 rounded-lg text-center min-h-[44px] flex items-center justify-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    ✨ Sign Up Free
                   </Link>
                 </>
               )}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../../../api';
 import { useToast } from '../../../components/Toast';
+import { CheckSquare, XSquare, AlertCircle } from 'lucide-react';
 
 export default function Reports() {
   const { showToast } = useToast();
@@ -11,9 +12,17 @@ export default function Reports() {
     start: '',
     end: '',
   });
+  
+  // Bulk actions state
+  const [pendingReviews, setPendingReviews] = useState([]);
+  const [pendingJobReports, setPendingJobReports] = useState([]);
+  const [selectedReviews, setSelectedReviews] = useState([]);
+  const [selectedJobReports, setSelectedJobReports] = useState([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   useEffect(() => {
     loadReports();
+    loadPendingItems();
   }, [selectedYear]);
 
   const loadReports = async () => {
@@ -33,6 +42,81 @@ export default function Reports() {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const loadPendingItems = async () => {
+    try {
+      const [reviewsRes, reportsRes] = await Promise.all([
+        fetch('/api/admin/reviews?status=pending').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/admin/job-reports?status=pending').then(r => r.ok ? r.json() : { data: [] })
+      ]);
+      setPendingReviews(reviewsRes.data || []);
+      setPendingJobReports(reportsRes.data || []);
+    } catch (error) {
+      console.error('Failed to load pending items:', error);
+    }
+  };
+  
+  const handleBulkApproveReviews = async () => {
+    if (selectedReviews.length === 0) {
+      showToast('No reviews selected', 'error');
+      return;
+    }
+    
+    try {
+      await fetch('/api/admin/reviews/bulk-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedReviews }),
+      });
+      showToast(`${selectedReviews.length} reviews approved`, 'success');
+      setSelectedReviews([]);
+      loadPendingItems();
+    } catch (error) {
+      showToast('Bulk approve failed', 'error');
+    }
+  };
+  
+  const handleBulkRejectReviews = async () => {
+    if (selectedReviews.length === 0) {
+      showToast('No reviews selected', 'error');
+      return;
+    }
+    
+    if (!confirm(`Reject ${selectedReviews.length} reviews? This cannot be undone.`)) return;
+    
+    try {
+      await fetch('/api/admin/reviews/bulk-reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedReviews }),
+      });
+      showToast(`${selectedReviews.length} reviews rejected`, 'success');
+      setSelectedReviews([]);
+      loadPendingItems();
+    } catch (error) {
+      showToast('Bulk reject failed', 'error');
+    }
+  };
+  
+  const handleBulkResolveJobReports = async (action) => {
+    if (selectedJobReports.length === 0) {
+      showToast('No job reports selected', 'error');
+      return;
+    }
+    
+    try {
+      await fetch('/api/admin/job-reports/bulk-resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedJobReports, action }),
+      });
+      showToast(`${selectedJobReports.length} job reports ${action}`, 'success');
+      setSelectedJobReports([]);
+      loadPendingItems();
+    } catch (error) {
+      showToast('Bulk action failed', 'error');
     }
   };
 
@@ -71,7 +155,144 @@ export default function Reports() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
+        <button
+          onClick={() => setShowBulkActions(!showBulkActions)}
+          className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 font-medium text-sm flex items-center gap-2"
+        >
+          <AlertCircle className="w-4 h-4" />
+          Pending Items ({(pendingReviews.length + pendingJobReports.length)})
+        </button>
       </div>
+
+      {/* Bulk Actions Panel */}
+      {showBulkActions && (pendingReviews.length > 0 || pendingJobReports.length > 0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
+            Pending Moderation
+          </h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Pending Reviews */}
+            {pendingReviews.length > 0 && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-semibold text-gray-900">Company Reviews ({pendingReviews.length})</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleBulkApproveReviews}
+                      disabled={selectedReviews.length === 0}
+                      className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+                    >
+                      <CheckSquare className="w-3 h-3" />
+                      Approve ({selectedReviews.length})
+                    </button>
+                    <button
+                      onClick={handleBulkRejectReviews}
+                      disabled={selectedReviews.length === 0}
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+                    >
+                      <XSquare className="w-3 h-3" />
+                      Reject ({selectedReviews.length})
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {pendingReviews.slice(0, 10).map(review => (
+                    <label key={review.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedReviews.includes(review.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedReviews([...selectedReviews, review.id]);
+                          } else {
+                            setSelectedReviews(selectedReviews.filter(id => id !== review.id));
+                          }
+                        }}
+                        className="mt-1 h-4 w-4 text-primary-600 rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-900">{review.company_name || 'Company'}</div>
+                        <div className="text-xs text-gray-600 line-clamp-2">{review.review_text}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Rating: {'⭐'.repeat(review.rating || 0)} | {review.author_name}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                
+                {pendingReviews.length === 0 && (
+                  <div className="text-center py-6 text-gray-500 text-sm">
+                    No pending reviews
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Pending Job Reports */}
+            {pendingJobReports.length > 0 && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-semibold text-gray-900">Job Reports ({pendingJobReports.length})</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleBulkResolveJobReports('resolved')}
+                      disabled={selectedJobReports.length === 0}
+                      className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+                    >
+                      <CheckSquare className="w-3 h-3" />
+                      Resolve ({selectedJobReports.length})
+                    </button>
+                    <button
+                      onClick={() => handleBulkResolveJobReports('dismissed')}
+                      disabled={selectedJobReports.length === 0}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+                    >
+                      <XSquare className="w-3 h-3" />
+                      Dismiss ({selectedJobReports.length})
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {pendingJobReports.slice(0, 10).map(report => (
+                    <label key={report.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedJobReports.includes(report.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedJobReports([...selectedJobReports, report.id]);
+                          } else {
+                            setSelectedJobReports(selectedJobReports.filter(id => id !== report.id));
+                          }
+                        }}
+                        className="mt-1 h-4 w-4 text-primary-600 rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-900">{report.job_title || 'Job'}</div>
+                        <div className="text-xs text-gray-600 line-clamp-2">{report.reason}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Reported by: {report.reporter_name || 'User'} | {new Date(report.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                
+                {pendingJobReports.length === 0 && (
+                  <div className="text-center py-6 text-gray-500 text-sm">
+                    No pending job reports
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Date Range Selector & Export */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
