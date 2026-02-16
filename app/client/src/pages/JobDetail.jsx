@@ -228,12 +228,14 @@ export default function JobDetail() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
-                      <p className="text-lg text-gray-700 font-medium flex items-center gap-2">
-                        {job.company_name}
-                        {job.source !== 'headhunter' && (
-                          <span className="text-green-600 text-sm">✓ Verified</span>
-                        )}
-                      </p>
+                      {job.company_name && job.company_name !== 'WantokJobs Imports' && (
+                        <p className="text-lg text-gray-700 font-medium flex items-center gap-2">
+                          {job.company_name}
+                          {!job.source?.includes('headhunter') && !job.source?.includes('deep-scrape') && (
+                            <span className="text-green-600 text-sm">✓ Verified</span>
+                          )}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -386,7 +388,7 @@ export default function JobDetail() {
             )}
 
             {/* Company Info */}
-            {(job.company_description || job.website) && (
+            {(job.company_description || job.website) && job.company_name !== 'WantokJobs Imports' && !job.company_description?.includes('System account for imported') && (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">About {job.company_name}</h2>
                 {job.company_description && (
@@ -412,16 +414,6 @@ export default function JobDetail() {
               </div>
             )}
 
-            {/* External Link Notice */}
-            {job.external_url && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-sm text-amber-800">
-                  <span className="font-semibold">Note:</span> This job is hosted externally. 
-                  Click "Apply on Company Website" to submit your application.
-                </p>
-              </div>
-            )}
-
             {/* Additional Info */}
             <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
               <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -431,13 +423,6 @@ export default function JobDetail() {
                 <div>
                   <span className="font-medium">Views:</span> {job.views_count || 0}
                 </div>
-                {job.source === 'headhunter' && (
-                  <div>
-                    <span className="inline-flex items-center gap-1">
-                      🤖 <span className="font-medium">Imported from external source</span>
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -493,11 +478,11 @@ export default function JobDetail() {
             </div>
 
             {/* Company Snapshot */}
-            {(job.company_name || job.location) && (
+            {(job.location || (job.company_name && job.company_name !== 'WantokJobs Imports')) && (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <h3 className="font-bold text-gray-900 mb-4">Company Snapshot</h3>
                 <div className="space-y-3 text-sm">
-                  {job.company_name && (
+                  {job.company_name && job.company_name !== 'WantokJobs Imports' && (
                     <div className="flex items-start gap-2">
                       <span className="text-gray-500 min-w-[24px]">🏢</span>
                       <div>

@@ -36,7 +36,7 @@ git push origin main 2>&1 | tail -3
 # Deploy to VPS
 VPS="root@76.13.190.157"
 echo "📥 Pulling on VPS..."
-ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $VPS "cd /opt/wantokjobs && git pull origin main" 2>&1 | tail -3
+ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $VPS "cd /opt/wantokjobs && git checkout -- . && rm -f app/server/data/wantokjobs.db-shm app/server/data/wantokjobs.db-wal && git clean -fd app/server/public/ 2>/dev/null; git pull origin main" 2>&1 | tail -5
 
 echo "📦 Installing deps on VPS..."
 ssh $VPS "cd /opt/wantokjobs/app && npm install --production 2>&1 | tail -3"
