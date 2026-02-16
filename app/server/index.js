@@ -206,6 +206,9 @@ app.use('/api/contact', contactLimiter, require('./routes/contact'));
 const { authenticateToken } = require('./middleware/auth');
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 
+// Sitemap routes (SEO)
+app.use('/', require('./routes/sitemap'));
+
 // robots.txt
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(`User-agent: *

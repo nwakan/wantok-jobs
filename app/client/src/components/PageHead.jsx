@@ -8,6 +8,7 @@ const SITE_NAME = 'WantokJobs';
 export default function PageHead({ title, description, image, type = 'website', noIndex = false }) {
   const location = useLocation();
   const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} — Find Jobs in Papua New Guinea`;
+  // Canonical URL: strip query parameters for cleaner indexing
   const canonicalUrl = `${BASE_URL}${location.pathname}`;
   const ogImage = image || DEFAULT_IMAGE;
 
