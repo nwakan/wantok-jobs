@@ -160,4 +160,143 @@ router.delete("/jobs/:id", (req, res) => {
   }
 });
 
+// ─── Banners ──────────────────────────────────────────────────────
+
+// GET /banners — List all banners
+router.get('/banners', (req, res) => {
+  try {
+    const banners = db.prepare('SELECT * FROM banners ORDER BY active DESC, id DESC').all();
+    res.json({ banners });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch banners' });
+  }
+});
+
+// POST /banners — Create banner
+router.post('/banners', (req, res) => {
+  try {
+    const { title, image_url, link_url, placement, start_date, end_date } = req.body;
+    if (!image_url || !placement) return res.status(400).json({ error: 'image_url and placement required' });
+    
+    const result = db.prepare(`
+      INSERT INTO banners (employer_id, title, image_url, link_url, placement, start_date, end_date, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(req.user.id, title || '', image_url, link_url || '', placement, start_date || null, end_date || null);
+    
+    const banner = db.prepare('SELECT * FROM banners WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(banner);
+  } catch (error) {
+    console.error('Create banner error:', error);
+    res.status(500).json({ error: 'Failed to create banner' });
+  }
+});
+
+// PUT /banners/:id — Update banner
+router.put('/banners/:id', (req, res) => {
+  try {
+    const { title, image_url, link_url, placement, active, start_date, end_date } = req.body;
+    db.prepare(`
+      UPDATE banners SET title = COALESCE(?, title), image_url = COALESCE(?, image_url),
+        link_url = COALESCE(?, link_url), placement = COALESCE(?, placement),
+        active = COALESCE(?, active), start_date = COALESCE(?, start_date), end_date = COALESCE(?, end_date)
+      WHERE id = ?
+    `).run(title, image_url, link_url, placement, active, start_date, end_date, req.params.id);
+    
+    res.json(db.prepare('SELECT * FROM banners WHERE id = ?').get(req.params.id));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update banner' });
+  }
+});
+
+// DELETE /banners/:id
+router.delete('/banners/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM banners WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Banner deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete banner' });
+  }
+});
+
+// ─── Articles / Blog ──────────────────────────────────────────────
+
+// GET /articles — List all articles
+router.get('/articles', (req, res) => {
+  try {
+    const { status } = req.query;
+    let where = '';
+    const params = [];
+    if (status) { where = ' WHERE a.status = ?'; params.push(status); }
+    
+    const articles = db.prepare(`
+      SELECT a.*, u.name as author_name
+      FROM articles a JOIN users u ON a.author_id = u.id
+      ${where}
+      ORDER BY a.created_at DESC
+    `).all(...params);
+    res.json({ articles });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch articles' });
+  }
+});
+
+// POST /articles — Create article
+router.post('/articles', (req, res) => {
+  try {
+    const { title, slug, content, excerpt, category, tags, featured_image, status } = req.body;
+    if (!title || !content) return res.status(400).json({ error: 'title and content required' });
+    
+    const articleSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const publishedAt = status === 'published' ? new Date().toISOString() : null;
+    
+    const result = db.prepare(`
+      INSERT INTO articles (author_id, title, slug, content, excerpt, category, tags, featured_image, status, published_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, title, articleSlug, content, excerpt || '', category || '', tags || '', featured_image || '', status || 'draft', publishedAt);
+    
+    res.status(201).json(db.prepare('SELECT * FROM articles WHERE id = ?').get(result.lastInsertRowid));
+  } catch (error) {
+    console.error('Create article error:', error);
+    res.status(500).json({ error: error.message?.includes('UNIQUE') ? 'Article slug already exists' : 'Failed to create article' });
+  }
+});
+
+// PUT /articles/:id — Update article
+router.put('/articles/:id', (req, res) => {
+  try {
+    const { title, content, excerpt, category, tags, featured_image, status } = req.body;
+    const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    
+    const publishedAt = status === 'published' && article.status !== 'published' ? new Date().toISOString() : article.published_at;
+    
+    db.prepare(`
+      UPDATE articles SET title = COALESCE(?, title), content = COALESCE(?, content),
+        excerpt = COALESCE(?, excerpt), category = COALESCE(?, category),
+        tags = COALESCE(?, tags), featured_image = COALESCE(?, featured_image),
+        status = COALESCE(?, status), published_at = COALESCE(?, published_at)
+      WHERE id = ?
+    `).run(title, content, excerpt, category, tags, featured_image, status, publishedAt, req.params.id);
+    
+    res.json(db.prepare('SELECT * FROM articles WHERE id = ?').get(req.params.id));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update article' });
+  }
+});
+
+// DELETE /articles/:id
+router.delete('/articles/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM articles WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Article deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete article' });
+  }
+});
+
+// ─── Public article endpoints ─────────────────────────────────────
+
+// These are on the admin router but we need public ones too
+// They're handled by the blog route below
+
 module.exports = router;
