@@ -1,14 +1,28 @@
 import { Link } from 'react-router-dom';
-import { timeAgo, stripHTML, truncate } from '../utils/helpers';
+import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 
 export default function JobCard({ job, compact = false }) {
   const excerpt = job.excerpt || truncate(stripHTML(job.description), compact ? 80 : 150);
+  const isNew = isNewJob(job.created_at);
+  const isHot = isHotJob(job.created_at);
   
   return (
     <Link
       to={`/jobs/${job.id}`}
-      className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border border-gray-100 hover:border-primary-200"
+      className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border border-gray-100 hover:border-primary-200 relative"
     >
+      {/* New/Hot Badge */}
+      {isHot && (
+        <div className="absolute top-3 right-3 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
+          🔥 HOT
+        </div>
+      )}
+      {!isHot && isNew && (
+        <div className="absolute top-3 right-3 px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full shadow-sm">
+          ✨ NEW
+        </div>
+      )}
+      
       <div className="flex gap-4">
         {/* Company Logo */}
         {job.logo_url && (

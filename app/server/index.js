@@ -113,6 +113,55 @@ app.use('/api/contact', contactLimiter, require('./routes/contact'));
 const { authenticateToken } = require('./middleware/auth');
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 
+// robots.txt
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/
+Sitemap: https://wantokjobs.com/sitemap.xml
+`);
+});
+
+// Dynamic sitemap.xml
+app.get('/sitemap.xml', (req, res) => {
+  try {
+    const db = require('./database');
+    const baseUrl = 'https://wantokjobs.com';
+    const jobs = db.prepare("SELECT id, updated_at FROM jobs WHERE status = 'active' ORDER BY updated_at DESC LIMIT 1000").all();
+    const articles = db.prepare("SELECT slug, updated_at FROM articles WHERE status = 'published' ORDER BY updated_at DESC").all();
+    const categories = db.prepare("SELECT slug FROM categories").all();
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${baseUrl}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>${baseUrl}/jobs</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
+  <url><loc>${baseUrl}/categories</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/companies</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/blog</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>${baseUrl}/pricing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>${baseUrl}/faq</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>${baseUrl}/contact</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>`;
+
+    for (const job of jobs) {
+      xml += `\n  <url><loc>${baseUrl}/jobs/${job.id}</loc><lastmod>${job.updated_at ? job.updated_at.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
+    }
+    for (const cat of categories) {
+      xml += `\n  <url><loc>${baseUrl}/jobs?category=${cat.slug}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`;
+    }
+    for (const article of articles) {
+      xml += `\n  <url><loc>${baseUrl}/blog/${article.slug}</loc><lastmod>${article.updated_at ? article.updated_at.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`;
+    }
+
+    xml += '\n</urlset>';
+    res.type('application/xml').send(xml);
+  } catch (error) {
+    console.error('Sitemap error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
 // Serve uploaded files statically
 const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
 app.use('/uploads', express.static(path.join(dataDir, 'uploads')));

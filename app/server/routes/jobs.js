@@ -15,8 +15,8 @@ router.get('/featured', (req, res) => {
     const jobs = db.prepare(`
       SELECT j.*, 
              u.name as employer_name,
-             pe.company_name,
-             pe.logo_url
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
@@ -52,8 +52,8 @@ router.get('/', (req, res) => {
     let query = `
       SELECT j.*, 
              u.name as employer_name,
-             pe.company_name,
-             pe.logo_url,
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url,
              pe.industry as company_industry
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
@@ -160,8 +160,8 @@ router.get('/my', authenticateToken, requireRole('employer'), (req, res) => {
     const jobs = db.prepare(`
       SELECT j.*, 
              u.name as employer_name,
-             pe.company_name,
-             pe.logo_url,
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url,
              (SELECT COUNT(*) FROM applications WHERE job_id = j.id) as applications_count
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
@@ -184,11 +184,11 @@ router.get('/:id', (req, res) => {
       SELECT j.*, 
              u.name as employer_name,
              u.email as employer_email,
-             pe.company_name,
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
              pe.company_size,
              pe.industry as company_industry,
              pe.website,
-             pe.logo_url,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url,
              pe.description as company_description,
              pe.location as company_location,
              pe.verified as company_verified
@@ -214,7 +214,9 @@ router.get('/:id', (req, res) => {
     // Get similar jobs (3-5 jobs with same industry OR location, excluding current)
     const similarJobs = db.prepare(`
       SELECT j.id, j.title, j.location, j.job_type, j.salary_min, j.salary_max, 
-             j.salary_currency, j.created_at, pe.company_name, pe.logo_url
+             j.salary_currency, j.created_at, 
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url
       FROM jobs j
       LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
       WHERE j.status = 'active' 
@@ -247,7 +249,8 @@ router.get('/:id/similar', (req, res) => {
     const similarJobs = db.prepare(`
       SELECT j.id, j.title, j.location, j.job_type, j.salary_min, j.salary_max, 
              j.salary_currency, j.created_at, j.views_count,
-             pe.company_name, pe.logo_url
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url
       FROM jobs j
       LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
       WHERE j.status = 'active' 

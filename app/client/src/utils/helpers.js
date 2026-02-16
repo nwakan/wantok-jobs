@@ -13,6 +13,24 @@ export function timeAgo(dateString) {
   return `${Math.floor(seconds / 31536000)} years ago`;
 }
 
+// Check if job is new (posted within last 48 hours)
+export function isNewJob(dateString) {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  const now = new Date();
+  const hours = Math.floor((now - date) / (1000 * 60 * 60));
+  return hours <= 48;
+}
+
+// Check if job is hot (posted within last 24 hours)
+export function isHotJob(dateString) {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  const now = new Date();
+  const hours = Math.floor((now - date) / (1000 * 60 * 60));
+  return hours <= 24;
+}
+
 // Detect if text contains HTML tags
 export function containsHTML(text) {
   if (!text) return false;

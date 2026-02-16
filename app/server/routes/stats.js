@@ -173,4 +173,42 @@ router.get('/dashboard', authenticateToken, requireRole('admin'), (req, res) => 
   }
 });
 
+// GET /categories - Public category stats with job counts
+router.get('/categories', (req, res) => {
+  try {
+    const categories = db.prepare(`
+      SELECT c.id, c.name, c.slug, COUNT(jc.job_id) as job_count
+      FROM categories c
+      LEFT JOIN job_categories jc ON c.id = jc.category_id
+      LEFT JOIN jobs j ON jc.job_id = j.id AND j.status = 'active'
+      GROUP BY c.id
+      ORDER BY job_count DESC
+    `).all();
+    res.json({ data: categories });
+  } catch (error) {
+    console.error('Category stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch category stats' });
+  }
+});
+
+// GET /top-employers - Public top employers with logos
+router.get('/top-employers', (req, res) => {
+  try {
+    const employers = db.prepare(`
+      SELECT pe.user_id as id, pe.company_name, pe.logo_url, pe.industry, pe.verified,
+             COUNT(j.id) as job_count
+      FROM profiles_employer pe
+      LEFT JOIN jobs j ON pe.user_id = j.employer_id AND j.status = 'active'
+      WHERE pe.company_name IS NOT NULL AND pe.company_name != ''
+      GROUP BY pe.user_id
+      ORDER BY pe.verified DESC, job_count DESC, pe.company_name ASC
+      LIMIT 12
+    `).all();
+    res.json({ data: employers });
+  } catch (error) {
+    console.error('Top employers error:', error);
+    res.status(500).json({ error: 'Failed to fetch top employers' });
+  }
+});
+
 module.exports = router;
