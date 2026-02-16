@@ -1,24 +1,40 @@
 const express = require('express');
-const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
+const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
+const { requireRole } = require('../middleware/role');
 
-const db = new Database(path.join(__dirname, '../data/wantokjobs.db'));
+const router = express.Router();
 
-// Track job view
+// Track job view (authenticated users only)
 router.post('/track-view', authenticateToken, (req, res) => {
   try {
-    const { jobId } = req.body;
-    const userId = req.user.id;
+    const { job_id } = req.body;
 
-    // Insert into activity log
-    const stmt = db.prepare(`
-      INSERT INTO activity_log (user_id, action, entity_type, entity_id, created_at)
-      VALUES (?, 'job_view', 'job', ?, datetime('now'))
-    `);
-    
-    stmt.run(userId, jobId);
+    if (!job_id) {
+      return res.status(400).json({ error: 'Job ID required' });
+    }
+
+    // Ensure activity_log table exists
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS activity_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          action TEXT NOT NULL,
+          job_id INTEGER,
+          metadata TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          FOREIGN KEY (job_id) REFERENCES jobs(id)
+        )
+      `);
+    } catch (e) {}
+
+    // Log the view
+    db.prepare(`
+      INSERT INTO activity_log (user_id, action, job_id)
+      VALUES (?, 'view_job', ?)
+    `).run(req.user.id, job_id);
 
     res.json({ success: true });
   } catch (error) {
@@ -30,51 +46,92 @@ router.post('/track-view', authenticateToken, (req, res) => {
 // Get recently viewed jobs
 router.get('/recent-views', authenticateToken, (req, res) => {
   try {
-    const userId = req.user.id;
-    const limit = parseInt(req.query.limit) || 5;
+    const { limit = 5 } = req.query;
 
-    const views = db.prepare(`
-      SELECT DISTINCT
-        j.id,
-        j.title,
-        j.company_name,
-        al.created_at as viewed_at,
-        CASE 
-          WHEN julianday('now') - julianday(al.created_at) < 1 THEN 
-            CAST((julianday('now') - julianday(al.created_at)) * 24 AS INTEGER) || ' hours ago'
-          ELSE 
-            CAST(julianday('now') - julianday(al.created_at) AS INTEGER) || ' days ago'
-        END as viewed_ago
+    const recentViews = db.prepare(`
+      SELECT DISTINCT j.*, al.created_at as viewed_at
       FROM activity_log al
-      JOIN jobs j ON j.id = al.entity_id
-      WHERE al.user_id = ?
-        AND al.action = 'job_view'
-        AND al.entity_type = 'job'
+      JOIN jobs j ON al.job_id = j.id
+      WHERE al.user_id = ? AND al.action = 'view_job'
       ORDER BY al.created_at DESC
       LIMIT ?
-    `).all(userId, limit);
+    `).all(req.user.id, parseInt(limit));
 
-    res.json(views);
+    res.json(recentViews);
   } catch (error) {
-    console.error('Recent views error:', error);
-    res.status(500).json({ error: 'Failed to fetch recent views' });
+    // Table might not exist yet
+    res.json([]);
   }
 });
 
-// Track job search
+// Track job application (called after successful apply)
+router.post('/track-apply', authenticateToken, requireRole('jobseeker'), (req, res) => {
+  try {
+    const { job_id } = req.body;
+
+    if (!job_id) {
+      return res.status(400).json({ error: 'Job ID required' });
+    }
+
+    // Ensure activity_log table exists
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS activity_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          action TEXT NOT NULL,
+          job_id INTEGER,
+          metadata TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          FOREIGN KEY (job_id) REFERENCES jobs(id)
+        )
+      `);
+    } catch (e) {}
+
+    // Log the application
+    db.prepare(`
+      INSERT INTO activity_log (user_id, action, job_id)
+      VALUES (?, 'apply_job', ?)
+    `).run(req.user.id, job_id);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Track apply error:', error);
+    res.status(500).json({ error: 'Failed to track application' });
+  }
+});
+
+// Track search query
 router.post('/track-search', authenticateToken, (req, res) => {
   try {
-    const { keyword, filters } = req.body;
-    const userId = req.user.id;
+    const { query } = req.body;
 
-    const metadata = JSON.stringify({ keyword, filters });
+    if (!query) {
+      return res.status(400).json({ error: 'Query required' });
+    }
 
-    const stmt = db.prepare(`
-      INSERT INTO activity_log (user_id, action, entity_type, metadata, created_at)
-      VALUES (?, 'job_search', 'search', ?, datetime('now'))
-    `);
-    
-    stmt.run(userId, metadata);
+    // Ensure activity_log table exists
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS activity_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          action TEXT NOT NULL,
+          job_id INTEGER,
+          metadata TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          FOREIGN KEY (job_id) REFERENCES jobs(id)
+        )
+      `);
+    } catch (e) {}
+
+    // Log the search
+    db.prepare(`
+      INSERT INTO activity_log (user_id, action, metadata)
+      VALUES (?, 'search', ?)
+    `).run(req.user.id, JSON.stringify({ query }));
 
     res.json({ success: true });
   } catch (error) {
@@ -86,32 +143,31 @@ router.post('/track-search', authenticateToken, (req, res) => {
 // Get recent searches
 router.get('/recent-searches', authenticateToken, (req, res) => {
   try {
-    const userId = req.user.id;
-    const limit = parseInt(req.query.limit) || 5;
+    const { limit = 5 } = req.query;
 
-    const searches = db.prepare(`
-      SELECT 
-        id,
-        metadata,
-        created_at
+    const recentSearches = db.prepare(`
+      SELECT metadata, created_at
       FROM activity_log
-      WHERE user_id = ?
-        AND action = 'job_search'
-        AND entity_type = 'search'
+      WHERE user_id = ? AND action = 'search'
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(userId, limit);
+    `).all(req.user.id, parseInt(limit));
 
-    // Parse metadata JSON
-    const parsed = searches.map(s => ({
-      ...s,
-      ...JSON.parse(s.metadata || '{}')
-    }));
+    const searches = recentSearches.map(s => {
+      try {
+        return {
+          query: JSON.parse(s.metadata).query,
+          timestamp: s.created_at
+        };
+      } catch (e) {
+        return null;
+      }
+    }).filter(Boolean);
 
-    res.json(parsed);
+    res.json(searches);
   } catch (error) {
-    console.error('Recent searches error:', error);
-    res.status(500).json({ error: 'Failed to fetch recent searches' });
+    // Table might not exist yet
+    res.json([]);
   }
 });
 

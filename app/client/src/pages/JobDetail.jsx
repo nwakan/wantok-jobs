@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
 import JobCard from '../components/JobCard';
-import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp } from 'lucide-react';
+import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp, CheckCircle2, ArrowRight, ArrowLeft, FileText, Mail, Phone, MapPin, Upload, AlertCircle, X } from 'lucide-react';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -17,6 +17,13 @@ export default function JobDetail() {
   const [applying, setApplying] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applicationStep, setApplicationStep] = useState(1); // 1: Profile Check, 2: Contact Info, 3: Screening, 4: Review
+  const [applicationSuccess, setApplicationSuccess] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState([]);
+  const [screeningAnswers, setScreeningAnswers] = useState({});
+  const [screeningQuestions, setScreeningQuestions] = useState([]);
+  const [contactInfo, setContactInfo] = useState({ name: '', email: '', phone: '', location: '' });
+  const [cvUrl, setCvUrl] = useState('');
   const [saved, setSaved] = useState(false);
   const [similarJobs, setSimilarJobs] = useState([]);
   const [companyInfo, setCompanyInfo] = useState(null);
@@ -182,33 +189,213 @@ export default function JobDetail() {
     }
   };
 
-  const handleApply = async (e) => {
-    e.preventDefault();
+  // Profile completeness check
+  const checkProfileCompleteness = async () => {
+    if (!user || user.role !== 'jobseeker') return [];
+    
+    try {
+      const response = await fetch('/api/profile');
+      if (!response.ok) return ['profile'];
+      
+      const profile = await response.json();
+      const missing = [];
+      
+      if (!profile.phone && !profile.profile_phone) missing.push('phone');
+      if (!profile.location && !profile.profile_location) missing.push('location');
+      if (!profile.cv_url && !profile.profile_cv_url) missing.push('resume');
+      if (!profile.headline) missing.push('headline');
+      if (!profile.skills || (typeof profile.skills === 'string' ? JSON.parse(profile.skills) : profile.skills).length === 0) missing.push('skills');
+      
+      // Load contact info and CV for form
+      setContactInfo({
+        name: user.name || '',
+        email: user.email || '',
+        phone: profile.phone || profile.profile_phone || '',
+        location: profile.location || profile.profile_location || ''
+      });
+      setCvUrl(profile.cv_url || profile.profile_cv_url || '');
+      
+      return missing;
+    } catch (error) {
+      console.error('Failed to check profile:', error);
+      return ['profile'];
+    }
+  };
+
+  // Load screening questions for the job
+  const loadScreeningQuestions = async () => {
+    if (!job.screening_questions) return;
+    
+    try {
+      const questions = typeof job.screening_questions === 'string' 
+        ? JSON.parse(job.screening_questions) 
+        : job.screening_questions;
+      
+      setScreeningQuestions(questions || []);
+      
+      // Initialize answers object
+      const answers = {};
+      (questions || []).forEach((q, idx) => {
+        answers[idx] = '';
+      });
+      setScreeningAnswers(answers);
+    } catch (error) {
+      console.error('Failed to load screening questions:', error);
+      setScreeningQuestions([]);
+    }
+  };
+
+  // Handle opening apply modal
+  const handleApplyClick = async () => {
     if (!user) {
       navigate('/login');
       return;
     }
 
-    if (job.external_url) {
-      window.open(job.external_url, '_blank');
+    if (job.application_method === 'external' && job.application_url) {
+      window.open(job.application_url, '_blank');
       showToast('Opening external application page...', 'info');
       return;
     }
 
+    if (job.application_method === 'email' && job.application_email) {
+      window.location.href = `mailto:${job.application_email}?subject=Application for ${job.title}`;
+      showToast('Opening email client...', 'info');
+      return;
+    }
+
+    // Check profile completeness
+    const missing = await checkProfileCompleteness();
+    setProfileIncomplete(missing);
+    
+    // Load screening questions
+    await loadScreeningQuestions();
+    
+    // Load draft from localStorage
+    const draftKey = `application-draft-${id}`;
+    const draft = localStorage.getItem(draftKey);
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        setCoverLetter(parsed.coverLetter || '');
+        setScreeningAnswers(parsed.screeningAnswers || {});
+      } catch (e) {}
+    }
+    
+    // Determine starting step
+    if (missing.length > 0) {
+      setApplicationStep(1); // Start at profile check
+    } else {
+      setApplicationStep(2); // Skip to contact info
+    }
+    
+    setShowApplyModal(true);
+  };
+
+  // Save draft to localStorage
+  const saveDraft = () => {
+    const draftKey = `application-draft-${id}`;
+    localStorage.setItem(draftKey, JSON.stringify({
+      coverLetter,
+      screeningAnswers,
+      timestamp: Date.now()
+    }));
+  };
+
+  // Handle step navigation
+  const handleNextStep = () => {
+    saveDraft();
+    
+    // Validate current step
+    if (applicationStep === 2) {
+      if (!contactInfo.phone || !contactInfo.location) {
+        showToast('Please fill in all required contact information', 'error');
+        return;
+      }
+    }
+    
+    if (applicationStep === 3 && screeningQuestions.length > 0) {
+      const unanswered = screeningQuestions.find((q, idx) => !screeningAnswers[idx] || screeningAnswers[idx].trim() === '');
+      if (unanswered) {
+        showToast('Please answer all screening questions', 'error');
+        return;
+      }
+    }
+    
+    // Skip step 3 if no screening questions
+    if (applicationStep === 2 && screeningQuestions.length === 0) {
+      setApplicationStep(4);
+    } else {
+      setApplicationStep(prev => prev + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    saveDraft();
+    
+    // Skip step 3 if no screening questions when going back
+    if (applicationStep === 4 && screeningQuestions.length === 0) {
+      setApplicationStep(2);
+    } else {
+      setApplicationStep(prev => prev - 1);
+    }
+  };
+
+  // Submit application
+  const handleApply = async (e) => {
+    e.preventDefault();
+    
     setApplying(true);
     try {
-      await applications.create({
+      const payload = {
         job_id: parseInt(id),
         cover_letter: coverLetter,
-      });
-      showToast('Application submitted successfully!', 'success');
-      setShowApplyModal(false);
-      setCoverLetter('');
+        cv_url: cvUrl,
+        phone: contactInfo.phone,
+        location: contactInfo.location,
+      };
+      
+      // Add screening answers if any
+      if (screeningQuestions.length > 0) {
+        payload.screening_answers = Object.keys(screeningAnswers).map(key => ({
+          question: screeningQuestions[parseInt(key)],
+          answer: screeningAnswers[key]
+        }));
+      }
+      
+      await applications.create(payload);
+      
+      // Clear draft
+      const draftKey = `application-draft-${id}`;
+      localStorage.removeItem(draftKey);
+      
+      // Show success state
+      setApplicationSuccess(true);
+      
+      // Track activity
+      try {
+        await fetch('/api/activity/track-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: parseInt(id) })
+        });
+      } catch (e) {}
+      
     } catch (error) {
       showToast(error.message || 'Failed to submit application', 'error');
     } finally {
       setApplying(false);
     }
+  };
+
+  // Close modal and reset
+  const closeApplyModal = () => {
+    setShowApplyModal(false);
+    setApplicationSuccess(false);
+    setApplicationStep(1);
+    setCoverLetter('');
+    setScreeningAnswers({});
+    setProfileIncomplete([]);
   };
 
   const handleSaveJob = async () => {
@@ -401,23 +588,13 @@ export default function JobDetail() {
 
               {/* Quick Apply Button (Mobile) */}
               <div className="lg:hidden">
-                {user?.role === 'jobseeker' && !job.external_url && (
+                {user?.role === 'jobseeker' && (
                   <button
-                    onClick={() => setShowApplyModal(true)}
+                    onClick={handleApplyClick}
                     className="w-full px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     Apply Now
                   </button>
-                )}
-                {job.external_url && (
-                  <a
-                    href={job.external_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    Apply on Company Website →
-                  </a>
                 )}
                 {!user && (
                   <Link
@@ -648,23 +825,13 @@ export default function JobDetail() {
             {/* Apply Card - Sticky */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 sticky top-6">
               <div className="space-y-3">
-                {user?.role === 'jobseeker' && !job.external_url && (
+                {user?.role === 'jobseeker' && (
                   <button
-                    onClick={() => setShowApplyModal(true)}
+                    onClick={handleApplyClick}
                     className="w-full px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
                   >
                     Apply Now
                   </button>
-                )}
-                {job.external_url && (
-                  <a
-                    href={job.external_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
-                  >
-                    Apply on Company Website →
-                  </a>
                 )}
                 {!user && (
                   <Link
@@ -830,44 +997,538 @@ export default function JobDetail() {
         </div>
       </div>
 
-      {/* Apply Modal */}
-      {showApplyModal && (
+      {/* Enhanced Multi-Step Apply Modal (LinkedIn/Indeed-style) */}
+      {showApplyModal && !applicationSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-3xl w-full shadow-2xl my-8">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Apply to {job.company_name}</h2>
+                <p className="text-gray-600 mt-1">{job.title}</p>
+              </div>
+              <button
+                onClick={closeApplyModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Progress Indicator */}
+            <div className="px-6 pt-6">
+              <div className="flex items-center justify-between mb-2">
+                {[
+                  { step: 1, label: 'Profile' },
+                  { step: 2, label: 'Contact' },
+                  ...(screeningQuestions.length > 0 ? [{ step: 3, label: 'Questions' }] : []),
+                  { step: screeningQuestions.length > 0 ? 4 : 3, label: 'Review' }
+                ].map((item, idx, arr) => (
+                  <div key={item.step} className="flex-1 flex items-center">
+                    <div className="flex flex-col items-center flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                        applicationStep >= item.step
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-200 text-gray-500'
+                      }`}>
+                        {applicationStep > item.step ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          item.step
+                        )}
+                      </div>
+                      <span className={`text-xs mt-2 font-medium ${
+                        applicationStep >= item.step ? 'text-primary-600' : 'text-gray-500'
+                      }`}>
+                        {item.label}
+                      </span>
+                    </div>
+                    {idx < arr.length - 1 && (
+                      <div className={`h-0.5 flex-1 -mt-8 transition-all ${
+                        applicationStep > item.step ? 'bg-primary-600' : 'bg-gray-200'
+                      }`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Step 1: Profile Completeness Check */}
+              {applicationStep === 1 && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Check Your Profile</h3>
+                    <p className="text-gray-600">Make sure your profile is complete before applying</p>
+                  </div>
+
+                  {profileIncomplete.length > 0 ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                      <div className="flex items-start gap-3 mb-4">
+                        <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-semibold text-amber-900 mb-2">Profile Incomplete</h4>
+                          <p className="text-sm text-amber-800 mb-3">
+                            Complete your profile to improve your application success rate by 40%
+                          </p>
+                          <ul className="space-y-2 text-sm">
+                            {profileIncomplete.includes('phone') && (
+                              <li className="flex items-center gap-2 text-amber-900">
+                                <Phone className="w-4 h-4" />
+                                Phone number is required
+                              </li>
+                            )}
+                            {profileIncomplete.includes('location') && (
+                              <li className="flex items-center gap-2 text-amber-900">
+                                <MapPin className="w-4 h-4" />
+                                Location is required
+                              </li>
+                            )}
+                            {profileIncomplete.includes('resume') && (
+                              <li className="flex items-center gap-2 text-amber-900">
+                                <FileText className="w-4 h-4" />
+                                Resume/CV is required
+                              </li>
+                            )}
+                            {profileIncomplete.includes('headline') && (
+                              <li className="flex items-center gap-2 text-amber-900">
+                                <Briefcase className="w-4 h-4" />
+                                Professional headline is recommended
+                              </li>
+                            )}
+                            {profileIncomplete.includes('skills') && (
+                              <li className="flex items-center gap-2 text-amber-900">
+                                <Star className="w-4 h-4" />
+                                Add at least 3 skills
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Link
+                          to="/dashboard/profile"
+                          className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium transition-colors"
+                        >
+                          Complete Profile
+                        </Link>
+                        <button
+                          onClick={handleNextStep}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+                        >
+                          Continue Anyway
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-semibold text-green-900 mb-2">Profile Complete!</h4>
+                          <p className="text-sm text-green-800">
+                            Your profile looks great. You're ready to apply.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Match Score Display */}
+                  {matchedSkills.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h4 className="font-semibold text-blue-900 mb-2">Your Match Score</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="text-3xl font-bold text-blue-600">
+                          {Math.round((matchedSkills.filter(s => s.matched).length / matchedSkills.length) * 100)}%
+                        </div>
+                        <div className="text-sm text-blue-800">
+                          {matchedSkills.filter(s => s.matched).length} of {matchedSkills.length} skills match
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {matchedSkills.slice(0, 5).map((skill, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              skill.matched
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {skill.matched && '✓ '}
+                            {skill.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Contact Information */}
+              {applicationStep === 2 && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Contact Information</h3>
+                    <p className="text-gray-600">Verify your contact details</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={contactInfo.name}
+                        onChange={(e) => setContactInfo({...contactInfo, name: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-gray-50"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address *
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <input
+                          type="email"
+                          value={contactInfo.email}
+                          onChange={(e) => setContactInfo({...contactInfo, email: e.target.value})}
+                          className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-gray-50"
+                          disabled
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number *
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <input
+                          type="tel"
+                          value={contactInfo.phone}
+                          onChange={(e) => setContactInfo({...contactInfo, phone: e.target.value})}
+                          className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="+675 ..."
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Location *
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={contactInfo.location}
+                          onChange={(e) => setContactInfo({...contactInfo, location: e.target.value})}
+                          className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Port Moresby, PNG"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Resume/CV *
+                    </label>
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                      <input
+                        type="url"
+                        value={cvUrl}
+                        onChange={(e) => setCvUrl(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="https://..."
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      URL to your CV (Dropbox, Google Drive, etc.)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cover Letter (Optional)
+                    </label>
+                    <textarea
+                      value={coverLetter}
+                      onChange={(e) => setCoverLetter(e.target.value)}
+                      rows={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Tell us why you're a great fit for this role..."
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">
+                        Optional, but recommended — applications with cover letters receive 40% more responses
+                      </p>
+                      <span className="text-xs text-gray-500">{coverLetter.length} chars</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Screening Questions */}
+              {applicationStep === 3 && screeningQuestions.length > 0 && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Screening Questions</h3>
+                    <p className="text-gray-600">The employer has {screeningQuestions.length} additional questions</p>
+                  </div>
+
+                  {screeningQuestions.map((question, idx) => (
+                    <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        {idx + 1}. {question}
+                      </label>
+                      <textarea
+                        value={screeningAnswers[idx] || ''}
+                        onChange={(e) => setScreeningAnswers({...screeningAnswers, [idx]: e.target.value})}
+                        rows={4}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
+                        placeholder="Your answer..."
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-2">{(screeningAnswers[idx] || '').length} characters</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Step 4: Review & Submit */}
+              {applicationStep === (screeningQuestions.length > 0 ? 4 : 3) && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Review Your Application</h3>
+                    <p className="text-gray-600">Check everything before submitting</p>
+                  </div>
+
+                  {/* Contact Info Review */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                    <h4 className="font-semibold text-gray-900 mb-3">Contact Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-600">Name:</span>
+                        <span className="ml-2 text-gray-900 font-medium">{contactInfo.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Email:</span>
+                        <span className="ml-2 text-gray-900 font-medium">{contactInfo.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Phone:</span>
+                        <span className="ml-2 text-gray-900 font-medium">{contactInfo.phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Location:</span>
+                        <span className="ml-2 text-gray-900 font-medium">{contactInfo.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Resume */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                    <h4 className="font-semibold text-gray-900 mb-2">Resume/CV</h4>
+                    <a
+                      href={cvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-600 hover:text-primary-700 underline flex items-center gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View Resume
+                    </a>
+                  </div>
+
+                  {/* Cover Letter */}
+                  {coverLetter.trim() && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                      <h4 className="font-semibold text-gray-900 mb-2">Cover Letter</h4>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {coverLetter}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Screening Answers */}
+                  {screeningQuestions.length > 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                      <h4 className="font-semibold text-gray-900 mb-3">Screening Answers</h4>
+                      <div className="space-y-4">
+                        {screeningQuestions.map((question, idx) => (
+                          <div key={idx}>
+                            <p className="text-sm font-medium text-gray-900 mb-1">{idx + 1}. {question}</p>
+                            <p className="text-sm text-gray-700 pl-4">{screeningAnswers[idx]}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Confirmation */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-semibold mb-1">Before you submit:</p>
+                        <ul className="list-disc list-inside space-y-1 text-blue-800">
+                          <li>Double-check all information is correct</li>
+                          <li>Your application cannot be edited after submission</li>
+                          <li>You'll receive a confirmation email shortly</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <div>
+                {applicationStep > 1 && (
+                  <button
+                    onClick={handlePrevStep}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={closeApplyModal}
+                  className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Save Draft & Close
+                </button>
+                {applicationStep < (screeningQuestions.length > 0 ? 4 : 3) ? (
+                  <button
+                    onClick={handleNextStep}
+                    className="inline-flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleApply}
+                    disabled={applying}
+                    className="inline-flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                  >
+                    {applying ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Submit Application
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Application Success Modal */}
+      {showApplyModal && applicationSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-8 shadow-xl">
-            <h2 className="text-2xl font-bold mb-4">Apply for {job.title}</h2>
-            <form onSubmit={handleApply}>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cover Letter (Optional)
-                </label>
-                <textarea
-                  value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
-                  rows={8}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Tell us why you're a great fit for this role..."
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Your profile and resume will be automatically attached
-                </p>
+          <div className="bg-white rounded-xl max-w-2xl w-full p-8 shadow-2xl">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowApplyModal(false)}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Application Submitted!</h2>
+              <p className="text-gray-600 mb-2">
+                Your application for <span className="font-semibold">{job.title}</span> at{' '}
+                <span className="font-semibold">{job.company_name}</span> has been submitted.
+              </p>
+              <p className="text-gray-600 mb-8">
+                You'll receive a confirmation email at <span className="font-semibold">{contactInfo.email}</span>
+              </p>
+
+              {/* Next Steps */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 text-left">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  What happens next?
+                </h3>
+                <ol className="space-y-2 text-sm text-blue-900">
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">1.</span>
+                    <span>The employer will review your application</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">2.</span>
+                    <span>You'll be notified if they want to schedule an interview</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">3.</span>
+                    <span>Track your application status in your dashboard</span>
+                  </li>
+                </ol>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  to="/dashboard/applications"
+                  className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={applying}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium"
+                  View My Applications
+                </Link>
+                <Link
+                  to="/jobs"
+                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  {applying ? 'Submitting...' : 'Submit Application'}
+                  Browse More Jobs
+                </Link>
+                <button
+                  onClick={closeApplyModal}
+                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
                 </button>
               </div>
-            </form>
+
+              {/* Similar Jobs Suggestion */}
+              {similarJobs.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="font-semibold text-gray-900 mb-4">Apply to similar jobs</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {similarJobs.slice(0, 2).map((similarJob) => (
+                      <Link
+                        key={similarJob.id}
+                        to={`/jobs/${similarJob.id}`}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
+                      >
+                        <div className="text-left">
+                          <p className="font-semibold text-gray-900 group-hover:text-primary-600">{similarJob.title}</p>
+                          <p className="text-sm text-gray-600">{similarJob.company_name} • {similarJob.location}</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

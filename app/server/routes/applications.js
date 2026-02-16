@@ -11,7 +11,7 @@ const router = express.Router();
 // Apply to job (jobseeker only)
 router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
   try {
-    const { job_id, cover_letter, cv_url } = req.body;
+    const { job_id, cover_letter, cv_url, phone, location, screening_answers } = req.body;
 
     if (!job_id) {
       return res.status(400).json({ error: 'Job ID required' });
@@ -39,13 +39,61 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
       finalCvUrl = profile?.cv_url;
     }
 
-    // Create application
+    // Create application with new fields
     const result = db.prepare(`
       INSERT INTO applications (job_id, jobseeker_id, cover_letter, cv_url)
       VALUES (?, ?, ?, ?)
     `).run(job_id, req.user.id, cover_letter, finalCvUrl);
 
     const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(result.lastInsertRowid);
+    
+    // Store screening answers if provided
+    if (screening_answers && Array.isArray(screening_answers) && screening_answers.length > 0) {
+      try {
+        // Check if screening_responses table exists
+        const tableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='screening_responses'`).get();
+        
+        if (tableExists) {
+          const insertResponse = db.prepare(`INSERT INTO screening_responses (application_id, question, answer) VALUES (?, ?, ?)`);
+          for (const qa of screening_answers) {
+            insertResponse.run(application.id, qa.question, qa.answer);
+          }
+        } else {
+          // Store as JSON in application record
+          db.prepare(`UPDATE applications SET notes = ? WHERE id = ?`).run(
+            JSON.stringify({ screening_answers }),
+            application.id
+          );
+        }
+      } catch (e) {
+        console.error('Failed to save screening answers:', e);
+        // Continue anyway
+      }
+    }
+
+    // Update profile with latest contact info if provided
+    if (phone || location) {
+      try {
+        const updates = [];
+        const params = [];
+        if (phone) {
+          updates.push('phone = ?');
+          params.push(phone);
+        }
+        if (location) {
+          updates.push('location = ?');
+          params.push(location);
+        }
+        if (updates.length > 0) {
+          params.push(req.user.id);
+          db.prepare(`UPDATE profiles_jobseeker SET ${updates.join(', ')} WHERE user_id = ?`).run(...params);
+        }
+      } catch (e) {
+        console.error('Failed to update profile:', e);
+        // Continue anyway
+      }
+    }
+
     const applicant = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
 
     // Smart notification with match score
