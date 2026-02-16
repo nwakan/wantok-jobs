@@ -1,0 +1,207 @@
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, HelpCircle, Users, Briefcase, Settings } from 'lucide-react';
+import PageHead from '../components/PageHead';
+
+const faqData = [
+  {
+    category: 'For Job Seekers',
+    icon: Users,
+    questions: [
+      {
+        q: 'How do I create an account?',
+        a: 'Click on "Sign Up" in the top right corner, choose "Job Seeker", and fill in your details. You can also sign up using your email address or social media accounts.',
+      },
+      {
+        q: 'How do I apply for a job?',
+        a: 'Browse jobs by searching or filtering by category, location, or other criteria. Click on a job listing to view details, then click "Apply Now". You\'ll need to be logged in and have a complete profile.',
+      },
+      {
+        q: 'How do I create job alerts?',
+        a: 'Go to your dashboard and click on "Job Alerts". Set your preferences including keywords, location, category, and frequency. You\'ll receive notifications via email, SMS, or WhatsApp based on your preferences.',
+      },
+      {
+        q: 'Is WantokJobs free for job seekers?',
+        a: 'Yes! WantokJobs is completely free for job seekers. You can search jobs, create alerts, apply to unlimited positions, and manage your applications at no cost.',
+      },
+      {
+        q: 'How do I update my profile?',
+        a: 'Log in to your account, go to your dashboard, and click on "Profile" or "Settings". You can update your personal information, work experience, education, skills, and upload your resume.',
+      },
+      {
+        q: 'Can I apply to multiple jobs at once?',
+        a: 'Yes, you can apply to as many jobs as you like. Each application is tracked separately in your dashboard.',
+      },
+    ],
+  },
+  {
+    category: 'For Employers',
+    icon: Briefcase,
+    questions: [
+      {
+        q: 'How do I post a job?',
+        a: 'Sign up as an employer, verify your company, then go to your dashboard and click "Post a Job". Fill in the job details, requirements, and select a posting plan. Your job will be reviewed and published within 24 hours.',
+      },
+      {
+        q: 'What are the pricing plans?',
+        a: 'We offer four plans: Free (1 job), Starter (K2,500/mo for 5 jobs), Professional (K7,500/mo for 20 jobs with premium features), and Enterprise (K20,000/mo for unlimited jobs). Visit our Pricing page for full details.',
+      },
+      {
+        q: 'How long does my job posting stay active?',
+        a: 'Job postings typically stay active for 30-90 days depending on your plan. You can renew or close a posting at any time from your dashboard.',
+      },
+      {
+        q: 'Can I edit a job posting after it\'s published?',
+        a: 'Yes, you can edit job details at any time from your employer dashboard. Changes are updated immediately.',
+      },
+      {
+        q: 'How do I access applicant information?',
+        a: 'All applications appear in your employer dashboard. You can view resumes, filter candidates, and use our AI-powered screening tools (available on Professional and Enterprise plans).',
+      },
+      {
+        q: 'Do you verify employers?',
+        a: 'Yes, all employer accounts go through a verification process to ensure legitimacy and protect job seekers from scams.',
+      },
+    ],
+  },
+  {
+    category: 'About WantokJobs',
+    icon: HelpCircle,
+    questions: [
+      {
+        q: 'What is WantokJobs?',
+        a: 'WantokJobs is Papua New Guinea\'s leading job platform, connecting job seekers with employers across PNG and the Pacific. We use AI-powered matching and multi-channel alerts to help people find the right opportunities.',
+      },
+      {
+        q: 'What makes WantokJobs different?',
+        a: 'We offer AI-powered job matching, multi-channel notifications (email, SMS, WhatsApp), mobile-first design, and local expertise. We understand the PNG job market and are committed to helping Papua New Guineans advance their careers.',
+      },
+      {
+        q: 'What industries do you cover?',
+        a: 'We cover all major industries including Mining, Oil & Gas, Healthcare, Education, IT, Banking & Finance, Construction, Retail, Hospitality, Government, NGOs, and more.',
+      },
+      {
+        q: 'Is WantokJobs available outside Port Moresby?',
+        a: 'Yes! We feature jobs from all provinces across Papua New Guinea, from Highlands to Islands, and even opportunities in other Pacific nations.',
+      },
+      {
+        q: 'How do I contact WantokJobs?',
+        a: 'You can reach us via email at info@wantokjobs.com, call +675 7583 0582, message us on WhatsApp, or visit our Contact page.',
+      },
+    ],
+  },
+  {
+    category: 'Technical & Account',
+    icon: Settings,
+    questions: [
+      {
+        q: 'I forgot my password. What do I do?',
+        a: 'Click on "Forgot Password" on the login page. Enter your email address and we\'ll send you instructions to reset your password.',
+      },
+      {
+        q: 'How do I change my email address?',
+        a: 'Go to your account settings and update your email address. You\'ll receive a verification email to confirm the change.',
+      },
+      {
+        q: 'Can I delete my account?',
+        a: 'Yes, you can request account deletion from your account settings. Contact us if you need assistance.',
+      },
+      {
+        q: 'Is my personal information secure?',
+        a: 'Yes, we take data security seriously. All data is encrypted, and we comply with international privacy standards. Read our Privacy Policy for more details.',
+      },
+      {
+        q: 'Why am I not receiving job alerts?',
+        a: 'Check your notification settings to ensure alerts are enabled. Also check your spam/junk folder. If using SMS or WhatsApp, ensure your phone number is verified.',
+      },
+      {
+        q: 'Does WantokJobs have a mobile app?',
+        a: 'WantokJobs is a Progressive Web App (PWA), which means you can add it to your phone\'s home screen for an app-like experience. We\'re also developing native mobile apps for iOS and Android.',
+      },
+    ],
+  },
+];
+
+function FAQItem({ question, answer }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border-b border-gray-200 last:border-0">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-4 px-6 flex items-center justify-between text-left hover:bg-gray-50 transition"
+      >
+        <span className="font-medium text-gray-900 pr-4">{question}</span>
+        {isOpen ? (
+          <ChevronUp className="w-5 h-5 text-primary-600 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="px-6 pb-4 text-gray-600">
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function FAQ() {
+  return (
+    <>
+      <PageHead
+        title="Frequently Asked Questions"
+        description="Find answers to common questions about WantokJobs, job searching, posting jobs, and using our platform."
+      />
+      
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
+              <HelpCircle className="w-8 h-8 text-primary-600" />
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Have questions? We've got answers. Browse through our FAQ or contact our support team for help.
+            </p>
+          </div>
+
+          {/* FAQ Categories */}
+          <div className="space-y-8">
+            {faqData.map((category, idx) => {
+              const IconComponent = category.icon;
+              return (
+                <div key={idx} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center gap-3">
+                    <IconComponent className="w-6 h-6 text-white" />
+                    <h2 className="text-xl font-bold text-white">{category.category}</h2>
+                  </div>
+                  <div>
+                    {category.questions.map((item, qIdx) => (
+                      <FAQItem key={qIdx} question={item.q} answer={item.a} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Still have questions CTA */}
+          <div className="mt-12 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg p-8 text-center text-white">
+            <h3 className="text-2xl font-bold mb-2">Still have questions?</h3>
+            <p className="text-primary-100 mb-6">
+              Can't find the answer you're looking for? Our support team is here to help.
+            </p>
+            <a
+              href="/contact"
+              className="inline-block bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
+            >
+              Contact Support
+            </a>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

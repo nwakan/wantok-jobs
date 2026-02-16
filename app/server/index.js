@@ -1,14 +1,51 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Allow inline scripts for SPA
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true,
+}));
+
+// Global rate limit: 200 req/min per IP
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+}));
+
+// Auth rate limit: 10 attempts/min per IP
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts. Please wait a minute.' },
+});
+
+// Contact form rate limit: 5/min
+const contactLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Too many submissions. Please wait a minute.' },
+});
+
+app.use(express.json({ limit: '1mb' }));
 
 // Initialize database
 require('./database');
@@ -18,7 +55,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
+// API Routes (auth endpoints get stricter rate limiting)
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/applications', require('./routes/applications'));
@@ -26,6 +66,18 @@ app.use('/api/profile', require('./routes/profiles'));
 app.use('/api/saved-jobs', require('./routes/saved-jobs'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', require('./middleware/auth').authenticateToken, require('./routes/admin'));
+
+// v2 routes
+app.use('/api/categories', require('./routes/categories'));
+app.use('/api/plans', require('./routes/plans'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/screening', require('./routes/screening'));
+app.use('/api/job-alerts', require('./routes/job-alerts'));
+app.use('/api/saved-resumes', require('./routes/saved-resumes'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/contact', contactLimiter, require('./routes/contact'));
+app.use('/api/companies', require('./routes/companies'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {

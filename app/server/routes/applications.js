@@ -1,7 +1,9 @@
+const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const { events: notifEvents } = require('../lib/notifications');
 
 const router = express.Router();
 
@@ -42,19 +44,16 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
       VALUES (?, ?, ?, ?)
     `).run(job_id, req.user.id, cover_letter, finalCvUrl);
 
-    // Create notification for employer
-    db.prepare(`
-      INSERT INTO notifications (user_id, type, title, message, data)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      job.employer_id,
-      'new_application',
-      'New Application',
-      `New application for ${job.title}`,
-      JSON.stringify({ application_id: result.lastInsertRowid, job_id })
-    );
-
     const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(result.lastInsertRowid);
+    const applicant = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+
+    // Smart notification with match score
+    notifEvents.onNewApplication(application, job, applicant || { name: 'A jobseeker' });
+
+    // Log application event
+    try {
+      db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'applied', ?, 'Initial application')`).run(application.id, req.user.id);
+    } catch(e) { /* table may not exist yet */ }
 
     res.status(201).json(application);
   } catch (error) {
@@ -155,21 +154,20 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    const oldStatus = application.status;
+
     db.prepare(`
       UPDATE applications SET status = ?, updated_at = datetime('now') WHERE id = ?
     `).run(status, req.params.id);
 
-    // Create notification for jobseeker
-    db.prepare(`
-      INSERT INTO notifications (user_id, type, title, message, data)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      application.jobseeker_id,
-      'application_update',
-      'Application Update',
-      `Your application for ${application.job_title} status changed to ${status}`,
-      JSON.stringify({ application_id: req.params.id, status })
-    );
+    // Rich notification with caring messages per status
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(application.job_id);
+    notifEvents.onApplicationStatusChanged(application, status, job || { title: application.job_title });
+
+    // Log application pipeline event
+    try {
+      db.prepare(`INSERT INTO application_events (application_id, from_status, to_status, changed_by, notes) VALUES (?, ?, ?, ?, ?)`).run(application.id, oldStatus, status, req.user.id, `Status changed by ${req.user.role}`);
+    } catch(e) { /* table may not exist yet */ }
 
     const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
 

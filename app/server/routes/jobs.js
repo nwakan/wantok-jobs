@@ -1,7 +1,9 @@
+const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const { events: notifEvents } = require('../lib/notifications');
 
 const router = express.Router();
 
@@ -33,9 +35,21 @@ router.get('/', (req, res) => {
     const params = [];
 
     if (keyword) {
-      query += ' AND (j.title LIKE ? OR j.description LIKE ?)';
-      const keywordParam = `%${keyword}%`;
-      params.push(keywordParam, keywordParam);
+      // Use FTS5 full-text search for keywords (falls back to LIKE if FTS fails)
+      try {
+        const ftsIds = db.prepare('SELECT rowid FROM jobs_fts WHERE jobs_fts MATCH ?').all(keyword.replace(/[^\w\s]/g, ' '));
+        if (ftsIds.length > 0) {
+          const idList = ftsIds.map(r => r.rowid).join(',');
+          query += ` AND j.id IN (${idList})`;
+        } else {
+          query += ' AND 0'; // No FTS matches
+        }
+      } catch {
+        // Fallback to LIKE if FTS fails
+        query += ' AND (j.title LIKE ? OR j.description LIKE ?)';
+        const keywordParam = `%${keyword}%`;
+        params.push(keywordParam, keywordParam);
+      }
     }
 
     if (location) {
@@ -149,7 +163,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create job (employer only)
-router.post('/', authenticateToken, requireRole('employer'), (req, res) => {
+router.post('/', authenticateToken, requireRole('employer'), validate(schemas.postJob), (req, res) => {
   try {
     const {
       title,
@@ -195,6 +209,13 @@ router.post('/', authenticateToken, requireRole('employer'), (req, res) => {
     );
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
+
+    // Notify admins about new job
+    const employer = db.prepare('SELECT * FROM profiles_employer WHERE user_id = ?').get(req.user.id);
+    notifEvents.onJobPosted(job, employer || { name: req.user.name || 'Unknown' });
+
+    // Log activity
+    try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'job_posted', 'job', job.id, JSON.stringify({ title })); } catch(e) {}
 
     res.status(201).json(job);
   } catch (error) {
