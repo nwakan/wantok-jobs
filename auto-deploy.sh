@@ -47,6 +47,14 @@ ssh $VPS "cd /opt/wantokjobs/app/client && npm install 2>&1 | tail -1 && npx vit
 echo "📊 Syncing database..."
 scp /data/.openclaw/workspace/data/wantok/app/server/data/wantokjobs.db $VPS:/opt/wantokjobs/app/server/data/wantokjobs.db 2>&1 | tail -1
 
+echo "🔧 Testing server startup..."
+ssh $VPS "cd /opt/wantokjobs/app && timeout 5 node -e \"require('./server/index.js')\" 2>&1 | head -5" || {
+  echo "❌ Server startup test FAILED — rolling back"
+  ssh $VPS "cd /opt/wantokjobs && git checkout HEAD~1 -- ."
+  ssh $VPS "systemctl restart wantokjobs"
+  exit 1
+}
+
 echo "🔄 Restarting service..."
 ssh $VPS "systemctl restart wantokjobs"
 
