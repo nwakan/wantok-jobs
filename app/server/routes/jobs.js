@@ -548,4 +548,96 @@ router.delete('/:id', authenticateToken, (req, res) => {
   }
 });
 
+// GET /:id/skills-match - Check which job skills match user's profile
+router.get('/:id/skills-match', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'jobseeker') {
+      return res.json([]);
+    }
+
+    const jobId = req.params.id;
+
+    // Get job skills
+    const jobSkills = db.prepare(`
+      SELECT s.id, s.name, js.required
+      FROM job_skills js
+      JOIN skills s ON js.skill_id = s.id
+      WHERE js.job_id = ?
+    `).all(jobId);
+
+    if (jobSkills.length === 0) {
+      return res.json([]);
+    }
+
+    // Get user's skills
+    const userSkillIds = db.prepare(`
+      SELECT skill_id FROM user_skills WHERE user_id = ?
+    `).all(req.user.id).map(us => us.skill_id);
+
+    // Mark which skills match
+    const matchedSkills = jobSkills.map(skill => ({
+      name: skill.name,
+      required: skill.required === 1,
+      matched: userSkillIds.includes(skill.id)
+    }));
+
+    res.json(matchedSkills);
+  } catch (error) {
+    console.error('Get skills match error:', error);
+    res.status(500).json({ error: 'Failed to fetch skills match' });
+  }
+});
+
+// POST /report - Report a job
+router.post('/report', async (req, res) => {
+  try {
+    const { job_id, reason } = req.body;
+
+    if (!job_id || !reason) {
+      return res.status(400).json({ error: 'job_id and reason are required' });
+    }
+
+    // Check if job exists
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Log the report in contact_messages table (repurposing for reports)
+    db.prepare(`
+      INSERT INTO contact_messages (name, email, subject, message, created_at)
+      VALUES (?, ?, ?, ?, datetime('now'))
+    `).run(
+      req.user ? req.user.name : 'Anonymous',
+      req.user ? req.user.email : 'anonymous@wantokjobs.com',
+      `Job Report: ${job.title} (ID: ${job_id})`,
+      `Reason: ${reason}\n\nJob Details:\n- Title: ${job.title}\n- Company: ${job.company_name}\n- Posted: ${job.created_at}\n- Employer ID: ${job.employer_id}`
+    );
+
+    // Optionally notify admin via notifications table
+    const adminUsers = db.prepare('SELECT id FROM users WHERE role = ?').all('admin');
+    adminUsers.forEach(admin => {
+      try {
+        db.prepare(`
+          INSERT INTO notifications (user_id, type, title, message, link, created_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `).run(
+          admin.id,
+          'report',
+          'Job Reported',
+          `Job "${job.title}" has been reported for: ${reason}`,
+          `/admin/jobs/${job_id}`
+        );
+      } catch (e) {
+        console.error('Failed to create admin notification:', e);
+      }
+    });
+
+    res.json({ message: 'Report submitted successfully' });
+  } catch (error) {
+    console.error('Report job error:', error);
+    res.status(500).json({ error: 'Failed to submit report' });
+  }
+});
+
 module.exports = router;

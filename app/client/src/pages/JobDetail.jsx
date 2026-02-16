@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
 import JobCard from '../components/JobCard';
+import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp } from 'lucide-react';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -18,6 +19,13 @@ export default function JobDetail() {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [saved, setSaved] = useState(false);
   const [similarJobs, setSimilarJobs] = useState([]);
+  const [companyInfo, setCompanyInfo] = useState(null);
+  const [companyReviews, setCompanyReviews] = useState({ rating: 0, count: 0 });
+  const [matchedSkills, setMatchedSkills] = useState([]);
+  const [jobsByCompany, setJobsByCompany] = useState([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [activeJobsTab, setActiveJobsTab] = useState('similar');
 
   useEffect(() => {
     loadJob();
@@ -26,8 +34,14 @@ export default function JobDetail() {
   useEffect(() => {
     if (job) {
       loadSimilarJobs();
+      loadCompanyInfo();
+      loadCompanyReviews();
+      loadJobsByCompany();
+      if (user) {
+        loadSkillsMatch();
+      }
     }
-  }, [job]);
+  }, [job, user]);
 
   // Add structured data for SEO
   useEffect(() => {
@@ -119,6 +133,55 @@ export default function JobDetail() {
     }
   };
 
+  const loadCompanyInfo = async () => {
+    if (!job.employer_id) return;
+    try {
+      const response = await fetch(`/api/companies/${job.employer_id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCompanyInfo(data.company);
+      }
+    } catch (error) {
+      console.error('Failed to load company info:', error);
+    }
+  };
+
+  const loadCompanyReviews = async () => {
+    if (!job.employer_id) return;
+    try {
+      const response = await fetch(`/api/reviews/company/${job.employer_id}/summary`);
+      if (response.ok) {
+        const data = await response.json();
+        setCompanyReviews(data);
+      }
+    } catch (error) {
+      console.error('Failed to load company reviews:', error);
+    }
+  };
+
+  const loadJobsByCompany = async () => {
+    if (!job.employer_id) return;
+    try {
+      const response = await jobs.getAll({ employer_id: job.employer_id, limit: 5 });
+      setJobsByCompany(response.data.filter(j => j.id !== job.id).slice(0, 4));
+    } catch (error) {
+      console.error('Failed to load jobs by company:', error);
+    }
+  };
+
+  const loadSkillsMatch = async () => {
+    if (!user || user.role !== 'jobseeker') return;
+    try {
+      const response = await fetch(`/api/jobs/${id}/skills-match`);
+      if (response.ok) {
+        const data = await response.json();
+        setMatchedSkills(data);
+      }
+    } catch (error) {
+      console.error('Failed to load skills match:', error);
+    }
+  };
+
   const handleApply = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -176,6 +239,35 @@ export default function JobDetail() {
       showToast('Link copied to clipboard!', 'success');
     } catch (error) {
       showToast('Failed to copy link', 'error');
+    }
+  };
+
+  const handleReport = async (e) => {
+    e.preventDefault();
+    if (!reportReason.trim()) {
+      showToast('Please provide a reason', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/jobs/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: parseInt(id),
+          reason: reportReason,
+        }),
+      });
+
+      if (response.ok) {
+        showToast('Report submitted. Thank you for helping keep WantokJobs safe.', 'success');
+        setShowReportModal(false);
+        setReportReason('');
+      } else {
+        throw new Error('Failed to submit report');
+      }
+    } catch (error) {
+      showToast(error.message || 'Failed to submit report', 'error');
     }
   };
 
@@ -240,6 +332,34 @@ export default function JobDetail() {
                   </div>
                 </div>
               </div>
+
+              {/* Social Proof Bar */}
+              {(job.applications_count > 0 || job.views_count > 0) && (
+                <div className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-gray-100">
+                  {job.applications_count > 0 && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Users className="w-4 h-4 text-primary-600" />
+                      <span className="text-sm font-medium">
+                        {job.applications_count} {job.applications_count === 1 ? 'applicant' : 'applicants'}
+                      </span>
+                    </div>
+                  )}
+                  {job.views_count > 0 && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Eye className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm">{job.views_count} views</span>
+                    </div>
+                  )}
+                  {companyReviews.count > 0 && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="text-sm font-medium">
+                        {companyReviews.rating.toFixed(1)} ({companyReviews.count} reviews)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Key Info Bar */}
               <div className="flex flex-wrap gap-3 mb-6 pb-6 border-b border-gray-100">
@@ -309,6 +429,44 @@ export default function JobDetail() {
                 )}
               </div>
             </div>
+
+            {/* Skills Match (LinkedIn-style) */}
+            {matchedSkills.length > 0 && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                  How you match
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-700 font-medium">Skills match</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {matchedSkills.filter(s => s.matched).length}/{matchedSkills.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {matchedSkills.map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          skill.matched
+                            ? 'bg-green-100 text-green-800 border border-green-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}
+                      >
+                        {skill.matched && '✓ '}
+                        {skill.name}
+                      </span>
+                    ))}
+                  </div>
+                  {matchedSkills.filter(s => !s.matched).length > 0 && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      💡 Add missing skills to your profile to increase your match score
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Job Highlights */}
             {(job.salary_min || job.experience_level || job.job_type) && (
@@ -387,17 +545,62 @@ export default function JobDetail() {
               </div>
             )}
 
-            {/* Company Info */}
-            {(job.company_description || job.website) && job.company_name !== 'WantokJobs Imports' && !job.company_description?.includes('System account for imported') && (
+            {/* Enhanced Company Info (Glassdoor-style) */}
+            {(companyInfo || job.company_description || job.website) && job.company_name !== 'WantokJobs Imports' && !job.company_description?.includes('System account for imported') && (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">About {job.company_name}</h2>
-                {job.company_description && (
-                  <p className="text-gray-700 mb-4 leading-relaxed">{job.company_description}</p>
+                <div className="flex items-start justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">About {job.company_name}</h2>
+                  {companyInfo?.verified && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                      ✓ Verified
+                    </span>
+                  )}
+                </div>
+
+                {/* Company Stats */}
+                {companyInfo && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                    {companyInfo.company_size && (
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Company Size</div>
+                        <div className="font-semibold text-gray-900">{companyInfo.company_size}</div>
+                      </div>
+                    )}
+                    {companyInfo.industry && (
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Industry</div>
+                        <div className="font-semibold text-gray-900">{companyInfo.industry}</div>
+                      </div>
+                    )}
+                    {companyReviews.count > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Rating</div>
+                        <div className="font-semibold text-gray-900 flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          {companyReviews.rating.toFixed(1)}
+                        </div>
+                      </div>
+                    )}
+                    {companyInfo.total_jobs_posted > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Jobs Posted</div>
+                        <div className="font-semibold text-gray-900">{companyInfo.total_jobs_posted}</div>
+                      </div>
+                    )}
+                  </div>
                 )}
+
+                {(job.company_description || companyInfo?.description) && (
+                  <p className="text-gray-700 mb-4 leading-relaxed">
+                    {companyInfo?.description || job.company_description}
+                  </p>
+                )}
+
+                {/* Company Actions */}
                 <div className="flex flex-wrap gap-3">
-                  {job.website && (
+                  {(job.website || companyInfo?.website) && (
                     <a
-                      href={job.website}
+                      href={companyInfo?.website || job.website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
@@ -405,10 +608,23 @@ export default function JobDetail() {
                       🌐 Visit Website
                     </a>
                   )}
-                  {job.industry && (
-                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
-                      🏢 {job.industry}
-                    </span>
+                  {jobsByCompany.length > 0 && (
+                    <Link
+                      to={`/jobs?employer_id=${job.employer_id}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-medium"
+                    >
+                      <Briefcase className="w-4 h-4" />
+                      See {jobsByCompany.length}+ more jobs
+                    </Link>
+                  )}
+                  {companyReviews.count > 0 && (
+                    <Link
+                      to={`/company/${job.employer_id}/reviews`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors font-medium"
+                    >
+                      <Star className="w-4 h-4" />
+                      Read {companyReviews.count} reviews
+                    </Link>
                   )}
                 </div>
               </div>
@@ -474,6 +690,14 @@ export default function JobDetail() {
                 >
                   🔗 Share Job
                 </button>
+
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="w-full px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Flag className="w-4 h-4" />
+                  Report this job
+                </button>
               </div>
             </div>
 
@@ -528,17 +752,60 @@ export default function JobDetail() {
               </div>
             )}
 
-            {/* Similar Jobs */}
-            {similarJobs.length > 0 && (
+            {/* Similar Jobs + Jobs from Company */}
+            {(similarJobs.length > 0 || jobsByCompany.length > 0) && (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-4">Similar Jobs</h3>
-                <div className="space-y-3">
-                  {similarJobs.map(similarJob => (
-                    <JobCard key={similarJob.id} job={similarJob} compact />
-                  ))}
-                </div>
+                {jobsByCompany.length > 0 && similarJobs.length > 0 ? (
+                  <>
+                    <div className="flex gap-4 mb-4 border-b border-gray-200">
+                      <button
+                        onClick={() => setActiveJobsTab('similar')}
+                        className={`pb-2 px-1 font-semibold text-sm transition-colors ${
+                          activeJobsTab === 'similar'
+                            ? 'border-b-2 border-primary-600 text-primary-600'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Similar Jobs
+                      </button>
+                      <button
+                        onClick={() => setActiveJobsTab('company')}
+                        className={`pb-2 px-1 font-semibold text-sm transition-colors ${
+                          activeJobsTab === 'company'
+                            ? 'border-b-2 border-primary-600 text-primary-600'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        More from {job.company_name}
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {activeJobsTab === 'similar' &&
+                        similarJobs.map(similarJob => (
+                          <JobCard key={similarJob.id} job={similarJob} compact />
+                        ))}
+                      {activeJobsTab === 'company' &&
+                        jobsByCompany.map(companyJob => (
+                          <JobCard key={companyJob.id} job={companyJob} compact />
+                        ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-gray-900 mb-4">
+                      {jobsByCompany.length > 0 ? `More from ${job.company_name}` : 'Similar Jobs'}
+                    </h3>
+                    <div className="space-y-3">
+                      {(jobsByCompany.length > 0 ? jobsByCompany : similarJobs).map(relatedJob => (
+                        <JobCard key={relatedJob.id} job={relatedJob} compact />
+                      ))}
+                    </div>
+                  </>
+                )}
                 <Link
-                  to="/jobs"
+                  to={jobsByCompany.length > 0 && activeJobsTab === 'company' 
+                    ? `/jobs?employer_id=${job.employer_id}`
+                    : '/jobs'}
                   className="block text-center mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium"
                 >
                   View all jobs →
@@ -598,6 +865,64 @@ export default function JobDetail() {
                   className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium"
                 >
                   {applying ? 'Submitting...' : 'Submit Application'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Report Job Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-8 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <Flag className="w-6 h-6 text-red-600" />
+              <h2 className="text-2xl font-bold">Report this job</h2>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Help us keep WantokJobs safe. Tell us why this job should be reviewed.
+            </p>
+            <form onSubmit={handleReport}>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for reporting *
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
+                  required
+                >
+                  <option value="">Select a reason...</option>
+                  <option value="spam">Spam or misleading</option>
+                  <option value="fake">Fake job posting</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="discrimination">Discriminatory</option>
+                  <option value="scam">Potential scam</option>
+                  <option value="expired">Job is already filled/expired</option>
+                  <option value="other">Other</option>
+                </select>
+                <p className="text-xs text-gray-500">
+                  Reports are confidential and reviewed within 24-48 hours
+                </p>
+              </div>
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setReportReason('');
+                  }}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                >
+                  Submit Report
                 </button>
               </div>
             </form>

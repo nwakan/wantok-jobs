@@ -3,6 +3,24 @@ const router = express.Router();
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
+// GET /company/:id/summary — Get review summary for a company (for job detail page)
+router.get('/company/:id/summary', (req, res) => {
+  try {
+    const stats = db.prepare(`
+      SELECT 
+        COUNT(*) as count,
+        COALESCE(AVG(rating), 0) as rating
+      FROM company_reviews
+      WHERE company_id = ? AND approved = 1
+    `).get(req.params.id);
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Get review summary error:', error);
+    res.status(500).json({ error: 'Failed to fetch review summary' });
+  }
+});
+
 // GET /companies/:id/reviews — Get all reviews for a company
 router.get('/companies/:id/reviews', (req, res) => {
   try {
