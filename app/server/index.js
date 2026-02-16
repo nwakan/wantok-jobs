@@ -79,6 +79,10 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/contact', contactLimiter, require('./routes/contact'));
 app.use('/api/companies', require('./routes/companies'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/uploads', require('./routes/uploads'));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
