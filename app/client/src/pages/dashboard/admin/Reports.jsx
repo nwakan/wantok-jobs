@@ -437,7 +437,7 @@ export default function Reports() {
             <h3 className="text-sm font-medium text-gray-700 mb-3">Applications</h3>
             <div className="space-y-2">
               {reports.slice(0, 6).map((report, idx) => {
-                const maxApps = Math.max(...reports.map(r => r.applications));
+                const maxApps = Math.max(...reports.map(r => r.applications), 1); // Prevent division by zero
                 return (
                   <div key={idx}>
                     <div className="flex justify-between text-xs mb-1">
@@ -461,7 +461,7 @@ export default function Reports() {
             <h3 className="text-sm font-medium text-gray-700 mb-3">Revenue</h3>
             <div className="space-y-2">
               {reports.slice(0, 6).map((report, idx) => {
-                const maxRevenue = Math.max(...reports.map(r => r.revenue));
+                const maxRevenue = Math.max(...reports.map(r => r.revenue), 1); // Prevent division by zero
                 return (
                   <div key={idx}>
                     <div className="flex justify-between text-xs mb-1">

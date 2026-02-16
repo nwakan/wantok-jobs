@@ -8,6 +8,16 @@ function getAuthHeader() {
 async function handleResponse(response) {
   const data = await response.json();
   if (!response.ok) {
+    // Handle JWT expiry / authentication failure
+    if (response.status === 401) {
+      // Clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Redirect to login with session expired message
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?expired=true';
+      }
+    }
     throw new Error(data.error || 'Request failed');
   }
   return data;

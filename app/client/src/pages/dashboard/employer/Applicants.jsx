@@ -208,9 +208,9 @@ export default function Applicants() {
   // Analytics calculations
   const analytics = {
     totalApplicants: applicants.length,
-    avgMatchScore: Math.round(applicants.reduce((sum, a) => sum + a.match_score, 0) / applicants.length || 0),
-    avgRating: (applicants.reduce((sum, a) => sum + a.rating, 0) / applicants.length || 0).toFixed(1),
-    conversionRate: applicants.length ? Math.round((applicants.filter(a => ['hired', 'offered'].includes(a.status)).length / applicants.length) * 100) : 0,
+    avgMatchScore: applicants.length > 0 ? Math.round(applicants.reduce((sum, a) => sum + a.match_score, 0) / applicants.length) : 0,
+    avgRating: applicants.length > 0 ? (applicants.reduce((sum, a) => sum + a.rating, 0) / applicants.length).toFixed(1) : '0.0',
+    conversionRate: applicants.length > 0 ? Math.round((applicants.filter(a => ['hired', 'offered'].includes(a.status)).length / applicants.length) * 100) : 0,
     avgTimeInPipeline: '5.2 days', // Mock - would calculate from application_events
     topSource: applicants.reduce((acc, a) => {
       acc[a.source] = (acc[a.source] || 0) + 1;

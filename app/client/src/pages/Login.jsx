@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auth } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -17,6 +18,15 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   const [rateLimitTime, setRateLimitTime] = useState(0);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  
+  // Check for session expired flag
+  useEffect(() => {
+    if (searchParams.get('expired') === 'true') {
+      setSessionExpired(true);
+      setError('Your session has expired. Please log in again.');
+    }
+  }, [searchParams]);
   
   // Load remembered email on mount
   useEffect(() => {
@@ -94,7 +104,9 @@ export default function Login() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className={`border px-4 py-3 rounded flex items-start gap-2 ${
-              rateLimited ? 'bg-orange-100 border-orange-400 text-orange-700' : 'bg-red-100 border-red-400 text-red-700'
+              sessionExpired ? 'bg-blue-100 border-blue-400 text-blue-700' :
+              rateLimited ? 'bg-orange-100 border-orange-400 text-orange-700' : 
+              'bg-red-100 border-red-400 text-red-700'
             }`}>
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
