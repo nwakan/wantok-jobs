@@ -83,6 +83,7 @@ const AdminCategories = lazy(() => import('./pages/dashboard/admin/Categories'))
 const AdminReports = lazy(() => import('./pages/dashboard/admin/Reports'));
 const AdminBanners = lazy(() => import('./pages/dashboard/admin/Banners'));
 const AdminArticles = lazy(() => import('./pages/dashboard/admin/Articles'));
+const AdminNewsletter = lazy(() => import('./pages/dashboard/admin/Newsletter'));
 const AdminMessages = lazy(() => import('./pages/dashboard/admin/Messages'));
 const AdminContactMessages = lazy(() => import('./pages/dashboard/admin/ContactMessages'));
 const AdminAIAgents = lazy(() => import('./pages/dashboard/admin/AIAgents'));
@@ -160,6 +161,7 @@ function App() {
                 <Route path="reports" element={<Lazy component={AdminReports} />} />
                 <Route path="banners" element={<Lazy component={AdminBanners} />} />
                 <Route path="articles" element={<Lazy component={AdminArticles} />} />
+                <Route path="newsletter" element={<Lazy component={AdminNewsletter} />} />
                 <Route path="messages" element={<Lazy component={AdminMessages} />} />
                 <Route path="contact-messages" element={<Lazy component={AdminContactMessages} />} />
                 <Route path="ai-agents" element={<Lazy component={AdminAIAgents} />} />

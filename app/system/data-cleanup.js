@@ -227,11 +227,11 @@ function task4_cleanupTestData() {
 
   // Check for test jobs
   const testJobs = db.prepare(`
-    SELECT id, title, company 
+    SELECT id, title, company_name 
     FROM jobs 
     WHERE title LIKE '%test%' 
        OR title LIKE '%dummy%'
-       OR company LIKE '%test%'
+       OR company_name LIKE '%test%'
     LIMIT 50
   `).all();
 
@@ -239,7 +239,7 @@ function task4_cleanupTestData() {
   if (testJobs.length > 0) {
     console.log('  Sample:');
     testJobs.slice(0, 10).forEach(job => {
-      console.log(`    ID ${job.id}: ${job.title} at ${job.company}`);
+      console.log(`    ID ${job.id}: ${job.title} at ${job.company_name}`);
     });
   }
 
@@ -251,9 +251,10 @@ function task4_cleanupTestData() {
 
   // Check for duplicate jobs (same title + company)
   const duplicateJobs = db.prepare(`
-    SELECT title, company, COUNT(*) as count, GROUP_CONCAT(id) as ids
+    SELECT title, company_name, COUNT(*) as count, GROUP_CONCAT(id) as ids
     FROM jobs
-    GROUP BY LOWER(TRIM(title)), LOWER(TRIM(company))
+    WHERE company_name IS NOT NULL
+    GROUP BY LOWER(TRIM(title)), LOWER(TRIM(company_name))
     HAVING count > 1
     ORDER BY count DESC
     LIMIT 20
@@ -263,7 +264,7 @@ function task4_cleanupTestData() {
   if (duplicateJobs.length > 0) {
     console.log('  Top duplicates:');
     duplicateJobs.slice(0, 10).forEach(job => {
-      console.log(`    "${job.title}" at "${job.company}": ${job.count} copies (IDs: ${job.ids})`);
+      console.log(`    "${job.title}" at "${job.company_name}": ${job.count} copies (IDs: ${job.ids})`);
     });
   }
 
@@ -275,7 +276,7 @@ function task4_cleanupTestData() {
 
   // Check for test articles
   const testArticles = db.prepare(`
-    SELECT id, title, author
+    SELECT id, title, author_id, status
     FROM articles 
     WHERE title LIKE '%test%' 
        OR title LIKE '%dummy%'
@@ -298,17 +299,19 @@ function task4_cleanupTestData() {
 
   // Check for test reviews
   const testReviews = db.prepare(`
-    SELECT id, company, rating, comment
+    SELECT id, company_id, rating, title, pros, cons
     FROM company_reviews 
-    WHERE comment LIKE '%test%' 
-       OR comment LIKE '%dummy%'
+    WHERE title LIKE '%test%' 
+       OR pros LIKE '%test%'
+       OR cons LIKE '%test%'
+       OR pros LIKE '%dummy%'
     LIMIT 20
   `).all();
 
   console.log(`\n🔎 Found ${testReviews.length} potential test reviews`);
   if (testReviews.length > 0) {
     testReviews.slice(0, 5).forEach(review => {
-      console.log(`    ID ${review.id}: ${review.company} - ${review.comment?.substring(0, 50)}`);
+      console.log(`    ID ${review.id}: Company ${review.company_id} - ${review.title || review.pros?.substring(0, 50)}`);
     });
   }
 

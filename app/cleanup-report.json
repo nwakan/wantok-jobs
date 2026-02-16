@@ -1,0 +1,255 @@
+{
+  "timestamp": "2026-02-16T22:08:03.354Z",
+  "tasks": [
+    {
+      "name": "Fix Corrupted Admin Accounts",
+      "actions": [
+        {
+          "action": "Found corrupted admins",
+          "count": 0,
+          "details": []
+        },
+        {
+          "action": "Deleted corrupted admins",
+          "count": 0
+        },
+        {
+          "action": "Found users with invalid emails",
+          "count": 100,
+          "sample": [
+            {
+              "id": 12,
+              "email": "2022-01-26 22:21:09",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 13,
+              "email": "2022-01-30 23:43:59",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 14,
+              "email": "2022-01-31 02:24:38",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 15,
+              "email": "2022-01-31 04:34:29",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 16,
+              "email": "2022-01-31 06:05:02",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 17,
+              "email": "2022-01-31 07:46:37",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 18,
+              "email": "2022-01-31 09:14:41",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 19,
+              "email": "2022-02-01 02:45:08",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 20,
+              "email": "2022-02-16 06:36:34",
+              "name": "3 Yes",
+              "role": "jobseeker"
+            },
+            {
+              "id": 21,
+              "email": "2022-02-16 17:11:25",
+              "name": "2 Yes",
+              "role": "jobseeker"
+            }
+          ]
+        },
+        {
+          "action": "Verified legitimate admin",
+          "admin": {
+            "id": 1,
+            "email": "admin@wantokjobs.com",
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Legacy Password Audit",
+      "stats": {
+        "totalUsers": 61669,
+        "bcryptUsers": 41,
+        "legacyUsers": 61628,
+        "legacyPercentage": "99.93",
+        "sampleLegacyFormats": [
+          {
+            "id": 12,
+            "email": "2022-01-26 22:21:09",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 13,
+            "email": "2022-01-30 23:43:59",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 14,
+            "email": "2022-01-31 02:24:38",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 15,
+            "email": "2022-01-31 04:34:29",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 16,
+            "email": "2022-01-31 06:05:02",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 17,
+            "email": "2022-01-31 07:46:37",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 18,
+            "email": "2022-01-31 09:14:41",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 19,
+            "email": "2022-02-01 02:45:08",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 20,
+            "email": "2022-02-16 06:36:34",
+            "pwd_prefix": "legac",
+            "last_login": null
+          },
+          {
+            "id": 21,
+            "email": "2022-02-16 17:11:25",
+            "pwd_prefix": "legac",
+            "last_login": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Clean Up Test Data",
+      "removals": [
+        {
+          "type": "test_users",
+          "count": 42,
+          "sample": [
+            {
+              "id": 46401,
+              "email": "katyafakesss@gmail.com",
+              "name": "3 No",
+              "role": "jobseeker"
+            },
+            {
+              "id": 53110,
+              "email": "testovv54@gmail.com",
+              "name": "3 No",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61554,
+              "email": "bhtesting4242@gmail.com",
+              "name": "Bluehost",
+              "role": "employer"
+            },
+            {
+              "id": 61723,
+              "email": "js1771211843740@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61724,
+              "email": "e1771211843740@t.com",
+              "name": "TestEmp",
+              "role": "employer"
+            },
+            {
+              "id": 61725,
+              "email": "js1771212034037@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61726,
+              "email": "e1771212034037@t.com",
+              "name": "TestEmp",
+              "role": "employer"
+            },
+            {
+              "id": 61727,
+              "email": "js1771212194149@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61728,
+              "email": "e1771212194149@t.com",
+              "name": "TestEmp",
+              "role": "employer"
+            },
+            {
+              "id": 61729,
+              "email": "js1771212204048@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            }
+          ]
+        },
+        {
+          "type": "test_jobs",
+          "count": 0,
+          "sample": []
+        },
+        {
+          "type": "duplicate_jobs",
+          "count": 0,
+          "sample": []
+        },
+        {
+          "type": "test_articles",
+          "count": 0,
+          "sample": []
+        },
+        {
+          "type": "test_reviews",
+          "count": 0,
+          "sample": []
+        }
+      ]
+    }
+  ]
+}
