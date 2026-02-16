@@ -803,6 +803,47 @@ async function sendNewJobAlerts(job, employerProfile) {
   }
 }
 
+// ─── 19. Generic Notification Email ──────────────────────────────────
+
+async function sendNotificationEmail({ to, toName, subject, body, actionUrl, actionText, notificationType, digestData }) {
+  try {
+    const html = layout({
+      preheader: body.substring(0, 100),
+      body: `
+        ${greeting(toName)}
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 16px;">${body}</p>
+        ${actionUrl && actionText ? button(actionText, actionUrl) : ''}
+        ${digestData ? `
+          <div class="card">
+            <p style="font-size:14px;color:#6b7280;margin:0 0 12px;"><strong>Notification Summary:</strong></p>
+            ${Object.entries(digestData).map(([type, notifs]) => `
+              <p style="font-size:14px;color:#374151;margin:4px 0;">
+                <strong>${notifs.length}</strong> ${type.replace(/_/g, ' ')}
+              </p>
+            `).join('')}
+          </div>
+        ` : ''}
+        <p style="font-size:14px;color:#6b7280;margin:24px 0 0;">
+          Best wishes,<br>
+          <strong>The WantokJobs Team</strong>
+        </p>
+      `,
+    });
+
+    return sendEmail({
+      to,
+      toName,
+      subject,
+      html,
+      text: body,
+      tags: ['notification', notificationType || 'general'],
+    });
+  } catch (error) {
+    console.error('Send notification email error:', error);
+    return { error: error.message };
+  }
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -826,4 +867,5 @@ module.exports = {
   sendNewsletterDigest,
   sendWelcomeNewsletter,
   sendNewJobAlerts,
+  sendNotificationEmail,
 };

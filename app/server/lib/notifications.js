@@ -9,6 +9,7 @@
  */
 
 const db = require('../database');
+const { sendNotificationEmail } = require('./notification-emails');
 
 // ============================================================
 // NOTIFICATION TYPES & TEMPLATES
@@ -197,10 +198,38 @@ function notify(userId, type, data = {}) {
     const title = typeof template.title === 'function' ? template.title(data) : template.title;
     const message = typeof template.message === 'function' ? template.message(data) : template.message;
 
-    const result = db.prepare(`
-      INSERT INTO notifications (user_id, type, title, message, data)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(userId, type, title, message, JSON.stringify(data));
+    // Generate deep link if applicable
+    let link = null;
+    if (data.jobId) {
+      link = `/jobs/${data.jobId}`;
+    } else if (data.applicationId) {
+      link = `/dashboard/applications/${data.applicationId}`;
+    } else if (data.messageId) {
+      link = `/dashboard/messages/${data.messageId}`;
+    }
+
+    // Check if notification table has link column (backward compatible)
+    const hasLinkColumn = db.prepare("SELECT * FROM pragma_table_info('notifications') WHERE name='link'").get();
+    
+    let result;
+    if (hasLinkColumn) {
+      result = db.prepare(`
+        INSERT INTO notifications (user_id, type, title, message, data, link)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(userId, type, title, message, JSON.stringify(data), link);
+    } else {
+      result = db.prepare(`
+        INSERT INTO notifications (user_id, type, title, message, data)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(userId, type, title, message, JSON.stringify(data));
+    }
+
+    // Send email notification for critical types (async, don't block)
+    setImmediate(() => {
+      sendNotificationEmail(userId, type, data, title, message).catch(err => {
+        console.error('Email notification failed:', err.message);
+      });
+    });
 
     return result.lastInsertRowid;
   } catch (error) {
