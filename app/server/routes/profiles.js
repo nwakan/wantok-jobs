@@ -218,4 +218,66 @@ router.get('/:userId', (req, res) => {
   }
 });
 
+// Get profile views analytics
+router.get('/views-analytics', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Only jobseekers have profile views
+    if (req.user.role !== 'jobseeker') {
+      return res.json({ today: 0, week: 0, trend: 'stable' });
+    }
+
+    // Get profile views from activity_log (when employers view jobseeker profiles)
+    const today = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM activity_log
+      WHERE entity_type = 'profile'
+        AND entity_id = ?
+        AND action = 'profile_view'
+        AND date(created_at) = date('now')
+    `).get(userId);
+
+    const week = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM activity_log
+      WHERE entity_type = 'profile'
+        AND entity_id = ?
+        AND action = 'profile_view'
+        AND created_at >= datetime('now', '-7 days')
+    `).get(userId);
+
+    const lastWeek = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM activity_log
+      WHERE entity_type = 'profile'
+        AND entity_id = ?
+        AND action = 'profile_view'
+        AND created_at >= datetime('now', '-14 days')
+        AND created_at < datetime('now', '-7 days')
+    `).get(userId);
+
+    // Determine trend
+    let trend = 'stable';
+    if (week.count > lastWeek.count * 1.1) trend = 'up';
+    else if (week.count < lastWeek.count * 0.9) trend = 'down';
+
+    // Also update the profile_views counter in profiles_jobseeker
+    db.prepare(`
+      UPDATE profiles_jobseeker 
+      SET profile_views = ?
+      WHERE user_id = ?
+    `).run(week.count, userId);
+
+    res.json({
+      today: today.count,
+      week: week.count,
+      trend
+    });
+  } catch (error) {
+    console.error('Profile views analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch profile views' });
+  }
+});
+
 module.exports = router;

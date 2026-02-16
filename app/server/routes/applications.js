@@ -395,4 +395,40 @@ router.post('/notes', authenticateToken, requireRole('employer', 'admin'), (req,
   }
 });
 
+// Get upcoming application deadlines (jobs user might want to apply to)
+router.get('/upcoming-deadlines', authenticateToken, requireRole('jobseeker'), (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Get jobs with deadlines in next 7 days that user hasn't applied to yet
+    // AND match user's interests (saved jobs, recent searches, etc.)
+    const deadlines = db.prepare(`
+      SELECT 
+        j.id as job_id,
+        j.title as job_title,
+        j.company_name,
+        j.application_deadline,
+        CAST(julianday(j.application_deadline) - julianday('now') AS INTEGER) as days_left
+      FROM jobs j
+      LEFT JOIN saved_jobs sj ON sj.job_id = j.id AND sj.user_id = ?
+      LEFT JOIN applications a ON a.job_id = j.id AND a.jobseeker_id = ?
+      WHERE j.status = 'active'
+        AND j.application_deadline IS NOT NULL
+        AND date(j.application_deadline) >= date('now')
+        AND date(j.application_deadline) <= date('now', '+7 days')
+        AND a.id IS NULL
+        AND sj.id IS NOT NULL
+      ORDER BY j.application_deadline ASC
+      LIMIT 5
+    `).all(userId, userId);
+
+    res.json(deadlines);
+  } catch (error) {
+    console.error('Upcoming deadlines error:', error);
+    res.status(500).json({ error: 'Failed to fetch upcoming deadlines' });
+  }
+});
+
 module.exports = router;
