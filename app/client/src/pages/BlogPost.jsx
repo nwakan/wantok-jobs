@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, User, Tag, ArrowLeft, Share2, Clock } from 'lucide-react';
+import { Calendar, User, Tag, ArrowLeft, Share2, Clock, Facebook, Twitter, Linkedin, Link as LinkIcon, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import PageHead from '../components/PageHead';
 import api from '../api';
@@ -11,10 +11,21 @@ export default function BlogPost() {
   const [article, setArticle] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableOfContents, setTableOfContents] = useState([]);
+  const [activeSection, setActiveSection] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const contentRef = useRef(null);
 
   useEffect(() => {
     fetchArticle();
   }, [slug]);
+  
+  useEffect(() => {
+    if (article && contentRef.current) {
+      generateTableOfContents();
+      setupScrollSpy();
+    }
+  }, [article]);
 
   const fetchArticle = async () => {
     setLoading(true);
@@ -31,6 +42,42 @@ export default function BlogPost() {
       setLoading(false);
     }
   };
+  
+  const generateTableOfContents = () => {
+    const content = contentRef.current;
+    if (!content) return;
+    
+    const headings = content.querySelectorAll('h2, h3');
+    const toc = Array.from(headings).map((heading, index) => {
+      const id = `heading-${index}`;
+      heading.id = id;
+      return {
+        id,
+        text: heading.textContent,
+        level: heading.tagName.toLowerCase(),
+      };
+    });
+    
+    setTableOfContents(toc);
+  };
+  
+  const setupScrollSpy = () => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -80% 0px' }
+    );
+    
+    const headings = contentRef.current?.querySelectorAll('h2, h3');
+    headings?.forEach((heading) => observer.observe(heading));
+    
+    return () => observer.disconnect();
+  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -43,6 +90,24 @@ export default function BlogPost() {
       navigator.clipboard.writeText(window.location.href);
       alert('Link copied to clipboard!');
     }
+  };
+  
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+  
+  const shareOnFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
+  };
+  
+  const shareOnTwitter = () => {
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`, '_blank');
+  };
+  
+  const shareOnLinkedIn = () => {
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
   if (loading) {
@@ -137,17 +202,45 @@ export default function BlogPost() {
                       <Clock className="w-4 h-4" />
                       <span>{article.readTime || '5 min'} read</span>
                     </div>
-                    <button
-                      onClick={handleShare}
-                      className="flex items-center gap-2 text-primary-600 hover:text-primary-700 ml-auto"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </button>
+                  </div>
+                  
+                  {/* Social Share Buttons */}
+                  <div className="mb-8 pb-8 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Share this article:</p>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={shareOnFacebook}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        <Facebook className="w-4 h-4" />
+                        Facebook
+                      </button>
+                      <button
+                        onClick={shareOnTwitter}
+                        className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors text-sm font-medium"
+                      >
+                        <Twitter className="w-4 h-4" />
+                        Twitter
+                      </button>
+                      <button
+                        onClick={shareOnLinkedIn}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors text-sm font-medium"
+                      >
+                        <Linkedin className="w-4 h-4" />
+                        LinkedIn
+                      </button>
+                      <button
+                        onClick={copyLink}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                      >
+                        {linkCopied ? <Check className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
+                        {linkCopied ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Article Content */}
-                  <div className="prose prose-lg max-w-none">
+                  <div ref={contentRef} className="prose prose-lg max-w-none">
                     {article.content ? (
                       <div dangerouslySetInnerHTML={{ __html: article.content }} />
                     ) : (
@@ -216,24 +309,63 @@ export default function BlogPost() {
             {/* Sidebar */}
             <div className="lg:col-span-1">
               <div className="sticky top-8 space-y-6">
+                {/* Table of Contents */}
+                {tableOfContents.length > 0 && (
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      📖 Table of Contents
+                    </h3>
+                    <nav className="space-y-2 text-sm">
+                      {tableOfContents.map((item) => (
+                        <a
+                          key={item.id}
+                          href={`#${item.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }}
+                          className={`block py-1 transition-colors ${
+                            item.level === 'h3' ? 'pl-4' : ''
+                          } ${
+                            activeSection === item.id
+                              ? 'text-primary-600 font-medium'
+                              : 'text-gray-600 hover:text-primary-600'
+                          }`}
+                        >
+                          {item.text}
+                        </a>
+                      ))}
+                    </nav>
+                  </div>
+                )}
+                
                 {/* Related Articles */}
                 {relatedArticles.length > 0 && (
                   <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h3 className="font-bold text-gray-900 mb-4">Related Articles</h3>
+                    <h3 className="font-bold text-gray-900 mb-4">📚 Related Articles</h3>
                     <div className="space-y-4">
                       {relatedArticles.map((related) => (
                         <button
                           key={related.id}
                           onClick={() => navigate(`/blog/${related.slug}`)}
-                          className="block text-left group"
+                          className="block text-left group w-full"
                         >
-                          <h4 className="font-medium text-gray-900 group-hover:text-primary-600 transition mb-1 line-clamp-2">
+                          <h4 className="font-medium text-gray-900 group-hover:text-primary-600 transition mb-1 line-clamp-2 text-sm">
                             {related.title}
                           </h4>
-                          <p className="text-sm text-gray-500">{related.category}</p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                            <Tag className="w-3 h-3" />
+                            {related.category}
+                          </p>
                         </button>
                       ))}
                     </div>
+                    <Link
+                      to="/blog"
+                      className="block mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      View all articles →
+                    </Link>
                   </div>
                 )}
 

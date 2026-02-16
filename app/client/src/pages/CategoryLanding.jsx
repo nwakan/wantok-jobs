@@ -180,7 +180,7 @@ export default function CategoryLanding() {
                       <button
                         onClick={() => loadMoreJobs(pagination.page - 1)}
                         disabled={pagination.page === 1}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="min-w-[100px] min-h-[48px] px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Previous
                       </button>
@@ -198,10 +198,10 @@ export default function CategoryLanding() {
                               <button
                                 key={pageNum}
                                 onClick={() => loadMoreJobs(pageNum)}
-                                className={`w-10 h-10 rounded-lg ${
+                                className={`min-w-[44px] min-h-[44px] rounded-lg ${
                                   pageNum === pagination.page
                                     ? 'bg-primary-600 text-white'
-                                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100'
                                 }`}
                               >
                                 {pageNum}
@@ -220,7 +220,7 @@ export default function CategoryLanding() {
                       <button
                         onClick={() => loadMoreJobs(pagination.page + 1)}
                         disabled={pagination.page === pagination.totalPages}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="min-w-[100px] min-h-[48px] px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next
                       </button>

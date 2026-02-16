@@ -167,21 +167,21 @@ export default function Home() {
           >
             <div className="grid md:grid-cols-3 gap-4 mb-4">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 md:w-5 md:h-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Job title or keywords..."
                   value={searchData.keyword}
                   onChange={(e) => setSearchData({ ...searchData, keyword: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 md:w-5 md:h-5 text-gray-400" />
                 <select
                   value={searchData.location}
                   onChange={(e) => setSearchData({ ...searchData, location: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
+                  className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
                 >
                   {provinces.map((loc) => (
                     <option key={loc} value={loc}>{loc}</option>
@@ -189,11 +189,11 @@ export default function Home() {
                 </select>
               </div>
               <div className="relative">
-                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 md:w-5 md:h-5 text-gray-400" />
                 <select
                   value={searchData.category}
                   onChange={(e) => setSearchData({ ...searchData, category: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
+                  className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
                 >
                   <option value="">All Categories</option>
                   {categories.map((cat) => (

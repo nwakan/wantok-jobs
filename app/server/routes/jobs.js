@@ -1,6 +1,7 @@
 const { validate, schemas } = require("../middleware/validate");
 const { sendJobPostedEmail, sendNewJobAlerts } = require('../lib/email');
 const { canPostJob, consumeEmployerServiceCredit } = require('../lib/billing');
+const { addPaginationHeaders } = require('../utils/pagination');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -214,6 +215,9 @@ router.get('/', (req, res) => {
 
     const jobs = db.prepare(query).all(...paginatedParams);
 
+    // Add pagination headers
+    addPaginationHeaders(res, total, parseInt(page), limitNum, `${req.protocol}://${req.get('host')}${req.path}`);
+
     res.json({
       data: jobs,
       total,
@@ -222,7 +226,7 @@ router.get('/', (req, res) => {
     });
   } catch (error) {
     console.error('Get jobs error:', error);
-    res.status(500).json({ error: 'Failed to fetch jobs' });
+    res.status(500).json({ error: 'Failed to fetch jobs', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 

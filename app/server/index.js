@@ -3,17 +3,38 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security headers
+// Request logging middleware
+const requestLogger = require('./middleware/logging');
+
+// Response compression (gzip)
+app.use(compression({
+  // Only compress responses above 1kb
+  threshold: 1024,
+  // Compression level (0-9, 6 is default)
+  level: 6,
+}));
+
+// Security headers (enhanced CSRF protection)
 app.use(helmet({
   contentSecurityPolicy: false, // Allow inline scripts for SPA
   crossOriginEmbedderPolicy: false,
 }));
+
+// Additional CSRF protection header
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 // CORS
 app.use(cors({
@@ -29,6 +50,9 @@ app.use(rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
 }));
+
+// Request logging
+app.use(requestLogger);
 
 // Auth rate limit: 10 attempts/min per IP
 const authLimiter = rateLimit({

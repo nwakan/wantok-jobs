@@ -1008,8 +1008,8 @@ export default function JobDetail() {
 
       {/* Enhanced Multi-Step Apply Modal (LinkedIn/Indeed-style) */}
       {showApplyModal && !applicationSuccess && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-3xl w-full shadow-2xl my-8">
+        <div className="fixed inset-0 bg-black bg-opacity-50 md:flex md:items-center md:justify-center z-50 md:p-4 overflow-y-auto">
+          <div className="bg-white md:rounded-xl md:max-w-3xl w-full h-full md:h-auto md:max-h-[90vh] md:shadow-2xl md:my-8 overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div>
@@ -1457,8 +1457,8 @@ export default function JobDetail() {
 
       {/* Application Success Modal */}
       {showApplyModal && applicationSuccess && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-8 shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 md:flex md:items-center md:justify-center z-50 md:p-4 overflow-y-auto">
+          <div className="bg-white md:rounded-xl md:max-w-2xl w-full h-full md:h-auto p-6 md:p-8 md:shadow-2xl overflow-y-auto">
             <div className="text-center">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
@@ -1597,6 +1597,30 @@ export default function JobDetail() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Sticky Apply Button - Mobile Only (44px+ touch target) */}
+      {job && user?.role === 'jobseeker' && !applicationSuccess && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30 shadow-lg safe-area-bottom">
+          <button 
+            onClick={handleApplyClick}
+            className="w-full bg-primary-600 text-white py-4 rounded-lg font-semibold shadow-md active:bg-primary-700 min-h-[48px] flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            Apply for this job
+          </button>
+        </div>
+      )}
+      {job && !user && !applicationSuccess && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30 shadow-lg safe-area-bottom">
+          <Link
+            to="/login"
+            className="w-full bg-primary-600 text-white py-4 rounded-lg font-semibold shadow-md active:bg-primary-700 min-h-[48px] flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            Login to Apply
+          </Link>
         </div>
       )}
     </div>
