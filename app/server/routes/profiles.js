@@ -43,43 +43,101 @@ router.put('/', authenticateToken, (req, res) => {
         location,
         country,
         bio,
+        headline,
         skills,
+        top_skills,
         work_history,
         education,
+        languages,
+        certifications,
+        volunteer,
+        projects,
+        awards,
+        featured,
         cv_url,
+        profile_photo_url,
+        profile_banner_url,
+        profile_video_url,
         desired_job_type,
         desired_salary_min,
         desired_salary_max,
-        availability
+        availability,
+        open_to_work,
+        profile_visibility,
+        profile_slug,
+        social_links
       } = req.body;
 
       // Check profile completeness
       const profile_complete = !!(phone && location && bio && skills?.length && cv_url);
 
+      // Check if profile_slug is unique (if provided)
+      if (profile_slug) {
+        const existing = db.prepare('SELECT user_id FROM profiles_jobseeker WHERE profile_slug = ? AND user_id != ?').get(profile_slug, req.user.id);
+        if (existing) {
+          return res.status(400).json({ error: 'Profile URL already taken' });
+        }
+      }
+
       db.prepare(`
         UPDATE profiles_jobseeker SET
-          phone = COALESCE(?, phone), location = COALESCE(?, location), 
-          country = COALESCE(?, country), bio = COALESCE(?, bio),
-          skills = COALESCE(?, skills), work_history = COALESCE(?, work_history), 
+          phone = COALESCE(?, phone), 
+          location = COALESCE(?, location), 
+          country = COALESCE(?, country), 
+          bio = COALESCE(?, bio),
+          headline = COALESCE(?, headline),
+          skills = COALESCE(?, skills), 
+          top_skills = COALESCE(?, top_skills),
+          work_history = COALESCE(?, work_history), 
           education = COALESCE(?, education),
-          cv_url = COALESCE(?, cv_url), desired_job_type = COALESCE(?, desired_job_type),
+          languages = COALESCE(?, languages),
+          certifications = COALESCE(?, certifications),
+          volunteer = COALESCE(?, volunteer),
+          projects = COALESCE(?, projects),
+          awards = COALESCE(?, awards),
+          featured = COALESCE(?, featured),
+          cv_url = COALESCE(?, cv_url),
+          profile_photo_url = COALESCE(?, profile_photo_url),
+          profile_banner_url = COALESCE(?, profile_banner_url),
+          profile_video_url = COALESCE(?, profile_video_url),
+          desired_job_type = COALESCE(?, desired_job_type),
           desired_salary_min = COALESCE(?, desired_salary_min), 
           desired_salary_max = COALESCE(?, desired_salary_max),
-          availability = COALESCE(?, availability), profile_complete = ?
+          availability = COALESCE(?, availability),
+          open_to_work = COALESCE(?, open_to_work),
+          profile_visibility = COALESCE(?, profile_visibility),
+          profile_slug = COALESCE(?, profile_slug),
+          social_links = COALESCE(?, social_links),
+          profile_complete = ?
         WHERE user_id = ?
       `).run(
         phone || null,
         location || null,
         country || null,
         bio || null,
-        skills ? JSON.stringify(skills) : null,
-        work_history ? JSON.stringify(work_history) : null,
-        education ? JSON.stringify(education) : null,
+        headline || null,
+        skills || null,
+        top_skills || null,
+        work_history || null,
+        education || null,
+        languages || null,
+        certifications || null,
+        volunteer || null,
+        projects || null,
+        awards || null,
+        featured || null,
         cv_url || null,
+        profile_photo_url || null,
+        profile_banner_url || null,
+        profile_video_url || null,
         desired_job_type || null,
         desired_salary_min || null,
         desired_salary_max || null,
         availability || null,
+        open_to_work !== undefined ? open_to_work : null,
+        profile_visibility || null,
+        profile_slug || null,
+        social_links || null,
         profile_complete ? 1 : 0,
         req.user.id
       );
