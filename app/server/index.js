@@ -36,9 +36,29 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS
+// CORS with production whitelist
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? (process.env.CORS_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean)
+  : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001'];
+
+// Default production origins if CORS_ORIGIN not set
+if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+  allowedOrigins.push('https://wantokjobs.com', 'https://www.wantokjobs.com');
+  console.warn('⚠️  No CORS_ORIGIN set in production. Using default: wantokjobs.com');
+}
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`❌ CORS blocked: ${origin} (allowed: ${allowedOrigins.join(', ')})`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 

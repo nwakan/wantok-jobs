@@ -23,6 +23,46 @@ function isWeakPassword(password) {
   return WEAK_PASSWORDS.some(weak => lower.includes(weak));
 }
 
+/**
+ * Enhanced password strength validation
+ * Enforces: 8+ chars, 2 of 4 types (upper/lower/number/symbol)
+ * Balanced for PNG market (not overly strict)
+ */
+function validatePasswordStrength(password) {
+  const errors = [];
+  
+  // Minimum length
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  // Count character type diversity
+  let typeCount = 0;
+  if (/[a-z]/.test(password)) typeCount++; // lowercase
+  if (/[A-Z]/.test(password)) typeCount++; // uppercase
+  if (/[0-9]/.test(password)) typeCount++; // numbers
+  if (/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~]/.test(password)) typeCount++; // symbols
+  
+  if (typeCount < 2) {
+    errors.push('Password must include at least 2 of: lowercase, uppercase, numbers, symbols');
+  }
+  
+  // Check for simple patterns (all same character)
+  if (/^(.)\1+$/.test(password)) {
+    errors.push('Password cannot be all the same character');
+  }
+  
+  // Check for simple sequences
+  const sequences = ['0123', '1234', '2345', '3456', '4567', '5678', '6789', '7890',
+                     'abcd', 'bcde', 'cdef', 'defg', 'efgh', 'fghi', 'ghij', 'hijk'];
+  const lower = password.toLowerCase();
+  if (sequences.some(seq => lower.includes(seq))) {
+    errors.push('Password cannot contain simple sequences (1234, abcd, etc.)');
+  }
+  
+  return errors; // Empty array = valid
+}
+
 // Security: Maximum failed attempts before lockout
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
@@ -41,7 +81,16 @@ router.post('/register', validate(schemas.register), async (req, res) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // Security: Check for weak passwords
+    // Security: Comprehensive password validation
+    const strengthErrors = validatePasswordStrength(password);
+    if (strengthErrors.length > 0) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: strengthErrors 
+      });
+    }
+    
+    // Security: Check for weak passwords (blocklist)
     if (isWeakPassword(password)) {
       return res.status(400).json({ error: 'Password is too common. Please choose a stronger password.' });
     }
@@ -265,9 +314,17 @@ router.post('/reset-password', validate(schemas.resetPassword), async (req, res)
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: 'Token and new password required' });
-    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-    // Security: Check for weak passwords
+    // Security: Comprehensive password validation
+    const strengthErrors = validatePasswordStrength(password);
+    if (strengthErrors.length > 0) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: strengthErrors 
+      });
+    }
+
+    // Security: Check for weak passwords (blocklist)
     if (isWeakPassword(password)) {
       return res.status(400).json({ error: 'Password is too common. Please choose a stronger password.' });
     }
@@ -294,9 +351,17 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
-    if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
 
-    // Security: Check for weak passwords
+    // Security: Comprehensive password validation
+    const strengthErrors = validatePasswordStrength(newPassword);
+    if (strengthErrors.length > 0) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: strengthErrors 
+      });
+    }
+
+    // Security: Check for weak passwords (blocklist)
     if (isWeakPassword(newPassword)) {
       return res.status(400).json({ error: 'Password is too common. Please choose a stronger password.' });
     }
