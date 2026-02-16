@@ -1,13 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
-const { authenticateToken, requireJobseeker } = require('../middleware/auth');
-
-const db = new Database(path.join(__dirname, '../data/wantokjobs.db'));
+const db = require('../database');
+const { authenticateToken } = require('../middleware/auth');
 
 // Profile views analytics for jobseeker
-router.get('/profile-views', authenticateToken, requireJobseeker, (req, res) => {
+router.get('/profile-views', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -57,7 +54,7 @@ router.get('/profile-views', authenticateToken, requireJobseeker, (req, res) => 
 });
 
 // Salary insights based on jobseeker's desired role
-router.get('/salary', authenticateToken, requireJobseeker, (req, res) => {
+router.get('/salary', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
 
