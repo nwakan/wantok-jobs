@@ -1,4 +1,8 @@
-*.json
 *.md
 !public/
 !render.yaml
+# Ignore data files but keep package configs
+legacy-dump.sql
+*.db
+candidates.json
+jobs.json

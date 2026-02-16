@@ -1,0 +1,47 @@
+[
+  {
+    "id": "cand_001",
+    "name": "John K.",
+    "location": "Lae, Morobe Province",
+    "role": "Heavy Equipment Fitter",
+    "experience_years": 8,
+    "skills": ["Caterpillar Systems", "Hydraulics", "Mining Safety", "Preventative Maintenance"],
+    "bio": "Experienced HEF looking for FIFO roles. Previously worked at Lihir Gold."
+  },
+  {
+    "id": "cand_002",
+    "name": "Sarah M.",
+    "location": "Port Moresby, NCD",
+    "role": "Sales Associate",
+    "experience_years": 3,
+    "skills": ["Customer Service", "Point of Sale", "Tok Pisin", "Inventory Management"],
+    "bio": "Energetic sales professional with retail experience in POM."
+  },
+  {
+    "id": "cand_003",
+    "name": "David T.",
+    "location": "Goroka, EHP",
+    "role": "Maintenance Planner",
+    "experience_years": 12,
+    "skills": ["SAP", "Maintenance Planning", "Logistics", "Team Leadership"],
+    "bio": "Senior planner seeking new opportunities in the Highlands region."
+  },
+  {
+    "id": "cand_004",
+    "name": "Grace L.",
+    "location": "Madang",
+    "role": "Administrative Assistant",
+    "experience_years": 5,
+    "skills": ["Microsoft Office", "Data Entry", "Scheduling", "Email Management"],
+    "bio": "Organized and efficient admin support."
+  },
+  {
+    "id": "cand_005",
+    "name": "Peter W.",
+    "location": "Tabubil",
+    "role": "Diesel Mechanic",
+    "experience_years": 6,
+    "skills": ["Diesel Engines", "Diagnostics", "Truck Repair"],
+    "bio": "Certified mechanic available immediately."
+  }
+]
