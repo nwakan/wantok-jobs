@@ -4,6 +4,7 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { events: notifEvents } = require('../lib/notifications');
+const { sendApplicationStatusEmail, sendNewApplicationEmail } = require('../lib/email');
 
 const router = express.Router();
 
@@ -49,6 +50,10 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
 
     // Smart notification with match score
     notifEvents.onNewApplication(application, job, applicant || { name: 'A jobseeker' });
+
+    // Email employer about new application
+    const employer = db.prepare('SELECT email, name FROM users WHERE id = ?').get(job.employer_id);
+    if (employer) sendNewApplicationEmail(employer, job.title, applicant?.name || 'A jobseeker').catch(() => {});
 
     // Log application event
     try {
@@ -163,6 +168,11 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
     // Rich notification with caring messages per status
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(application.job_id);
     notifEvents.onApplicationStatusChanged(application, status, job || { title: application.job_title });
+
+    // Email jobseeker about status change
+    const jobseeker = db.prepare('SELECT email, name FROM users WHERE id = ?').get(application.jobseeker_id);
+    const companyName = db.prepare('SELECT company_name FROM profiles_employer WHERE user_id = ?').get(application.employer_id || job?.employer_id);
+    if (jobseeker) sendApplicationStatusEmail(jobseeker, job?.title || 'a position', status, companyName?.company_name || 'the employer').catch(() => {});
 
     // Log application pipeline event
     try {

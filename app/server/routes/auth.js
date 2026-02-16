@@ -6,6 +6,7 @@ const db = require('../database');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 const { events: notifEvents } = require('../lib/notifications');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../lib/email');
 
 const router = express.Router();
 
@@ -51,6 +52,9 @@ router.post('/register', validate(schemas.register), async (req, res) => {
 
     // Welcome notification + admin alert
     notifEvents.onUserRegistered({ id: userId, email, role, name });
+
+    // Send welcome email (async, don't block response)
+    sendWelcomeEmail({ email, name, role }).catch(e => console.error('Welcome email error:', e.message));
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(userId, 'register', 'user', userId, JSON.stringify({ role })); } catch(e) {}
@@ -183,9 +187,9 @@ router.post('/forgot-password', validate(schemas.forgotPassword), (req, res) => 
 
     db.prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?').run(token, expires, user.id);
 
-    // In production, send email here. For now, log and notify.
-    console.log(`🔑 Password reset token for ${email}: ${token}`);
-    console.log(`🔗 Reset URL: /reset-password?token=${token}`);
+    // Send reset email
+    sendPasswordResetEmail(user, token).catch(e => console.error('Reset email error:', e.message));
+    console.log(`🔑 Password reset requested for ${email}`);
 
     res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
   } catch (error) {
