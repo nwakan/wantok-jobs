@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 
@@ -13,13 +12,6 @@ const PORT = process.env.PORT || 3001;
 // Request logging middleware
 const requestLogger = require('./middleware/logging');
 
-// Response compression (gzip)
-app.use(compression({
-  // Only compress responses above 1kb
-  threshold: 1024,
-  // Compression level (0-9, 6 is default)
-  level: 6,
-}));
 
 // Security headers (enhanced CSRF protection)
 app.use(helmet({
