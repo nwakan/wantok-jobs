@@ -40,6 +40,7 @@ const FAQ = lazy(() => import('./pages/FAQ'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const CategoriesPage = lazy(() => import('./pages/Categories'));
+const CategoryLanding = lazy(() => import('./pages/CategoryLanding'));
 const CompaniesPage = lazy(() => import('./pages/Companies'));
 const CompanyProfilePage = lazy(() => import('./pages/CompanyProfile'));
 const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
@@ -109,6 +110,7 @@ function App() {
               <Route path="pricing" element={<Lazy component={Pricing} />} />
               <Route path="faq" element={<Lazy component={FAQ} />} />
               <Route path="categories" element={<Lazy component={CategoriesPage} />} />
+              <Route path="category/:slug" element={<Lazy component={CategoryLanding} />} />
               <Route path="companies" element={<Lazy component={CompaniesPage} />} />
               <Route path="companies/:id" element={<Lazy component={CompanyProfilePage} />} />
               <Route path="companies/:id/reviews" element={<Lazy component={CompanyReviews} />} />
