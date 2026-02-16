@@ -16,6 +16,13 @@ const FROM_NAME = process.env.FROM_NAME || 'WantokJobs';
 const BASE_URL = process.env.APP_URL || 'https://wantokjobs.com';
 const SUPPORT_EMAIL = 'support@wantokjobs.com';
 
+// ─── EMAIL SAFETY GATE ──────────────────────────────────────────────
+// Set EMAIL_MODE=live to enable real sends. Default is 'test'.
+// In test mode: all emails redirect to TEST_EMAIL, auto-triggered emails are blocked.
+const EMAIL_MODE = process.env.EMAIL_MODE || 'test';
+const TEST_EMAIL = process.env.TEST_EMAIL || 'nick.wakan@gmail.com';
+const EMAIL_AUTO_SEND = process.env.EMAIL_AUTO_SEND === 'true'; // explicit opt-in for auto emails
+
 // ─── Shared HTML Layout ──────────────────────────────────────────────
 
 function layout({ preheader, body, footerExtra }) {
@@ -89,6 +96,19 @@ function divider() {
 // ─── Core Send Function ──────────────────────────────────────────────
 
 async function sendEmail({ to, toName, subject, html, text, replyTo, tags }) {
+  // SAFETY GATE: In test mode, ALL emails go to TEST_EMAIL only.
+  // Set EMAIL_MODE=live in .env when ready for production.
+  if (EMAIL_MODE !== 'live') {
+    if (!BREVO_API_KEY) {
+      console.log(`📧 [TEST/NO KEY] Would send to: ${to} | ${subject}`);
+      return { success: false, reason: 'Test mode + no BREVO_API_KEY' };
+    }
+    console.log(`📧 [TEST MODE] Redirecting: ${to} → ${TEST_EMAIL} | ${subject}`);
+    to = TEST_EMAIL;
+    toName = `[TEST for: ${toName || 'User'}]`;
+    subject = `[TEST] ${subject}`;
+  }
+
   if (!BREVO_API_KEY) {
     console.log(`📧 [NO KEY] To: ${to} | ${subject}`);
     return { success: false, reason: 'No BREVO_API_KEY' };
@@ -688,6 +708,101 @@ async function sendWelcomeEmail(user) {
   return user.role === 'employer' ? sendWelcomeEmployer(user) : sendWelcomeJobseeker(user);
 }
 
+// ─── 16. Newsletter Digest (Weekly) ──────────────────────────────────
+
+async function sendNewsletterDigest(subscriber, jobs, stats, personalizedJobs) {
+  const { newsletterDigest } = require('./email-templates');
+  const unsubToken = Buffer.from(`${subscriber.email}:${Date.now()}`).toString('base64');
+  
+  return sendEmail({
+    to: subscriber.email,
+    toName: subscriber.name || subscriber.email,
+    subject: `WantokJobs Weekly — ${jobs.length} New Jobs This Week`,
+    html: newsletterDigest({
+      subscriberName: subscriber.name,
+      jobs,
+      stats,
+      personalizedJobs,
+      unsubscribeToken: unsubToken,
+    }),
+    tags: ['newsletter', 'weekly'],
+  });
+}
+
+// ─── 17. Welcome to Newsletter ───────────────────────────────────────
+
+async function sendWelcomeNewsletter(email, name) {
+  const { welcomeToNewsletter } = require('./email-templates');
+  
+  return sendEmail({
+    to: email,
+    toName: name || email,
+    subject: 'Welcome to WantokJobs Weekly! 🎉',
+    html: welcomeToNewsletter(name, email),
+    tags: ['newsletter', 'welcome'],
+  });
+}
+
+// ─── 18. New Job Posted → Alert Matching Subscribers ─────────────────
+
+async function sendNewJobAlerts(job, employerProfile) {
+  const db = require('../database');
+  
+  try {
+    // Find subscribers with matching job alerts (if they have accounts)
+    const alerts = db.prepare(`
+      SELECT DISTINCT ja.*, u.email, u.name
+      FROM job_alerts ja
+      JOIN users u ON ja.user_id = u.id
+      WHERE ja.active = 1
+        AND ja.channel = 'email'
+        AND (
+          ja.keywords IS NULL 
+          OR ? LIKE '%' || ja.keywords || '%'
+          OR ? LIKE '%' || ja.keywords || '%'
+        )
+        AND (ja.location IS NULL OR ? LIKE '%' || ja.location || '%')
+        AND (ja.job_type IS NULL OR ? = ja.job_type)
+    `).all(
+      job.title.toLowerCase(),
+      (job.description || '').toLowerCase(),
+      job.location || '',
+      job.job_type || ''
+    );
+
+    if (alerts.length === 0) return { sent: 0 };
+
+    let sent = 0;
+    for (const alert of alerts) {
+      try {
+        // Check if alert was sent recently (avoid spam)
+        const lastSent = alert.last_sent ? new Date(alert.last_sent) : null;
+        const hoursSinceLastSent = lastSent ? (Date.now() - lastSent.getTime()) / (1000 * 60 * 60) : 999;
+
+        if (alert.frequency === 'instant' || hoursSinceLastSent >= 24) {
+          await sendJobAlertEmail(
+            { email: alert.email, name: alert.name },
+            [job],
+            alert.keywords || 'your job alert'
+          );
+
+          // Update last_sent
+          db.prepare("UPDATE job_alerts SET last_sent = datetime('now') WHERE id = ?").run(alert.id);
+          sent++;
+        }
+      } catch (e) {
+        console.error(`Failed to send job alert to ${alert.email}:`, e.message);
+      }
+    }
+
+    console.log(`📧 Sent ${sent} job alert emails for new job: ${job.title}`);
+    return { sent };
+  } catch (error) {
+    console.error('Send new job alerts error:', error);
+    return { sent: 0, error: error.message };
+  }
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -708,4 +823,7 @@ module.exports = {
   sendContactFormAdminEmail,
   sendContactFormAutoReply,
   sendAdminDigestEmail,
+  sendNewsletterDigest,
+  sendWelcomeNewsletter,
+  sendNewJobAlerts,
 };

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { applications } from '../../../api';
-import ApplicationStatusBadge from '../../../components/ApplicationStatusBadge';
 
 export default function MyApplications() {
   const [myApplications, setMyApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('date'); // 'date' or 'status'
 
   useEffect(() => {
     loadApplications();
@@ -15,17 +15,136 @@ export default function MyApplications() {
   const loadApplications = async () => {
     try {
       const data = await applications.getMy();
-      setMyApplications(data);
+      setMyApplications(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load applications:', error);
+      setMyApplications([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Filter applications
   const filteredApplications = filter === 'all' 
     ? myApplications 
     : myApplications.filter(app => app.status === filter);
+
+  // Sort applications
+  const sortedApplications = [...filteredApplications].sort((a, b) => {
+    if (sortBy === 'date') {
+      return new Date(b.applied_at) - new Date(a.applied_at);
+    } else {
+      const statusOrder = { offered: 0, interview: 1, shortlisted: 2, screening: 3, applied: 4, rejected: 5, withdrawn: 6 };
+      return (statusOrder[a.status] || 10) - (statusOrder[b.status] || 10);
+    }
+  });
+
+  // Status configuration
+  const statusConfig = {
+    applied: { 
+      label: 'Applied', 
+      color: 'bg-blue-100 text-blue-800 border-blue-300', 
+      icon: '📝',
+      step: 1,
+    },
+    screening: { 
+      label: 'Screening', 
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+      icon: '🔍',
+      step: 2,
+    },
+    shortlisted: { 
+      label: 'Shortlisted', 
+      color: 'bg-orange-100 text-orange-800 border-orange-300', 
+      icon: '⭐',
+      step: 3,
+    },
+    interview: { 
+      label: 'Interview', 
+      color: 'bg-purple-100 text-purple-800 border-purple-300', 
+      icon: '🎯',
+      step: 4,
+    },
+    offered: { 
+      label: 'Offered', 
+      color: 'bg-green-100 text-green-800 border-green-300', 
+      icon: '🎉',
+      step: 5,
+    },
+    rejected: { 
+      label: 'Rejected', 
+      color: 'bg-gray-100 text-gray-800 border-gray-300', 
+      icon: '❌',
+      step: 0,
+    },
+    withdrawn: { 
+      label: 'Withdrawn', 
+      color: 'bg-gray-100 text-gray-800 border-gray-300', 
+      icon: '↩️',
+      step: 0,
+    },
+  };
+
+  // Status counts for filters
+  const statusCounts = {
+    all: myApplications.length,
+    applied: myApplications.filter(a => a.status === 'applied').length,
+    screening: myApplications.filter(a => a.status === 'screening').length,
+    shortlisted: myApplications.filter(a => a.status === 'shortlisted').length,
+    interview: myApplications.filter(a => a.status === 'interview').length,
+    offered: myApplications.filter(a => a.status === 'offered').length,
+    rejected: myApplications.filter(a => a.status === 'rejected').length,
+  };
+
+  // Status Timeline Component
+  const StatusTimeline = ({ status }) => {
+    const currentStep = statusConfig[status]?.step || 0;
+    const steps = ['Applied', 'Screening', 'Shortlisted', 'Interview', 'Offered'];
+    
+    if (status === 'rejected' || status === 'withdrawn') {
+      return (
+        <div className="flex items-center justify-center py-2">
+          <span className={`px-4 py-2 rounded-full font-semibold text-sm ${statusConfig[status].color}`}>
+            {statusConfig[status].icon} {statusConfig[status].label}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2 py-3">
+        {steps.map((step, index) => {
+          const stepNum = index + 1;
+          const isCompleted = stepNum <= currentStep;
+          const isCurrent = stepNum === currentStep;
+          
+          return (
+            <div key={step} className="flex items-center flex-1">
+              <div className="flex flex-col items-center flex-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                  isCompleted 
+                    ? 'bg-primary-500 text-white' 
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {isCompleted ? '✓' : stepNum}
+                </div>
+                <p className={`text-xs mt-1 font-medium ${
+                  isCurrent ? 'text-primary-600' : isCompleted ? 'text-gray-700' : 'text-gray-400'
+                }`}>
+                  {step}
+                </p>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`flex-1 h-1 -mt-6 ${
+                  stepNum < currentStep ? 'bg-primary-500' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -37,96 +156,210 @@ export default function MyApplications() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Applications</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Applications</h1>
+        <p className="text-gray-600">Track all your job applications in one place</p>
+      </div>
 
-      {/* Filter */}
+      {/* Filter Tabs */}
       <div className="mb-6 flex gap-2 flex-wrap">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg ${filter === 'all' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'all' 
+              ? 'bg-primary-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
         >
-          All ({myApplications.length})
+          All ({statusCounts.all})
         </button>
         <button
           onClick={() => setFilter('applied')}
-          className={`px-4 py-2 rounded-lg ${filter === 'applied' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'applied' 
+              ? 'bg-blue-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
         >
-          Applied
+          📝 Applied ({statusCounts.applied})
         </button>
         <button
           onClick={() => setFilter('screening')}
-          className={`px-4 py-2 rounded-lg ${filter === 'screening' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'screening' 
+              ? 'bg-yellow-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
         >
-          Screening
+          🔍 Screening ({statusCounts.screening})
         </button>
         <button
           onClick={() => setFilter('shortlisted')}
-          className={`px-4 py-2 rounded-lg ${filter === 'shortlisted' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'shortlisted' 
+              ? 'bg-orange-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
         >
-          Shortlisted
+          ⭐ Shortlisted ({statusCounts.shortlisted})
         </button>
         <button
           onClick={() => setFilter('interview')}
-          className={`px-4 py-2 rounded-lg ${filter === 'interview' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'interview' 
+              ? 'bg-purple-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
         >
-          Interview
+          🎯 Interview ({statusCounts.interview})
+        </button>
+        <button
+          onClick={() => setFilter('offered')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'offered' 
+              ? 'bg-green-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          🎉 Offered ({statusCounts.offered})
         </button>
       </div>
 
-      {/* Applications List */}
-      {filteredApplications.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-          <p className="text-gray-600 mb-4">No applications found</p>
-          <Link to="/jobs" className="text-primary-600 hover:text-primary-700 font-medium">
-            Browse jobs →
-          </Link>
+      {/* Sort Options */}
+      <div className="mb-6 flex justify-between items-center">
+        <p className="text-sm text-gray-600">
+          Showing <span className="font-semibold">{sortedApplications.length}</span> application{sortedApplications.length !== 1 ? 's' : ''}
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSortBy('date')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              sortBy === 'date'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📅 Sort by Date
+          </button>
+          <button
+            onClick={() => setSortBy('status')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              sortBy === 'status'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📊 Sort by Status
+          </button>
+        </div>
+      </div>
+
+      {/* Applications Cards */}
+      {sortedApplications.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="text-6xl mb-4">📋</div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            {filter === 'all' ? 'No applications yet' : `No ${filter} applications`}
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {filter === 'all' 
+              ? 'Start applying to jobs that match your skills and experience'
+              : `You don't have any applications with status: ${filter}`
+            }
+          </p>
+          {filter === 'all' ? (
+            <Link 
+              to="/jobs" 
+              className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
+            >
+              Browse Jobs
+            </Link>
+          ) : (
+            <button
+              onClick={() => setFilter('all')}
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+            >
+              View All Applications
+            </button>
+          )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm divide-y">
-          {filteredApplications.map(app => (
-            <div key={app.id} className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <Link to={`/jobs/${app.job_id}`} className="text-xl font-semibold text-gray-900 hover:text-primary-600">
-                    {app.job_title}
+        <div className="grid grid-cols-1 gap-6">
+          {sortedApplications.map(app => {
+            const config = statusConfig[app.status] || statusConfig.applied;
+            
+            return (
+              <div key={app.id} className="bg-white rounded-lg shadow-md border-2 border-gray-200 hover:border-primary-500 transition overflow-hidden">
+                {/* Header */}
+                <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-white">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <Link 
+                        to={`/jobs/${app.job_id}`} 
+                        className="text-2xl font-bold text-gray-900 hover:text-primary-600 transition"
+                      >
+                        {app.job_title}
+                      </Link>
+                      <p className="text-lg text-gray-700 font-medium mt-1">{app.company_name}</p>
+                    </div>
+                    <span className={`px-4 py-2 rounded-full font-semibold text-sm border-2 ${config.color}`}>
+                      {config.icon} {config.label}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <span>📍 {app.location}</span>
+                    <span>💼 {app.job_type}</span>
+                    {app.salary_min && app.salary_max && (
+                      <span>💰 {app.salary_currency || 'K'}{app.salary_min.toLocaleString()} - {app.salary_currency || 'K'}{app.salary_max.toLocaleString()}</span>
+                    )}
+                    <span className="text-gray-500">
+                      • Applied {new Date(app.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status Timeline */}
+                <div className="px-6 py-4 bg-gray-50">
+                  <StatusTimeline status={app.status} />
+                </div>
+
+                {/* Cover Letter */}
+                {app.cover_letter && (
+                  <div className="px-6 py-4 border-t bg-white">
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 hover:text-primary-600 list-none flex items-center justify-between">
+                        <span>📄 Your Cover Letter</span>
+                        <svg className="w-5 h-5 transition group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </summary>
+                      <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg mt-3 whitespace-pre-wrap border border-gray-200">
+                        {app.cover_letter}
+                      </p>
+                    </details>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="px-6 py-4 bg-gray-50 border-t flex gap-2">
+                  <Link
+                    to={`/jobs/${app.job_id}`}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm transition"
+                  >
+                    View Job Details
                   </Link>
-                  <p className="text-gray-600 mt-1">{app.company_name}</p>
-                </div>
-                <ApplicationStatusBadge status={app.status} />
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Location:</span>
-                  <p className="font-medium">{app.location}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Job Type:</span>
-                  <p className="font-medium">{app.job_type}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Applied:</span>
-                  <p className="font-medium">{new Date(app.applied_at).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Salary:</span>
-                  <p className="font-medium">
-                    {app.salary_min && app.salary_max 
-                      ? `${app.salary_currency} ${app.salary_min.toLocaleString()} - ${app.salary_max.toLocaleString()}`
-                      : 'Not specified'
-                    }
-                  </p>
+                  {(app.status === 'offered' || app.status === 'interview') && (
+                    <button
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition"
+                    >
+                      📧 Contact Employer
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {app.cover_letter && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Your Cover Letter:</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">{app.cover_letter}</p>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,0 +1,136 @@
+{
+  "generated_at": "2026-02-16T07:29:52.904Z",
+  "period": "Last 90 days",
+  "summary": {
+    "total_active_jobs": 70,
+    "new_jobs_last_30_days": 1738,
+    "total_employers": 351,
+    "total_jobseekers": 61317
+  },
+  "top_industries": [],
+  "top_locations": [
+    {
+      "location": "National Capital District",
+      "job_count": 10
+    },
+    {
+      "location": "Morobe",
+      "job_count": 4
+    },
+    {
+      "location": "East Sepik",
+      "job_count": 3
+    },
+    {
+      "location": "Eastern Highlands, Eastern Highlands",
+      "job_count": 2
+    },
+    {
+      "location": "Eastern Highlands",
+      "job_count": 2
+    },
+    {
+      "location": "ASSET",
+      "job_count": 2
+    },
+    {
+      "location": "Western Highlands",
+      "job_count": 1
+    },
+    {
+      "location": "Port Moresby, Papua New Guinea Position Summary The Projects Purchasing Officer is responsible for the procurement of materials, equipment, subcontracted services, and logistics required to support MTIS Group&rsquo;s project development and execution activities in the oil, gas, and mining sectors ...\" />",
+      "job_count": 1
+    },
+    {
+      "location": "Port Moresby",
+      "job_count": 1
+    },
+    {
+      "location": "POM",
+      "job_count": 1
+    }
+  ],
+  "salary_ranges": [],
+  "skill_demand": [
+    {
+      "skill": "completed year 12",
+      "demand_count": 2
+    },
+    {
+      "skill": "5 years’ experience in similar role",
+      "demand_count": 2
+    },
+    {
+      "skill": "very good with inventory skills (fifo)",
+      "demand_count": 2
+    },
+    {
+      "skill": "customer oriented",
+      "demand_count": 2
+    },
+    {
+      "skill": "has good product knowledge",
+      "demand_count": 2
+    },
+    {
+      "skill": "very good communication skills both oral and written",
+      "demand_count": 2
+    },
+    {
+      "skill": "current class 3 driver’s license is an advantage",
+      "demand_count": 2
+    },
+    {
+      "skill": "trustworthy and responsible",
+      "demand_count": 1
+    },
+    {
+      "skill": "completed year 12 with a certificate in a business or administration course (or equivalent)",
+      "demand_count": 1
+    },
+    {
+      "skill": "at least 2 years’ experience in retail, customer service, or a similar role",
+      "demand_count": 1
+    },
+    {
+      "skill": "basic cashiering and money-handling skills",
+      "demand_count": 1
+    },
+    {
+      "skill": "with computer skills",
+      "demand_count": 1
+    },
+    {
+      "skill": "good communication skills in english – verbal and written",
+      "demand_count": 1
+    },
+    {
+      "skill": "able to work in a fast-paced environment with minimum supervision",
+      "demand_count": 1
+    },
+    {
+      "skill": "excellent customer service, energetic, and a team player",
+      "demand_count": 1
+    },
+    {
+      "skill": "motivated, responsible, and results-oriented",
+      "demand_count": 1
+    },
+    {
+      "skill": "fully vaccinated",
+      "demand_count": 1
+    },
+    {
+      "skill": "diploma in it/communications or equivalent",
+      "demand_count": 1
+    },
+    {
+      "skill": "minimum 2 years’ experience in it/communications, including pc maintenance and hardware support",
+      "demand_count": 1
+    },
+    {
+      "skill": "experience in servicing and troubleshooting copiers and office equipment is a plus",
+      "demand_count": 1
+    }
+  ]
+}

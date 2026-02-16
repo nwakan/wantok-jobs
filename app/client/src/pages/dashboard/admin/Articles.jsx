@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../../../components/Toast';
+import { articles as articlesAPI } from '../../../api';
 
 export default function Articles() {
   const [articles, setArticles] = useState([]);
@@ -14,58 +15,41 @@ export default function Articles() {
     excerpt: '',
     category: 'news',
     status: 'draft',
+    tags: '',
+    featured_image: '',
   });
 
   useEffect(() => {
     loadArticles();
   }, []);
 
-  const loadArticles = () => {
-    // Placeholder data
-    setArticles([
-      {
-        id: 1,
-        title: 'Top 10 Skills Employers Look For in 2024',
-        excerpt: 'Discover the most in-demand skills...',
-        category: 'career-advice',
-        status: 'published',
-        views: 2543,
-        created_at: '2024-01-15',
-        author: 'Admin',
-      },
-      {
-        id: 2,
-        title: 'How to Write a Resume That Gets Noticed',
-        excerpt: 'Learn the secrets to crafting an effective resume...',
-        category: 'career-advice',
-        status: 'published',
-        views: 1876,
-        created_at: '2024-01-20',
-        author: 'Admin',
-      },
-      {
-        id: 3,
-        title: 'Upcoming Job Fair - Registration Open',
-        excerpt: 'Join us for the biggest job fair of the year...',
-        category: 'news',
-        status: 'draft',
-        views: 0,
-        created_at: '2024-02-01',
-        author: 'Admin',
-      },
-    ]);
-    setLoading(false);
+  const loadArticles = async () => {
+    try {
+      setLoading(true);
+      const response = await articlesAPI.getAll();
+      setArticles(response.articles || []);
+    } catch (error) {
+      showToast(error.message || 'Failed to load articles', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingArticle) {
-      showToast('Article updated successfully', 'success');
-    } else {
-      showToast('Article created successfully', 'success');
+    try {
+      if (editingArticle) {
+        await articlesAPI.update(editingArticle.id, formData);
+        showToast('Article updated successfully', 'success');
+      } else {
+        await articlesAPI.create(formData);
+        showToast('Article created successfully', 'success');
+      }
+      loadArticles();
+      resetForm();
+    } catch (error) {
+      showToast(error.message || 'Failed to save article', 'error');
     }
-    loadArticles();
-    resetForm();
   };
 
   const handleEdit = (article) => {
@@ -73,26 +57,35 @@ export default function Articles() {
     setFormData({
       title: article.title,
       content: article.content || '',
-      excerpt: article.excerpt,
-      category: article.category,
-      status: article.status,
+      excerpt: article.excerpt || '',
+      category: article.category || 'news',
+      status: article.status || 'draft',
+      tags: article.tags || '',
+      featured_image: article.featured_image || '',
     });
     setShowForm(true);
   };
 
-  const togglePublish = (id) => {
-    setArticles(articles.map(a => 
-      a.id === id 
-        ? { ...a, status: a.status === 'published' ? 'draft' : 'published' }
-        : a
-    ));
-    showToast('Article status updated', 'success');
+  const togglePublish = async (article) => {
+    try {
+      const newStatus = article.status === 'published' ? 'draft' : 'published';
+      await articlesAPI.update(article.id, { status: newStatus });
+      showToast('Article status updated', 'success');
+      loadArticles();
+    } catch (error) {
+      showToast(error.message || 'Failed to update status', 'error');
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this article?')) return;
-    setArticles(articles.filter(a => a.id !== id));
-    showToast('Article deleted successfully', 'success');
+    try {
+      await articlesAPI.delete(id);
+      showToast('Article deleted successfully', 'success');
+      loadArticles();
+    } catch (error) {
+      showToast(error.message || 'Failed to delete article', 'error');
+    }
   };
 
   const resetForm = () => {
@@ -102,6 +95,8 @@ export default function Articles() {
       excerpt: '',
       category: 'news',
       status: 'draft',
+      tags: '',
+      featured_image: '',
     });
     setEditingArticle(null);
     setShowForm(false);
@@ -140,7 +135,7 @@ export default function Articles() {
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
               />
             </div>
@@ -150,20 +145,33 @@ export default function Articles() {
               <textarea
                 value={formData.excerpt}
                 onChange={e => setFormData({ ...formData, excerpt: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 rows="2"
+                placeholder="Brief summary of the article..."
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Content (Markdown supported)</label>
               <textarea
                 value={formData.content}
                 onChange={e => setFormData({ ...formData, content: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                rows="10"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                rows="12"
+                placeholder="Write your article content here..."
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Featured Image URL</label>
+              <input
+                type="url"
+                value={formData.featured_image}
+                onChange={e => setFormData({ ...formData, featured_image: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="https://..."
               />
             </div>
 
@@ -173,12 +181,13 @@ export default function Articles() {
                 <select
                   value={formData.category}
                   onChange={e => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="news">News</option>
                   <option value="career-advice">Career Advice</option>
                   <option value="industry-trends">Industry Trends</option>
                   <option value="company-news">Company News</option>
+                  <option value="tips">Tips & Guides</option>
                 </select>
               </div>
 
@@ -187,12 +196,23 @@ export default function Articles() {
                 <select
                   value={formData.status}
                   onChange={e => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+              <input
+                type="text"
+                value={formData.tags}
+                onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="job search, cv tips, interview"
+              />
             </div>
 
             <div className="flex gap-4">
@@ -209,55 +229,61 @@ export default function Articles() {
 
       {/* Articles List */}
       <div className="space-y-4">
-        {articles.map(article => (
-          <div key={article.id} className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{article.title}</h3>
-                <p className="text-gray-600 text-sm mb-3">{article.excerpt}</p>
-                
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <span className="capitalize">{article.category}</span>
-                  <span>•</span>
-                  <span>{new Date(article.created_at).toLocaleDateString()}</span>
-                  <span>•</span>
-                  <span>{article.views} views</span>
-                  <span>•</span>
-                  <span>By {article.author}</span>
+        {articles.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <p className="text-gray-500 text-lg">No articles yet. Create your first article!</p>
+          </div>
+        ) : (
+          articles.map(article => (
+            <div key={article.id} className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{article.title}</h3>
+                  <p className="text-gray-600 text-sm mb-3">{article.excerpt}</p>
+                  
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span className="capitalize">{article.category}</span>
+                    <span>•</span>
+                    <span>{new Date(article.created_at).toLocaleDateString()}</span>
+                    <span>•</span>
+                    <span>{article.views || 0} views</span>
+                    <span>•</span>
+                    <span>By {article.author_name || 'Admin'}</span>
+                  </div>
                 </div>
+
+                <span className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-4 ${
+                  article.status === 'published' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {article.status}
+                </span>
               </div>
 
-              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                article.status === 'published' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {article.status}
-              </span>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => handleEdit(article)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => togglePublish(article)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  {article.status === 'published' ? 'Unpublish' : 'Publish'}
+                </button>
+                <button
+                  onClick={() => handleDelete(article.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
-
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => handleEdit(article)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => togglePublish(article.id)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                {article.status === 'published' ? 'Unpublish' : 'Publish'}
-              </button>
-              <button
-                onClick={() => handleDelete(article.id)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

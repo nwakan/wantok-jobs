@@ -99,9 +99,11 @@ router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
   }
 });
 
-// Get applications for a job (employer - own jobs only)
+// Get applications for a job (employer - own jobs only, enhanced with full profile data)
 router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
   try {
+    const { sort = 'date' } = req.query; // sort options: date, score, status
+
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.jobId);
 
     if (!job) {
@@ -112,26 +114,101 @@ router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const applications = db.prepare(`
+    // Enhanced query with full profile data
+    let query = `
       SELECT a.*,
              u.name as applicant_name,
              u.email as applicant_email,
-             pj.phone,
+             u.phone as applicant_phone,
+             pj.phone as profile_phone,
              pj.location as applicant_location,
+             pj.bio,
+             pj.headline,
              pj.skills,
              pj.work_history,
-             pj.education
+             pj.education,
+             pj.cv_url as profile_cv_url,
+             pj.desired_job_type,
+             pj.desired_salary_min,
+             pj.desired_salary_max,
+             pj.availability
       FROM applications a
       JOIN users u ON a.jobseeker_id = u.id
       LEFT JOIN profiles_jobseeker pj ON u.id = pj.user_id
       WHERE a.job_id = ?
-      ORDER BY a.applied_at DESC
-    `).all(req.params.jobId);
+    `;
 
-    res.json(applications);
+    // Sorting
+    if (sort === 'score') {
+      query += ' ORDER BY a.ai_score DESC NULLS LAST, a.applied_at DESC';
+    } else if (sort === 'status') {
+      query += ' ORDER BY a.status, a.applied_at DESC';
+    } else {
+      query += ' ORDER BY a.applied_at DESC';
+    }
+
+    const applications = db.prepare(query).all(req.params.jobId);
+
+    // Get screening answers for each application if screening questions exist
+    const hasScreening = db.prepare('SELECT COUNT(*) as count FROM screening_questions WHERE job_id = ?').get(req.params.jobId);
+    
+    if (hasScreening?.count > 0) {
+      applications.forEach(app => {
+        const answers = db.prepare(`
+          SELECT sa.*, sq.question, sq.question_type
+          FROM screening_answers sa
+          INNER JOIN screening_questions sq ON sa.question_id = sq.id
+          WHERE sa.application_id = ?
+          ORDER BY sq.sort_order
+        `).all(app.id);
+        app.screening_answers = answers;
+      });
+    }
+
+    res.json({ data: applications, total: applications.length });
   } catch (error) {
     console.error('Get job applications error:', error);
     res.status(500).json({ error: 'Failed to fetch applications' });
+  }
+});
+
+// PATCH /:id/notes - Add/update employer notes on applicant
+router.patch('/:id/notes', authenticateToken, requireRole('employer', 'admin'), validate(schemas.applicationNotes), (req, res) => {
+  try {
+    const { notes } = req.body;
+
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Add notes column if it doesn't exist (SQLite limitation workaround)
+    try {
+      db.exec('ALTER TABLE applications ADD COLUMN notes TEXT');
+    } catch(e) {
+      // Column already exists
+    }
+
+    db.prepare(`
+      UPDATE applications SET notes = ?, updated_at = datetime('now') WHERE id = ?
+    `).run(notes, req.params.id);
+
+    const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update application notes error:', error);
+    res.status(500).json({ error: 'Failed to update application notes' });
   }
 });
 

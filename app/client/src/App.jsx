@@ -42,6 +42,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const CategoriesPage = lazy(() => import('./pages/Categories'));
 const CompaniesPage = lazy(() => import('./pages/Companies'));
 const CompanyProfilePage = lazy(() => import('./pages/CompanyProfile'));
+const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 
@@ -110,6 +111,7 @@ function App() {
               <Route path="categories" element={<Lazy component={CategoriesPage} />} />
               <Route path="companies" element={<Lazy component={CompaniesPage} />} />
               <Route path="companies/:id" element={<Lazy component={CompanyProfilePage} />} />
+              <Route path="companies/:id/reviews" element={<Lazy component={CompanyReviews} />} />
               <Route path="blog" element={<Lazy component={Blog} />} />
               <Route path="blog/:slug" element={<Lazy component={BlogPost} />} />
               <Route path="forgot-password" element={<Lazy component={ForgotPassword} />} />

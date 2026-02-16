@@ -449,6 +449,77 @@ export const adminAPI = {
   },
 };
 
+// Articles
+export const articles = {
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetch(`${API_URL}/admin/articles?${queryString}`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse);
+  },
+
+  create: (articleData) =>
+    fetch(`${API_URL}/admin/articles`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(articleData),
+    }).then(handleResponse),
+
+  update: (id, articleData) =>
+    fetch(`${API_URL}/admin/articles/${id}`, {
+      method: 'PUT',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(articleData),
+    }).then(handleResponse),
+
+  delete: (id) =>
+    fetch(`${API_URL}/admin/articles/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+};
+
+// Banners
+export const banners = {
+  getAll: () =>
+    fetch(`${API_URL}/admin/banners`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  create: (bannerData) =>
+    fetch(`${API_URL}/admin/banners`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(bannerData),
+    }).then(handleResponse),
+
+  update: (id, bannerData) =>
+    fetch(`${API_URL}/admin/banners/${id}`, {
+      method: 'PUT',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(bannerData),
+    }).then(handleResponse),
+
+  delete: (id) =>
+    fetch(`${API_URL}/admin/banners/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+};
+
+// Reviews
+export const reviews = {
+  getForCompany: (companyId) =>
+    fetch(`${API_URL}/companies/${companyId}/reviews`).then(handleResponse),
+
+  create: (reviewData) =>
+    fetch(`${API_URL}/reviews`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(reviewData),
+    }).then(handleResponse),
+};
+
 // Default export for convenience
 const api = {
   get: (url) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { headers: getAuthHeader() }).then(handleResponse),

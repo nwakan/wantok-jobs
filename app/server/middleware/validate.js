@@ -120,6 +120,30 @@ const screeningQuestionSchema = z.object({
   sort_order: z.number().int().min(0).optional().default(0),
 });
 
+// === Screening Answers schema ===
+const screeningAnswersSchema = z.object({
+  answers: z.array(z.object({
+    question_id: z.number().int().positive('Question ID is required'),
+    answer: z.string().max(2000, 'Answer is too long')
+  })).min(1, 'At least one answer is required')
+});
+
+// === Application Notes schema ===
+const applicationNotesSchema = z.object({
+  notes: z.string().max(5000, 'Notes are too long').optional()
+});
+
+// === Job Status Update schema ===
+const jobStatusSchema = z.object({
+  status: z.enum(['draft', 'active', 'closed', 'filled'], { message: 'Invalid status' })
+});
+
+// === Saved Resume schema ===
+const savedResumeSchema = z.object({
+  notes: z.string().max(1000).optional(),
+  folder: z.string().max(100).optional().default('default')
+});
+
 module.exports = {
   validate,
   schemas: {
@@ -136,5 +160,9 @@ module.exports = {
     message: messageSchema,
     order: orderSchema,
     screeningQuestion: screeningQuestionSchema,
+    screeningAnswers: screeningAnswersSchema,
+    applicationNotes: applicationNotesSchema,
+    jobStatus: jobStatusSchema,
+    savedResume: savedResumeSchema,
   },
 };

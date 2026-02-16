@@ -37,19 +37,38 @@ export default function Home() {
     category: '',
   });
   const [featuredJobs, setFeaturedJobs] = useState([]);
+  const [stats, setStats] = useState({
+    totalJobs: 0,
+    activeJobs: 0,
+    totalEmployers: 0,
+    totalJobseekers: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [emailAlert, setEmailAlert] = useState('');
 
   useEffect(() => {
-    fetchFeaturedJobs();
+    fetchData();
   }, []);
 
-  const fetchFeaturedJobs = async () => {
+  const fetchData = async () => {
     try {
-      const response = await jobsAPI.getAll({ limit: 6 });
-      setFeaturedJobs(response?.data || response || []);
+      const [jobsResponse, statsResponse] = await Promise.all([
+        jobsAPI.getAll({ limit: 6 }),
+        fetch('/api/stats').then(r => r.json()).catch(() => null),
+      ]);
+      setFeaturedJobs(jobsResponse?.data || jobsResponse || []);
+      
+      // Use real stats if available, otherwise fallback
+      if (statsResponse) {
+        setStats({
+          totalJobs: statsResponse.totalJobs || 0,
+          activeJobs: statsResponse.activeJobs || 0,
+          totalEmployers: statsResponse.totalEmployers || 0,
+          totalJobseekers: statsResponse.totalJobseekers || 0,
+        });
+      }
     } catch (error) {
-      console.error('Failed to load featured jobs:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
@@ -99,7 +118,7 @@ export default function Home() {
               <span className="text-secondary-400">Papua New Guinea</span>
             </h1>
             <p className="text-xl md:text-2xl text-primary-100 mb-2">
-              Join <strong>30,000+</strong> job seekers and <strong>330+</strong> employers
+              Join <strong>{stats.totalJobseekers.toLocaleString()}+</strong> job seekers and <strong>{stats.totalEmployers.toLocaleString()}+</strong> employers
             </p>
           </motion.div>
 
@@ -185,20 +204,28 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">30,000+</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
+                {stats.totalJobseekers.toLocaleString()}+
+              </div>
               <div className="text-sm md:text-base text-gray-600">Job Seekers</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">330+</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
+                {stats.totalEmployers.toLocaleString()}+
+              </div>
               <div className="text-sm md:text-base text-gray-600">Employers</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">1,600+</div>
-              <div className="text-sm md:text-base text-gray-600">Jobs Posted</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
+                {stats.activeJobs.toLocaleString()}+
+              </div>
+              <div className="text-sm md:text-base text-gray-600">Active Jobs</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">K1.1M+</div>
-              <div className="text-sm md:text-base text-gray-600">in Opportunities</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
+                {stats.totalJobs.toLocaleString()}+
+              </div>
+              <div className="text-sm md:text-base text-gray-600">Total Opportunities</div>
             </div>
           </div>
         </div>
