@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Accessibility: focus-visible outlines for keyboard navigation */
+@layer base {
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+    outline-style: solid;
+  }
+
+  /* Ensure text on green backgrounds is readable */
+  .bg-green-600, .bg-primary-600 {
+    color: #ffffff;
+  }
+}
+
 /* Dark mode support */
 :root {
   --bg-primary: #ffffff;

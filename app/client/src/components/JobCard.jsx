@@ -12,11 +12,13 @@ export default function JobCard({ job, compact = false }) {
   const isFeatured = !!job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
   
   return (
+    <article className="relative" aria-label={`${job.title} at ${getDisplayCompanyName(job)}`}>
     <Link
       to={`/jobs/${job.id}`}
-      className={`block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border hover:border-primary-200 relative ${
+      className={`block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border hover:border-primary-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 relative ${
         isFeatured ? 'border-yellow-300 bg-gradient-to-br from-yellow-50 to-white' : 'border-gray-100'
       }`}
+      aria-label={`View job: ${job.title}`}
     >
       {/* Featured Badge - Task 3 */}
       {isFeatured && (
@@ -43,7 +45,7 @@ export default function JobCard({ job, compact = false }) {
           <div className="flex-shrink-0">
             <img 
               src={job.logo_url} 
-              alt={job.company_name || job.employer_name} 
+              alt={`${job.company_name || job.employer_name} logo`} 
               className="w-14 h-14 rounded-lg object-cover border border-gray-200" 
             />
           </div>
@@ -59,7 +61,7 @@ export default function JobCard({ job, compact = false }) {
             <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
               {getDisplayCompanyName(job)}
               {!!job.employer_verified && (
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" aria-label="Verified employer" role="img" />
               )}
               {(() => {
                 const src = formatJobSource(job.source);
@@ -118,5 +120,6 @@ export default function JobCard({ job, compact = false }) {
         </div>
       </div>
     </Link>
+    </article>
   );
 }

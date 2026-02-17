@@ -45,12 +45,20 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 pb-16 md:pb-0">
+      {/* Skip to content link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-md focus:outline-none focus:ring-2 focus:ring-primary-400"
+      >
+        Skip to main content
+      </a>
+
       {/* Offline Banner */}
       <OfflineBanner />
       
       {/* Header */}
       <header className="bg-white shadow-sm">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Main navigation">
           <div className="flex justify-between h-16">
             <div className="flex">
               <Link to="/" className="flex items-center">
@@ -201,7 +209,7 @@ export default function Layout() {
       </header>
 
       {/* Main content */}
-      <main className="flex-grow">
+      <main id="main-content" className="flex-grow">
         <Outlet />
       </main>
 
@@ -212,7 +220,7 @@ export default function Layout() {
       <BackToTop />
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white mt-12">
+      <footer className="bg-gray-800 text-white mt-12" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>

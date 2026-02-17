@@ -1,57 +1,24 @@
 #!/usr/bin/env node
 /**
- * Scrape ReliefWeb PNG jobs via HTML pages (API requires registered appname)
- * Fetches job listings from reliefweb.int for Papua New Guinea
+ * Scrape ReliefWeb PNG jobs via API v1
  */
 
 const https = require('https');
 const db = require('../server/database');
 
-const JOB_URLS = [
-  'https://reliefweb.int/job/4198622/program-and-communications-coordinator',
-  'https://reliefweb.int/job/4197654/ict-coordinator-png',
-  'https://reliefweb.int/job/4197653/learners-wellbeing-and-support-officer-png',
-  'https://reliefweb.int/job/4196613/director-law-and-justice',
-  'https://reliefweb.int/job/4196606/rtn09-consultancy-services-kokoda-highway-scoping-study',
-  'https://reliefweb.int/job/4196410/provincial-facilitator-wnb',
-  'https://reliefweb.int/job/4195120/senior-coordinator-people-and-culture',
-  'https://reliefweb.int/job/4195118/people-culture-specialist',
-];
+const API_URL = 'https://api.reliefweb.int/v1/jobs?appname=wantokjobs&filter[field]=country.name&filter[value]=Papua%20New%20Guinea&limit=50&fields[include][]=title&fields[include][]=body&fields[include][]=source.name&fields[include][]=date.closing&fields[include][]=url';
 
 function fetch(url) {
   return new Promise((resolve, reject) => {
     https.get(url, { headers: { 'User-Agent': 'WantokJobs/1.0' } }, res => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetch(res.headers.location).then(resolve).catch(reject);
-      }
       let d = '';
       res.on('data', c => d += c);
-      res.on('end', () => resolve(d));
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve(d);
+        else reject(new Error(`HTTP ${res.statusCode}: ${d.substring(0, 200)}`));
+      });
     }).on('error', reject);
   });
-}
-
-function extractText(html) {
-  // Remove scripts, styles
-  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-  // Convert common tags
-  text = text.replace(/<br\s*\/?>/gi, '\n');
-  text = text.replace(/<\/p>/gi, '\n\n');
-  text = text.replace(/<\/li>/gi, '\n');
-  text = text.replace(/<li[^>]*>/gi, '• ');
-  text = text.replace(/<\/h[1-6]>/gi, '\n');
-  text = text.replace(/<[^>]+>/g, '');
-  text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&nbsp;/g, ' ');
-  text = text.replace(/\n{3,}/g, '\n\n').trim();
-  return text;
-}
-
-function extractField(html, label) {
-  // Look for structured data in ReliefWeb job pages
-  const regex = new RegExp(label + '\\s*[:\\-]?\\s*</[^>]+>\\s*<[^>]+>([^<]+)', 'i');
-  const m = html.match(regex);
-  return m ? m[1].trim() : null;
 }
 
 function categorizeJob(title) {
@@ -64,57 +31,25 @@ function categorizeJob(title) {
   if (/education|training|teacher|learner|wellbeing/.test(t)) return 'education-and-training';
   if (/engineer|construction|highway|consult/.test(t)) return 'engineering';
   if (/communicat|marketing/.test(t)) return 'marketing-and-sales';
-  return 'ngo-and-volunteering'; // Default for ReliefWeb jobs
+  if (/finance|accountant|budget/.test(t)) return 'accounting-and-finance';
+  if (/health|nurse|medical|doctor|nutrition/.test(t)) return 'healthcare';
+  if (/admin|assistant|secretary|office/.test(t)) return 'admin-and-office-support';
+  return 'ngo-and-volunteering';
 }
 
-async function scrapeJob(url) {
-  try {
-    const html = await fetch(url);
-    
-    // Extract title from <h1> or <title>
-    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) || html.match(/<title>([^|<]+)/i);
-    const title = titleMatch ? titleMatch[1].trim().replace(/\s*\|.*$/, '') : null;
-    if (!title) return null;
-    
-    // Extract organization
-    const orgMatch = html.match(/Organization[^<]*<[^>]*>[^<]*<a[^>]*>([^<]+)/i) || 
-                     html.match(/source[^<]*<[^>]*>([^<]+)/i);
-    const org = orgMatch ? orgMatch[1].trim() : 'International Organization';
-    
-    // Extract closing date
-    const closingMatch = html.match(/Closing date[^<]*<[^>]*>([^<]+)/i);
-    const closing = closingMatch ? closingMatch[1].trim() : null;
-    
-    // Try to extract body content
-    const bodyMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
-                      html.match(/class="[^"]*body[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
-    let description = bodyMatch ? extractText(bodyMatch[1]) : `${title} - Position based in Papua New Guinea. Visit ReliefWeb for full details.`;
-    
-    // Limit description length
-    if (description.length > 5000) description = description.substring(0, 5000) + '...';
-    if (description.length < 100) description = `${title}\n\nThis is an international development/humanitarian position based in Papua New Guinea. The role is with ${org}.\n\nFor full details, please visit the original posting on ReliefWeb.`;
-    
-    const slug = categorizeJob(title);
-    
-    return {
-      title,
-      description,
-      company_name: org,
-      location: 'Papua New Guinea',
-      country: 'PG',
-      job_type: 'full-time',
-      experience_level: 'Mid Level',
-      source: 'reliefweb',
-      external_url: url,
-      category_slug: slug,
-      application_deadline: closing,
-      status: 'active',
-      salary_currency: 'PGK',
-    };
-  } catch (e) {
-    console.error(`Error scraping ${url}:`, e.message);
-    return null;
-  }
+function stripHtml(html) {
+  if (!html) return '';
+  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/p>/gi, '\n\n');
+  text = text.replace(/<\/li>/gi, '\n');
+  text = text.replace(/<li[^>]*>/gi, '• ');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&nbsp;/g, ' ');
+  text = text.replace(/\n{3,}/g, '\n\n').trim();
+  if (text.length > 5000) text = text.substring(0, 5000) + '...';
+  return text;
 }
 
 // Get category slug → id map
@@ -129,7 +64,17 @@ const insertJob = db.prepare(`
 `);
 
 async function main() {
-  console.log('Scraping ReliefWeb PNG jobs...');
+  console.log('Fetching ReliefWeb PNG jobs via API...');
+  
+  const raw = await fetch(API_URL);
+  const data = JSON.parse(raw);
+  
+  if (!data.data || !data.data.length) {
+    console.log('No jobs returned from API.');
+    return;
+  }
+  
+  console.log(`API returned ${data.data.length} jobs.`);
   
   // Check existing to avoid duplicates
   const existing = new Set(
@@ -137,34 +82,32 @@ async function main() {
   );
   
   let added = 0;
-  for (const url of JOB_URLS) {
+  for (const item of data.data) {
+    const f = item.fields;
+    const url = f.url || `https://reliefweb.int/job/${item.id}`;
+    
     if (existing.has(url)) {
-      console.log(`  Skip (exists): ${url}`);
       continue;
     }
     
-    const job = await scrapeJob(url);
-    if (!job) {
-      console.log(`  Failed: ${url}`);
-      continue;
-    }
-    
-    const catId = slugToId[job.category_slug] || null;
+    const title = f.title || 'Untitled';
+    const body = stripHtml(f.body || '');
+    const org = (f.source && f.source.length > 0) ? f.source[0].name : 'International Organization';
+    const closing = f['date'] && f['date'].closing ? f['date'].closing.substring(0, 10) : null;
+    const slug = categorizeJob(title);
+    const catId = slugToId[slug] || null;
     
     insertJob.run(
-      job.title, job.description, job.company_name, job.location, job.country,
-      job.job_type, job.experience_level, job.source, job.external_url,
-      job.category_slug, catId, job.application_deadline, job.status, job.salary_currency
+      title, body || `${title} - Position in Papua New Guinea with ${org}.`,
+      org, 'Papua New Guinea', 'PG', 'full-time', 'Mid Level',
+      'reliefweb', url, slug, catId, closing, 'active', 'PGK'
     );
     
-    console.log(`  Added: ${job.title} [${job.category_slug}]`);
+    console.log(`  Added: ${title} (${org})`);
     added++;
-    
-    // Be polite
-    await new Promise(r => setTimeout(r, 1000));
   }
   
-  console.log(`\nDone. Added ${added} jobs from ReliefWeb.`);
+  console.log(`\nDone. Added ${added} new jobs from ReliefWeb (${data.data.length} total from API).`);
 }
 
 main().catch(console.error);

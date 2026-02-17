@@ -208,7 +208,7 @@ export default function JobSearch() {
                 type="text"
                 value={filters.keyword || ''}
                 onChange={(e) => handleKeywordChange(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleFiltersApply()}
+                onKeyDown={(e) => e.key === 'Enter' && handleFiltersApply()}
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 placeholder="🔍 Search by job title, keyword, or company..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -330,8 +330,9 @@ export default function JobSearch() {
                 
                 {/* Sort Options */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Sort by:</span>
+                  <label htmlFor="sort-select" className="text-sm text-gray-600">Sort by:</label>
                   <select
+                    id="sort-select"
                     value={sortBy}
                     onChange={(e) => handleSortChange(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -352,35 +353,35 @@ export default function JobSearch() {
                     {filters.location && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         📍 {filters.location}
-                        <button onClick={() => removeFilter('location')} className="ml-1 hover:text-primary-900">×</button>
+                        <button onClick={() => removeFilter('location')} className="ml-1 hover:text-primary-900" aria-label={`Remove location filter: ${filters.location}`}>×</button>
                       </span>
                     )}
                     
                     {filters.category && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         📂 {filters.category}
-                        <button onClick={() => removeFilter('category')} className="ml-1 hover:text-primary-900">×</button>
+                        <button onClick={() => removeFilter('category')} className="ml-1 hover:text-primary-900" aria-label={`Remove category filter: ${filters.category}`}>×</button>
                       </span>
                     )}
                     
                     {filters.job_type && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         💼 {filters.job_type.split(',').join(', ')}
-                        <button onClick={() => removeFilter('job_type')} className="ml-1 hover:text-primary-900">×</button>
+                        <button onClick={() => removeFilter('job_type')} className="ml-1 hover:text-primary-900" aria-label="Remove job type filter">×</button>
                       </span>
                     )}
                     
                     {filters.experience && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         📈 {filters.experience}
-                        <button onClick={() => removeFilter('experience')} className="ml-1 hover:text-primary-900">×</button>
+                        <button onClick={() => removeFilter('experience')} className="ml-1 hover:text-primary-900" aria-label="Remove experience filter">×</button>
                       </span>
                     )}
                     
                     {filters.company && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         🏢 {filters.company}
-                        <button onClick={() => removeFilter('company')} className="ml-1 hover:text-primary-900">×</button>
+                        <button onClick={() => removeFilter('company')} className="ml-1 hover:text-primary-900" aria-label="Remove company filter">×</button>
                       </span>
                     )}
                     
