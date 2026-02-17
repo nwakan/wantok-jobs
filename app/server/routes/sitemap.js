@@ -59,6 +59,12 @@ function formatUrl(loc, lastmod, changefreq = 'weekly', priority = '0.5') {
   </url>`;
 }
 
+// Industry slugs matching server/routes/industries.js
+const INDUSTRY_SLUGS = [
+  'mining', 'construction', 'banking', 'health',
+  'education', 'technology', 'oil-gas', 'government'
+];
+
 /**
  * GET /sitemap.xml - Index sitemap (points to sub-sitemaps)
  */
@@ -83,6 +89,14 @@ router.get('/sitemap.xml', (req, res) => {
   </sitemap>
   <sitemap>
     <loc>${BASE_URL}/sitemap-categories.xml</loc>
+    <lastmod>${now}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${BASE_URL}/sitemap-blog.xml</loc>
+    <lastmod>${now}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${BASE_URL}/sitemap-industries.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
 </sitemapindex>`;
@@ -112,8 +126,12 @@ router.get('/sitemap-static.xml', (req, res) => {
         { path: '/companies', priority: '0.7', changefreq: 'weekly' },
         { path: '/pricing', priority: '0.6', changefreq: 'monthly' },
         { path: '/about', priority: '0.5', changefreq: 'monthly' },
-        { path: '/blog', priority: '0.6', changefreq: 'weekly' },
+        { path: '/blog', priority: '0.7', changefreq: 'weekly' },
         { path: '/contact', priority: '0.4', changefreq: 'monthly' },
+        { path: '/salary-calculator', priority: '0.8', changefreq: 'monthly' },
+        { path: '/compare', priority: '0.8', changefreq: 'monthly' },
+        { path: '/success-stories', priority: '0.8', changefreq: 'monthly' },
+        { path: '/training', priority: '0.8', changefreq: 'monthly' },
       ];
 
       let xml = xmlHeader;
@@ -139,7 +157,6 @@ router.get('/sitemap-static.xml', (req, res) => {
 router.get('/sitemap-jobs.xml', (req, res) => {
   try {
     const sitemap = getCachedOrGenerate('jobs', () => {
-      // Get all active jobs with last modified date
       const jobs = db.prepare(`
         SELECT 
           id, 
@@ -159,8 +176,8 @@ router.get('/sitemap-jobs.xml', (req, res) => {
 
       jobs.forEach(job => {
         const slug = job.slug || `${job.id}/${job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-        const lastmod = (job.updated_at || job.created_at).split('T')[0];
-        xml += formatUrl(`${baseUrl}/jobs/${slug}`, lastmod, 'weekly', '0.8');
+        const lastmod = (job.updated_at || job.created_at || '').split('T')[0] || new Date().toISOString().split('T')[0];
+        xml += formatUrl(`${baseUrl}/jobs/${slug}`, lastmod, 'daily', '0.9');
       });
 
       xml += xmlFooter;
@@ -181,7 +198,6 @@ router.get('/sitemap-jobs.xml', (req, res) => {
 router.get('/sitemap-companies.xml', (req, res) => {
   try {
     const sitemap = getCachedOrGenerate('companies', () => {
-      // Get all companies with at least 1 active job
       const companies = db.prepare(`
         SELECT DISTINCT
           pe.id,
@@ -203,10 +219,8 @@ router.get('/sitemap-companies.xml', (req, res) => {
       let xml = xmlHeader;
 
       companies.forEach(company => {
-        const lastmod = (company.updated_at || company.created_at).split('T')[0];
-        // Priority based on job count (more jobs = higher priority)
-        const priority = Math.min(0.9, 0.5 + (company.job_count * 0.05)).toFixed(1);
-        xml += formatUrl(`${baseUrl}/companies/${company.id}`, lastmod, 'weekly', priority);
+        const lastmod = (company.updated_at || company.created_at || '').split('T')[0] || new Date().toISOString().split('T')[0];
+        xml += formatUrl(`${baseUrl}/companies/${company.id}`, lastmod, 'weekly', '0.6');
       });
 
       xml += xmlFooter;
@@ -227,7 +241,6 @@ router.get('/sitemap-companies.xml', (req, res) => {
 router.get('/sitemap-categories.xml', (req, res) => {
   try {
     const sitemap = getCachedOrGenerate('categories', () => {
-      // Get all categories with job counts
       const categories = db.prepare(`
         SELECT 
           c.slug,
@@ -249,7 +262,6 @@ router.get('/sitemap-categories.xml', (req, res) => {
         const lastmod = cat.latest_job 
           ? cat.latest_job.split('T')[0] 
           : new Date().toISOString().split('T')[0];
-        // Priority based on job count
         const priority = cat.job_count > 50 ? '0.8' : cat.job_count > 10 ? '0.7' : '0.6';
         xml += formatUrl(`${baseUrl}/category/${cat.slug}`, lastmod, 'daily', priority);
       });
@@ -267,8 +279,67 @@ router.get('/sitemap-categories.xml', (req, res) => {
 });
 
 /**
+ * GET /sitemap-blog.xml - Blog articles
+ */
+router.get('/sitemap-blog.xml', (req, res) => {
+  try {
+    const sitemap = getCachedOrGenerate('blog', () => {
+      const articles = db.prepare(`
+        SELECT slug, updated_at, created_at
+        FROM articles
+        WHERE status = 'published'
+        ORDER BY created_at DESC
+        LIMIT 5000
+      `).all();
+
+      const baseUrl = BASE_URL;
+      let xml = xmlHeader;
+
+      articles.forEach(article => {
+        const lastmod = (article.updated_at || article.created_at || '').split('T')[0] || new Date().toISOString().split('T')[0];
+        xml += formatUrl(`${baseUrl}/blog/${article.slug}`, lastmod, 'monthly', '0.7');
+      });
+
+      xml += xmlFooter;
+      return xml;
+    });
+
+    res.header('Content-Type', 'application/xml');
+    res.send(sitemap);
+  } catch (error) {
+    logger.error('Blog sitemap error', { error: error.message });
+    res.status(500).send('Sitemap generation failed');
+  }
+});
+
+/**
+ * GET /sitemap-industries.xml - Industry landing pages
+ */
+router.get('/sitemap-industries.xml', (req, res) => {
+  try {
+    const sitemap = getCachedOrGenerate('industries', () => {
+      const now = new Date().toISOString().split('T')[0];
+      const baseUrl = BASE_URL;
+      let xml = xmlHeader;
+
+      INDUSTRY_SLUGS.forEach(slug => {
+        xml += formatUrl(`${baseUrl}/industries/${slug}`, now, 'weekly', '0.8');
+      });
+
+      xml += xmlFooter;
+      return xml;
+    });
+
+    res.header('Content-Type', 'application/xml');
+    res.send(sitemap);
+  } catch (error) {
+    logger.error('Industries sitemap error', { error: error.message });
+    res.status(500).send('Sitemap generation failed');
+  }
+});
+
+/**
  * POST /sitemap/clear-cache - Admin endpoint to force regeneration
- * (Optional: for use after bulk job imports or major content changes)
  */
 router.post('/sitemap/clear-cache', (req, res) => {
   try {

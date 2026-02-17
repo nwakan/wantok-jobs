@@ -10,7 +10,7 @@ Disallow: /login
 Disallow: /register
 
 # Sitemaps
-Sitemap: https://wantokjobs.com/sitemap.xml
+Sitemap: https://tolarai.com/sitemap.xml
 
 # PNG bandwidth optimization - reduce server load
 Crawl-delay: 1
