@@ -122,6 +122,15 @@ class Jean {
       response = await this.handleNewMessage(session, message, user, pageContext);
     }
 
+    // Apply mood prefix if detected
+    const mood = personality.detectMood(message);
+    if (mood && response.message) {
+      const empathy = personality.empathize(mood);
+      if (empathy && !response.message.startsWith(empathy)) {
+        response.message = empathy + '\n\n' + response.message;
+      }
+    }
+
     // Save Jean's response
     this.saveMessage(session.id, 'jean', response.message, {
       quickReplies: response.quickReplies,
@@ -181,13 +190,6 @@ class Jean {
     };
 
     const { intent, confidence, params } = classify(message, context);
-
-    // Detect mood and prepend empathetic response if needed
-    const mood = personality.detectMood(message);
-    let moodPrefix = '';
-    if (mood) {
-      moodPrefix = personality.empathize(mood) + '\n\n';
-    }
 
     // ─── Route by intent ─────────────────────────────────
     switch (intent) {
@@ -329,7 +331,7 @@ class Jean {
         const fallback = user
           ? `I'm not quite sure what you need, ${user.name?.split(' ')[0] || 'there'}. But I can help with:\n\n🔍 Finding jobs — just tell me what you're looking for\n👤 Your profile — I'll update it for you through chat\n📄 Your CV — I'll build it from scratch\n📨 Applying — I can apply to jobs for you\n💰 Pricing — I'll explain how it works\n\nJust tell me in your own words what you need!`
           : "I didn't quite catch that — but no worries! Here's what I can do:\n\n🔍 **Find jobs** — tell me what you're looking for\n📂 **Browse by category** — mining, health, IT, and more\n💰 **Pricing** — it's free for job seekers!\n📝 **Sign up** — I'll walk you through it\n\nWhat would you like to do?";
-        return { message: moodPrefix + fallback, intent };
+        return { message: fallback, intent };
       }
     }
   }
