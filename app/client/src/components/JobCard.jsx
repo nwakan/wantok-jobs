@@ -57,8 +57,7 @@ export default function JobCard({ job, compact = false }) {
               {job.title}
             </h3>
             <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
-              {job.company_name || job.employer_name}
-              {/* Task 5: Verification badge */}
+              {getDisplayCompanyName(job)}
               {!!job.employer_verified && (
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
               )}
@@ -82,11 +81,11 @@ export default function JobCard({ job, compact = false }) {
                 💰 {job.salary_currency || 'PGK'} {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
               </span>
             )}
-            {job.source === 'headhunter' && (
+            {formatJobSource(job.source) ? (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                🤖 Imported
+                🤖 {formatJobSource(job.source).short}
               </span>
-            )}
+            ) : null}
           </div>
 
           {/* Excerpt */}

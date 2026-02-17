@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Heart, X } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
-import { formatPNGSalary, needsLogoPlaceholder, generateCompanyLogoPlaceholder } from '../utils/pngHelpers';
+import { formatPNGSalary, needsLogoPlaceholder, generateCompanyLogoPlaceholder, getDisplayCompanyName } from '../utils/pngHelpers';
 import { useSwipeActions } from '../hooks/useSwipeActions';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -129,7 +129,7 @@ export default function SwipeableJobCard({
                 {job.title}
               </h3>
               <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
-                {job.company_name || job.employer_name}
+                {getDisplayCompanyName(job)}
                 {!!job.employer_verified && (
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
                 )}

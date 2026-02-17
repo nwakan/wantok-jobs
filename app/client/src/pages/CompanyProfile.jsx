@@ -170,7 +170,7 @@ export default function CompanyProfile() {
                           Verified
                         </div>
                       )}
-                      {company.is_agency_managed && company.managed_by_agency && (
+                      {!!company.is_agency_managed && company.managed_by_agency && (
                         <div className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
                           <Users className="w-4 h-4" />
                           Managed by {company.managed_by_agency}
@@ -180,7 +180,7 @@ export default function CompanyProfile() {
                     <p className="text-lg text-gray-600 mb-2">{company.industry}</p>
                     
                     {/* Claim button for agency-managed profiles */}
-                    {company.is_agency_managed && (
+                    {!!company.is_agency_managed && (
                       <button
                         onClick={() => setShowClaimModal(true)}
                         className="mt-2 text-sm text-primary-600 hover:text-primary-800 underline"
