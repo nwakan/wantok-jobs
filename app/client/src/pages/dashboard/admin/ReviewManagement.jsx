@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Star, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
-import api from '../../../api';
+import { Star, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { admin as adminAPI } from '../../../api';
 import { useToast } from '../../../components/Toast';
 
 export default function ReviewManagement() {
@@ -15,9 +15,9 @@ export default function ReviewManagement() {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/admin/reviews?status=${filter}`);
-      setReviews(res.data.reviews || []);
-      setCounts(res.data.counts || {});
+      const data = await adminAPI.getReviews({ status: filter });
+      setReviews(data.reviews || []);
+      setCounts(data.counts || {});
     } catch (error) {
       showToast('Failed to load reviews', 'error');
     } finally {
@@ -27,7 +27,7 @@ export default function ReviewManagement() {
 
   const handleAction = async (id, action) => {
     try {
-      await api.patch(`/admin/reviews/${id}`, { action });
+      await adminAPI.updateReview(id, action);
       showToast(`Review ${action}d successfully`, 'success');
       fetchReviews();
     } catch (error) {

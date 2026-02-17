@@ -262,6 +262,20 @@ export const admin = {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ids }),
     }).then(handleResponse),
+
+  getReviews: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetch(`${API_URL}/admin/reviews?${queryString}`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse);
+  },
+
+  updateReview: (id, action) =>
+    fetch(`${API_URL}/admin/reviews/${id}`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    }).then(handleResponse),
 };
 
 // Categories
