@@ -49,33 +49,33 @@ export default function MyApplications() {
     if (sortBy === 'date') {
       return new Date(b.applied_at) - new Date(a.applied_at);
     } else {
-      const statusOrder = { offered: 0, interview: 1, shortlisted: 2, screening: 3, applied: 4, rejected: 5, withdrawn: 6 };
+      const statusOrder = { hired: 0, offered: 1, interviewed: 2, shortlisted: 3, reviewed: 4, pending: 5, rejected: 6, withdrawn: 7 };
       return (statusOrder[a.status] || 10) - (statusOrder[b.status] || 10);
     }
   });
 
   // Status configuration
   const statusConfig = {
-    applied: { 
-      label: 'Applied', 
-      color: 'bg-blue-100 text-blue-800 border-blue-300', 
-      icon: '📝',
+    pending: { 
+      label: 'Pending', 
+      color: 'bg-gray-100 text-gray-800 border-gray-300', 
+      icon: '⏳',
       step: 1,
     },
-    screening: { 
-      label: 'Screening', 
-      color: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
-      icon: '🔍',
+    reviewed: { 
+      label: 'Reviewed', 
+      color: 'bg-blue-100 text-blue-800 border-blue-300', 
+      icon: '👁️',
       step: 2,
     },
     shortlisted: { 
       label: 'Shortlisted', 
-      color: 'bg-orange-100 text-orange-800 border-orange-300', 
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
       icon: '⭐',
       step: 3,
     },
-    interview: { 
-      label: 'Interview', 
+    interviewed: { 
+      label: 'Interviewed', 
       color: 'bg-purple-100 text-purple-800 border-purple-300', 
       icon: '🎯',
       step: 4,
@@ -86,15 +86,21 @@ export default function MyApplications() {
       icon: '🎉',
       step: 5,
     },
+    hired: { 
+      label: 'Hired', 
+      color: 'bg-emerald-100 text-emerald-800 border-emerald-300', 
+      icon: '✅',
+      step: 6,
+    },
     rejected: { 
       label: 'Rejected', 
-      color: 'bg-gray-100 text-gray-800 border-gray-300', 
+      color: 'bg-red-100 text-red-800 border-red-300', 
       icon: '❌',
       step: 0,
     },
     withdrawn: { 
       label: 'Withdrawn', 
-      color: 'bg-gray-100 text-gray-800 border-gray-300', 
+      color: 'bg-gray-100 text-gray-500 border-gray-300', 
       icon: '↩️',
       step: 0,
     },
@@ -103,18 +109,19 @@ export default function MyApplications() {
   // Status counts for filters
   const statusCounts = {
     all: myApplications.length,
-    applied: myApplications.filter(a => a.status === 'applied').length,
-    screening: myApplications.filter(a => a.status === 'screening').length,
+    pending: myApplications.filter(a => a.status === 'pending').length,
+    reviewed: myApplications.filter(a => a.status === 'reviewed').length,
     shortlisted: myApplications.filter(a => a.status === 'shortlisted').length,
-    interview: myApplications.filter(a => a.status === 'interview').length,
+    interviewed: myApplications.filter(a => a.status === 'interviewed').length,
     offered: myApplications.filter(a => a.status === 'offered').length,
+    hired: myApplications.filter(a => a.status === 'hired').length,
     rejected: myApplications.filter(a => a.status === 'rejected').length,
   };
 
   // Status Timeline Component
   const StatusTimeline = ({ status }) => {
     const currentStep = statusConfig[status]?.step || 0;
-    const steps = ['Applied', 'Screening', 'Shortlisted', 'Interview', 'Offered'];
+    const steps = ['Pending', 'Reviewed', 'Shortlisted', 'Interviewed', 'Offered', 'Hired'];
     
     if (status === 'rejected' || status === 'withdrawn') {
       return (
@@ -189,44 +196,44 @@ export default function MyApplications() {
           All ({statusCounts.all})
         </button>
         <button
-          onClick={() => setFilter('applied')}
+          onClick={() => setFilter('pending')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'applied' 
+            filter === 'pending' 
+              ? 'bg-gray-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          ⏳ Pending ({statusCounts.pending})
+        </button>
+        <button
+          onClick={() => setFilter('reviewed')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'reviewed' 
               ? 'bg-blue-600 text-white shadow-md' 
               : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
           }`}
         >
-          📝 Applied ({statusCounts.applied})
-        </button>
-        <button
-          onClick={() => setFilter('screening')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'screening' 
-              ? 'bg-yellow-600 text-white shadow-md' 
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-          }`}
-        >
-          🔍 Screening ({statusCounts.screening})
+          👁️ Reviewed ({statusCounts.reviewed})
         </button>
         <button
           onClick={() => setFilter('shortlisted')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'shortlisted' 
-              ? 'bg-orange-600 text-white shadow-md' 
+              ? 'bg-yellow-600 text-white shadow-md' 
               : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
           }`}
         >
           ⭐ Shortlisted ({statusCounts.shortlisted})
         </button>
         <button
-          onClick={() => setFilter('interview')}
+          onClick={() => setFilter('interviewed')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'interview' 
+            filter === 'interviewed' 
               ? 'bg-purple-600 text-white shadow-md' 
               : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
           }`}
         >
-          🎯 Interview ({statusCounts.interview})
+          🎯 Interviewed ({statusCounts.interviewed})
         </button>
         <button
           onClick={() => setFilter('offered')}
@@ -237,6 +244,16 @@ export default function MyApplications() {
           }`}
         >
           🎉 Offered ({statusCounts.offered})
+        </button>
+        <button
+          onClick={() => setFilter('hired')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'hired' 
+              ? 'bg-emerald-600 text-white shadow-md' 
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          ✅ Hired ({statusCounts.hired})
         </button>
       </div>
 
@@ -364,7 +381,7 @@ export default function MyApplications() {
                   >
                     View Job Details
                   </Link>
-                  {(app.status === 'offered' || app.status === 'interview') && (
+                  {(app.status === 'offered' || app.status === 'interviewed' || app.status === 'hired') && (
                     <button
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition"
                     >

@@ -201,10 +201,10 @@ export default function Applicants() {
   });
 
   const pipelineStages = [
-    { key: 'applied', label: 'Applied', color: 'bg-blue-100', icon: Mail },
-    { key: 'screening', label: 'Screening', color: 'bg-yellow-100', icon: Search },
-    { key: 'shortlisted', label: 'Shortlisted', color: 'bg-purple-100', icon: Star },
-    { key: 'interview', label: 'Interview', color: 'bg-indigo-100', icon: Calendar },
+    { key: 'pending', label: 'Pending', color: 'bg-gray-100', icon: Mail },
+    { key: 'reviewed', label: 'Reviewed', color: 'bg-blue-100', icon: Eye },
+    { key: 'shortlisted', label: 'Shortlisted', color: 'bg-yellow-100', icon: Star },
+    { key: 'interviewed', label: 'Interviewed', color: 'bg-purple-100', icon: Calendar },
     { key: 'offered', label: 'Offered', color: 'bg-green-100', icon: Award },
     { key: 'hired', label: 'Hired', color: 'bg-emerald-100', icon: Users },
   ];
@@ -766,10 +766,10 @@ export default function Applicants() {
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg font-medium"
                 >
-                  <option value="applied">Applied</option>
-                  <option value="screening">Screening</option>
+                  <option value="pending">Pending</option>
+                  <option value="reviewed">Reviewed</option>
                   <option value="shortlisted">Shortlisted</option>
-                  <option value="interview">Interview</option>
+                  <option value="interviewed">Interviewed</option>
                   <option value="offered">Offered</option>
                   <option value="hired">Hired</option>
                   <option value="rejected">Rejected</option>

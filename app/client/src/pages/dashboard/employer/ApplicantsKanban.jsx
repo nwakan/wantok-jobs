@@ -17,12 +17,12 @@ export default function ApplicantsKanban({ applicants, job, onStatusChange, onRa
   const [selectedApplicant, setSelectedApplicant] = useState(null);
 
   const pipelineStages = [
-    { key: 'applied', label: 'Applied', color: 'bg-gray-100', textColor: 'text-gray-700', icon: Mail },
-    { key: 'screening', label: 'Screening', color: 'bg-blue-100', textColor: 'text-blue-700', icon: Search },
-    { key: 'shortlisted', label: 'Shortlisted', color: 'bg-purple-100', textColor: 'text-purple-700', icon: Star },
-    { key: 'interview', label: 'Interview', color: 'bg-indigo-100', textColor: 'text-indigo-700', icon: Calendar },
-    { key: 'offered', label: 'Offered', color: 'bg-amber-100', textColor: 'text-amber-700', icon: Award },
-    { key: 'hired', label: 'Hired', color: 'bg-green-100', textColor: 'text-green-700', icon: CheckCircle },
+    { key: 'pending', label: 'Pending', color: 'bg-gray-100', textColor: 'text-gray-700', icon: Mail },
+    { key: 'reviewed', label: 'Reviewed', color: 'bg-blue-100', textColor: 'text-blue-700', icon: Search },
+    { key: 'shortlisted', label: 'Shortlisted', color: 'bg-yellow-100', textColor: 'text-yellow-700', icon: Star },
+    { key: 'interviewed', label: 'Interviewed', color: 'bg-purple-100', textColor: 'text-purple-700', icon: Calendar },
+    { key: 'offered', label: 'Offered', color: 'bg-green-100', textColor: 'text-green-700', icon: Award },
+    { key: 'hired', label: 'Hired', color: 'bg-emerald-100', textColor: 'text-emerald-700', icon: CheckCircle },
     { key: 'rejected', label: 'Rejected', color: 'bg-red-100', textColor: 'text-red-700', icon: XCircle },
   ];
 
@@ -429,10 +429,10 @@ function ApplicantQuickView({ applicant, onClose, onStatusChange, onRating }) {
               onChange={(e) => onStatusChange(applicant.id, e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg font-medium"
             >
-              <option value="applied">Applied</option>
-              <option value="screening">Screening</option>
+              <option value="pending">Pending</option>
+              <option value="reviewed">Reviewed</option>
               <option value="shortlisted">Shortlisted</option>
-              <option value="interview">Interview</option>
+              <option value="interviewed">Interviewed</option>
               <option value="offered">Offered</option>
               <option value="hired">Hired</option>
               <option value="rejected">Rejected</option>

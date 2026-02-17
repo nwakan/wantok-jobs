@@ -300,7 +300,7 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
     sendApplicationConfirmationEmail({ email: req.user.email, name: applicant?.name }, job, companyProfile?.company_name || employer?.name || 'the employer').catch(() => {});
 
     // Log application event
-    db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'applied', ?, 'Initial application')`).run(application.id, req.user.id);
+    db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'pending', ?, 'Initial application')`).run(application.id, req.user.id);
 
     res.status(201).json(application);
   } catch (error) {
@@ -370,7 +370,7 @@ router.post('/quick-apply', resumeUpload.single('resume'), (req, res) => {
     try {
       result = db.prepare(`
         INSERT INTO applications (job_id, applicant_type, guest_name, guest_email, guest_phone, cover_letter, resume_path, status)
-        VALUES (?, 'quick', ?, ?, ?, ?, ?, 'applied')
+        VALUES (?, 'quick', ?, ?, ?, ?, ?, 'pending')
       `).run(job_id, safeName, safeEmail, safePhone, safeCoverLetter, resumePath);
     } catch (err) {
       if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || (err.message && err.message.includes('UNIQUE constraint failed'))) {
@@ -403,7 +403,7 @@ router.post('/quick-apply', resumeUpload.single('resume'), (req, res) => {
     // Log application event
     try {
       db.prepare(
-        `INSERT INTO application_events (application_id, to_status, notes) VALUES (?, 'applied', 'Quick apply (no account)')`
+        `INSERT INTO application_events (application_id, to_status, notes) VALUES (?, 'pending', 'Quick apply (no account)')`
       ).run(applicationId);
     } catch (e) {
       // application_events may have required changed_by — ignore
@@ -600,8 +600,8 @@ router.patch('/:id/notes', authenticateToken, requireRole('employer', 'admin'), 
   }
 });
 
-// Update application status (employer or admin)
-router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+// Update application status (employer or admin) — supports both PUT and PATCH
+function handleStatusUpdate(req, res) {
   try {
     const { status } = req.body;
 
@@ -609,9 +609,9 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
       return res.status(400).json({ error: 'Status required' });
     }
 
-    const validStatuses = ['applied', 'screening', 'shortlisted', 'interview', 'offered', 'rejected', 'withdrawn', 'hired'];
+    const validStatuses = ['pending', 'reviewed', 'shortlisted', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      return res.status(400).json({ error: 'Invalid status. Valid: ' + validStatuses.join(', ') });
     }
 
     const application = db.prepare(`
@@ -633,10 +633,10 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
 
     // Validate status transition
     const validTransitions = {
-      'applied': ['screening', 'shortlisted', 'rejected', 'withdrawn'],
-      'screening': ['shortlisted', 'rejected', 'withdrawn'],
-      'shortlisted': ['interview', 'rejected', 'withdrawn'],
-      'interview': ['offered', 'rejected', 'withdrawn'],
+      'pending': ['reviewed', 'shortlisted', 'rejected', 'withdrawn'],
+      'reviewed': ['shortlisted', 'rejected', 'withdrawn'],
+      'shortlisted': ['interviewed', 'rejected', 'withdrawn'],
+      'interviewed': ['offered', 'rejected', 'withdrawn'],
       'offered': ['hired', 'rejected', 'withdrawn'],
       'hired': [],
       'rejected': [],
@@ -657,7 +657,7 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
     }
 
     db.prepare(`
-      UPDATE applications SET status = ?, updated_at = datetime('now') WHERE id = ?
+      UPDATE applications SET status = ?, status_updated_at = datetime('now'), updated_at = datetime('now') WHERE id = ?
     `).run(status, req.params.id);
 
     // Auto-generate onboarding checklist when hired
@@ -697,6 +697,76 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
   } catch (error) {
     logger.error('Update application error', { error: error.message });
     res.status(500).json({ error: 'Failed to update application' });
+  }
+}
+router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), handleStatusUpdate);
+router.patch('/:id/status', authenticateToken, requireRole('employer', 'admin'), handleStatusUpdate);
+
+// POST /:id/notes - Add employer notes to a specific application
+router.post('/:id/notes', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    const { notes } = req.body;
+    if (!notes) return res.status(400).json({ error: 'Notes required' });
+
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!application) return res.status(404).json({ error: 'Application not found' });
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    db.prepare(`UPDATE applications SET employer_notes = ?, updated_at = datetime('now') WHERE id = ?`).run(notes, req.params.id);
+
+    // Log in applicant_notes table for history
+    try {
+      db.prepare(`INSERT INTO applicant_notes (application_id, note, created_by) VALUES (?, ?, ?)`).run(req.params.id, notes, req.user.id);
+    } catch (e) { /* table may not exist */ }
+
+    const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    logger.error('Add application notes error', { error: error.message });
+    res.status(500).json({ error: 'Failed to add notes' });
+  }
+});
+
+// GET /:id/events - Get status change history for an application
+router.get('/:id/events', authenticateToken, (req, res) => {
+  try {
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!application) return res.status(404).json({ error: 'Application not found' });
+
+    // Jobseekers can see their own, employers can see their jobs'
+    if (req.user.role === 'jobseeker' && application.jobseeker_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    if (req.user.role === 'employer' && application.employer_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const events = db.prepare(`
+      SELECT ae.*, u.name as changed_by_name
+      FROM application_events ae
+      LEFT JOIN users u ON ae.changed_by = u.id
+      WHERE ae.application_id = ?
+      ORDER BY ae.created_at ASC
+    `).all(req.params.id);
+
+    res.json(events);
+  } catch (error) {
+    logger.error('Get application events error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch events' });
   }
 });
 

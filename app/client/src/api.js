@@ -114,9 +114,21 @@ export const applications = {
 
   updateStatus: (id, status) =>
     fetch(`${API_URL}/applications/${id}/status`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
+    }).then(handleResponse),
+
+  addNotes: (id, notes) =>
+    fetch(`${API_URL}/applications/${id}/notes`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    }).then(handleResponse),
+
+  getEvents: (id) =>
+    fetch(`${API_URL}/applications/${id}/events`, {
+      headers: getAuthHeader(),
     }).then(handleResponse),
 };
 
