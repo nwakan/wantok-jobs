@@ -199,7 +199,8 @@ const INTENTS = {
   },
   browse_companies: {
     patterns: [
-      /\b(compan|employer|business|organisation|organization)\b.*\b(list|browse|view|see|who)/i,
+      /\bcompan(y|ies)\b/i,
+      /\b(employer|business|organisation|organization)s?\b.*\b(list|browse|view|see|who)/i,
       /\bwho'?s?\s*hiring\b/i,
     ],
     priority: 3,
