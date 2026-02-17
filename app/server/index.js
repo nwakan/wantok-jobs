@@ -267,6 +267,10 @@ app.get('/health', (req, res) => {
 // Public stats endpoint
 app.get('/api/stats', (req, res) => {
   try {
+    const statsCache = require('./lib/cache');
+    const cached = statsCache.get('stats:public');
+    if (cached) return res.json(cached);
+
     const db = require('./database');
     const stats = {
       totalJobseekers: db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'jobseeker' AND COALESCE(account_status, 'active') != 'spam'").get().count,
@@ -274,7 +278,9 @@ app.get('/api/stats', (req, res) => {
       totalJobs: db.prepare('SELECT COUNT(*) as count FROM jobs').get().count,
       activeJobs: db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'active'").get().count,
     };
-    res.json({ success: true, data: stats, ...stats });
+    const result = { success: true, data: stats, ...stats };
+    statsCache.set('stats:public', result, 300);
+    res.json(result);
   } catch (error) {
     logger.error('Stats error', { error: error.message, requestId: req.id });
     res.status(500).json({ success: false, error: 'Failed to fetch stats', message: 'Internal server error' });
@@ -408,7 +414,10 @@ app.get('/sitemap.xml', (req, res) => {
 
 // Serve uploaded files statically
 const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
-app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
+app.use('/uploads', express.static(path.join(dataDir, 'uploads'), {
+  maxAge: '1y',
+  immutable: true,
+}));
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {

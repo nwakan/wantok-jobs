@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../components/Toast';
 import { Plus, Pencil, Trash2, X, Building2, Briefcase } from 'lucide-react';
 import DashboardLayout from '../../../components/DashboardLayout';
+import OptimizedImage from '../../../components/OptimizedImage';
 
 const API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
 
@@ -115,7 +116,7 @@ export default function AgencyClients() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {c.logo_url ? (
-                        <img src={c.logo_url} alt="" className="w-8 h-8 rounded object-cover" />
+                        <OptimizedImage src={c.logo_url} alt="" width={32} height={32} className="w-8 h-8 rounded object-cover" />
                       ) : (
                         <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
                           <Building2 className="w-4 h-4 text-gray-400" />

@@ -4,10 +4,17 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
+const cache = require('../lib/cache');
+
 const router = express.Router();
 
 // All routes require auth + admin role
 router.use(authenticateToken, requireRole('admin'));
+
+// GET /cache-stats - Cache statistics
+router.get('/cache-stats', (req, res) => {
+  res.json(cache.stats);
+});
 
 // Dashboard stats — single endpoint for admin overview
 router.get("/dashboard-stats", (req, res) => {

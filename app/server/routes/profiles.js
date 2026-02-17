@@ -252,6 +252,7 @@ router.put('/', authenticateToken, (req, res) => {
       );
 
       const updated = db.prepare('SELECT * FROM profiles_employer WHERE user_id = ?').get(req.user.id);
+      require('../lib/cache').invalidate('companies');
       res.json(updated);
 
     } else {

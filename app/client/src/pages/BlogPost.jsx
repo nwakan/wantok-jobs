@@ -4,6 +4,7 @@ import { Calendar, User, Tag, ArrowLeft, Share2, Clock, Facebook, Twitter, Linke
 import { format } from 'date-fns';
 import PageHead from '../components/PageHead';
 import api from '../api';
+import OptimizedImage from '../components/OptimizedImage';
 
 export default function BlogPost() {
   const { slug } = useParams();
@@ -169,7 +170,7 @@ export default function BlogPost() {
                 {/* Featured Image */}
                 {article.image && (
                   <div className="h-96 overflow-hidden">
-                    <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+                    <OptimizedImage src={article.image} alt={article.title} className="w-full h-full object-cover" eager />
                   </div>
                 )}
 

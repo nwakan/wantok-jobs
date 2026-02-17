@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 import { getDisplayCompanyName, formatJobSource } from '../utils/pngHelpers';
+import OptimizedImage from './OptimizedImage';
 
 export default function JobCard({ job, compact = false }) {
   const excerpt = job.excerpt || truncate(stripHTML(job.description), compact ? 80 : 150);
@@ -43,9 +44,10 @@ export default function JobCard({ job, compact = false }) {
         {/* Company Logo */}
         {job.logo_url && (
           <div className="flex-shrink-0">
-            <img 
+            <OptimizedImage 
               src={job.logo_url} 
               alt={`${job.company_name || job.employer_name} logo`} 
+              width={56} height={56}
               className="w-14 h-14 rounded-lg object-cover border border-gray-200" 
             />
           </div>

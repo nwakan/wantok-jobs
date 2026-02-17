@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { training } from '../api';
 import PageHead from '../components/PageHead';
+import OptimizedImage from '../components/OptimizedImage';
 
 export default function Training() {
   const [providers, setProviders] = useState([]);
@@ -199,7 +200,7 @@ export default function Training() {
                 <div key={provider.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
                   <div className="flex items-start gap-4 mb-4">
                     {provider.logo_url ? (
-                      <img src={provider.logo_url} alt={provider.name} className="w-14 h-14 rounded-lg object-cover" />
+                      <OptimizedImage src={provider.logo_url} alt={provider.name} width={56} height={56} className="w-14 h-14 rounded-lg object-cover" />
                     ) : (
                       <div className="w-14 h-14 bg-primary-100 rounded-lg flex items-center justify-center text-primary-700 font-bold text-xl">
                         {provider.name?.charAt(0)}

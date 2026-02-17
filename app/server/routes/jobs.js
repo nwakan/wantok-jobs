@@ -11,6 +11,8 @@ const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { events: notifEvents } = require('../lib/notifications');
 
+const cache = require('../lib/cache');
+
 const router = express.Router();
 
 // GET /suggestions - Autocomplete for keywords and companies
@@ -57,6 +59,9 @@ router.get('/suggestions', (req, res) => {
 // GET /featured - Featured jobs (is_featured=1 with valid featured_until) + top viewed (Task 3)
 router.get('/featured', (req, res) => {
   try {
+    const cached = cache.get('jobs:featured');
+    if (cached) return res.json(cached);
+
     const jobs = db.prepare(`
       SELECT j.*, 
              u.name as employer_name,
@@ -76,7 +81,9 @@ router.get('/featured', (req, res) => {
       LIMIT 6
     `).all();
 
-    res.json({ data: jobs });
+    const result = { data: jobs };
+    cache.set('jobs:featured', result, 300);
+    res.json(result);
   } catch (error) {
     logger.error('Get featured jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch featured jobs' });
@@ -86,6 +93,10 @@ router.get('/featured', (req, res) => {
 // Get all jobs (public, with enhanced filters)
 router.get('/', (req, res) => {
   try {
+    const cacheKey = 'jobs:search:' + JSON.stringify(req.query);
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const {
       keyword,
       category,
@@ -259,12 +270,14 @@ router.get('/', (req, res) => {
       }
     }
 
-    res.json({
+    const result = {
       data: jobs,
       total,
       page: parseInt(page),
       totalPages: Math.ceil(total / limitNum)
-    });
+    };
+    cache.set(cacheKey, result, 60);
+    res.json(result);
   } catch (error) {
     logger.error('Get jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch jobs', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
@@ -459,6 +472,7 @@ router.patch('/:id/status', authenticateToken, requireRole('employer', 'admin'),
 
     const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
     
+    cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
     res.json(updated);
   } catch (error) {
     logger.error('Update job status error', { error: error.message });
@@ -609,6 +623,7 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'job_posted', 'job', job.id, JSON.stringify({ title, status })); } catch(e) {}
 
+    cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
     res.status(201).json({ data: job, id: job.id });
   } catch (error) {
     logger.error('Create job error', { error: error.message });
@@ -716,6 +731,7 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
     );
 
     const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+    cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
     res.json(updated);
   } catch (error) {
     logger.error('Update job error', { error: error.message });
@@ -738,6 +754,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 
     db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
 
+    cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
     logger.error('Delete job error', { error: error.message });

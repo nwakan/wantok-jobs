@@ -5,9 +5,14 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
+const cache = require('../lib/cache');
+
 // GET /popular-searches - Top 10 searches in last 7 days (public)
 router.get('/popular-searches', (req, res) => {
   try {
+    const cached = cache.get('analytics:popular-searches');
+    if (cached) return res.json(cached);
+
     const searches = db.prepare(`
       SELECT query, COUNT(*) as search_count, 
              MAX(results_count) as avg_results
@@ -20,7 +25,9 @@ router.get('/popular-searches', (req, res) => {
       LIMIT 10
     `).all();
 
-    res.json({ data: searches });
+    const result = { data: searches };
+    cache.set('analytics:popular-searches', result, 300);
+    res.json(result);
   } catch (error) {
     logger.error('Error fetching popular searches', { error: error.message });
     res.json({ data: [] });

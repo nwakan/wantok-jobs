@@ -66,18 +66,19 @@ export default function Layout() {
               </Link>
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                 <Link to="/jobs" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
-                  Find Jobs
+                  {t('nav.findJobs')}
                 </Link>
                 <Link to="/companies" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
-                  Companies
+                  {t('nav.companies')}
                 </Link>
                 <Link to="/training" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
-                  Training
+                  {t('nav.training')}
                 </Link>
               </div>
             </div>
             
             <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+              <LanguageToggle variant="compact" />
               <DarkModeToggle />
               {user ? (
                 <>
@@ -86,14 +87,14 @@ export default function Layout() {
                     to={getDashboardLink()}
                     className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
                   >
-                    Dashboard
+                    {t('nav.dashboard')}
                   </Link>
                   <span className="text-gray-700 dark:text-gray-300">{user.name}</span>
                   <button
                     onClick={handleLogout}
                     className="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700"
                   >
-                    Logout
+                    {t('nav.logout')}
                   </button>
                 </>
               ) : (
@@ -102,13 +103,13 @@ export default function Layout() {
                     to="/login"
                     className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium dark:text-gray-300"
                   >
-                    Login
+                    {t('nav.login')}
                   </Link>
                   <Link
                     to="/register"
                     className="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700"
                   >
-                    Sign Up
+                    {t('nav.register')}
                   </Link>
                 </>
               )}
@@ -141,47 +142,47 @@ export default function Layout() {
                 className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                🔍 Find Jobs
+                🔍 {t('nav.findJobs')}
               </Link>
               <Link 
                 to="/companies" 
                 className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                🏢 Companies
+                🏢 {t('nav.companies')}
               </Link>
               <Link 
                 to="/training" 
                 className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                📚 Training
+                📚 {t('nav.training')}
               </Link>
               <Link 
                 to="/about" 
                 className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                ℹ️ About
+                ℹ️ {t('nav.about')}
               </Link>
               {user ? (
                 <>
                   <div className="border-t border-gray-100 my-2"></div>
                   <div className="px-4 py-2 text-sm text-gray-600">
-                    Signed in as <strong>{user.name}</strong>
+                    {t('nav.signedInAs')} <strong>{user.name}</strong>
                   </div>
                   <Link 
                     to={getDashboardLink()} 
                     className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    📊 Dashboard
+                    📊 {t('nav.dashboard')}
                   </Link>
                   <button
                     onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
                     className="block w-full text-left px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 active:bg-red-100 min-h-[44px] flex items-center"
                   >
-                    🚪 Logout
+                    🚪 {t('nav.logout')}
                   </button>
                 </>
               ) : (
@@ -192,14 +193,14 @@ export default function Layout() {
                     className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    🔐 Login
+                    🔐 {t('nav.login')}
                   </Link>
                   <Link 
                     to="/register" 
                     className="block mx-4 my-2 px-4 py-3 text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 active:bg-primary-800 rounded-lg text-center min-h-[44px] flex items-center justify-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    ✨ Sign Up Free
+                    ✨ {t('nav.registerFree')}
                   </Link>
                 </>
               )}
@@ -226,26 +227,26 @@ export default function Layout() {
             <div>
               <h3 className="text-lg font-bold mb-4">WantokJobs</h3>
               <p className="text-gray-400">
-                Connecting talent with opportunity across the Pacific region.
+                {t('footer.tagline')}
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-bold mb-4">Quick Links</h3>
+              <h3 className="text-lg font-bold mb-4">{t('footer.quickLinks')}</h3>
               <ul className="space-y-2">
-                <li><Link to="/jobs" className="text-gray-400 hover:text-white">Browse Jobs</Link></li>
-                <li><Link to="/companies" className="text-gray-400 hover:text-white">Companies</Link></li>
-                <li><Link to="/training" className="text-gray-400 hover:text-white">Training & Courses</Link></li>
-                <li><Link to="/about" className="text-gray-400 hover:text-white">About Us</Link></li>
+                <li><Link to="/jobs" className="text-gray-400 hover:text-white">{t('footer.browseJobs')}</Link></li>
+                <li><Link to="/companies" className="text-gray-400 hover:text-white">{t('footer.companies')}</Link></li>
+                <li><Link to="/training" className="text-gray-400 hover:text-white">{t('footer.training')}</Link></li>
+                <li><Link to="/about" className="text-gray-400 hover:text-white">{t('footer.aboutUs')}</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-bold mb-4">Contact</h3>
+              <h3 className="text-lg font-bold mb-4">{t('footer.contact')}</h3>
               <p className="text-gray-400">Email: info@wantokjobs.com</p>
               <p className="text-gray-400">Phone: +675 7583 0582</p>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
-            <p>&copy; 2026 WantokJobs. All rights reserved.</p>
+            <p>{t('footer.copyright')}</p>
           </div>
         </div>
       </footer>

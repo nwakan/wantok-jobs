@@ -7,11 +7,55 @@
     "profile": "Profail",
     "home": "Haus",
     "companies": "Ol Kampani",
+    "training": "Trening",
     "about": "Abaut",
-    "login": "Sain In",
+    "login": "Go Insait",
     "register": "Rejista",
+    "registerFree": "Rejista Fri",
     "logout": "Sain Aut",
-    "dashboard": "Dasbot"
+    "dashboard": "Dasbot",
+    "signedInAs": "Yu stap olsem"
+  },
+  "hero": {
+    "title1": "Painim Gutpela Wok Long",
+    "title2": "Papua Niugini",
+    "subtitle": "Joinim {jobseekers}+ man meri painim wok na {employers}+ kampani",
+    "activeJobs": "{count} wok i stap nau long PNG",
+    "searchPlaceholder": "Nem bilong wok o tok i go wantaim...",
+    "locationPlaceholder": "Makim ples",
+    "categoryPlaceholder": "Makim kain wok",
+    "searchButton": "Sekim Wok",
+    "allLocations": "Olgeta Ples",
+    "allCategories": "Olgeta Kain Wok",
+    "trending": "Ol Samting I Hot"
+  },
+  "home": {
+    "featuredJobs": "Ol Nambawan Wok",
+    "viewAllJobs": "Lukim Olgeta Wok",
+    "browseCategories": "Lukim Long Kain Wok",
+    "topEmployers": "Ol Nambawan Kampani",
+    "howItWorks": "Olsem Wanem Em I Wok",
+    "createProfile": "Wokim Profail Bilong Yu",
+    "createProfileDesc": "Rejista na wokim profail bilong yu",
+    "searchJobs": "Sekim na Aplaim",
+    "searchJobsDesc": "Lukim ol wok na aplaim wanpela klik tasol",
+    "getHired": "Kisim Wok",
+    "getHiredDesc": "Bungim ol kampani na kisim wok yu laikim",
+    "jobAlerts": "Kisim Wok Notis",
+    "jobAlertsDesc": "Kisim ol nupela wok notis long email bilong yu",
+    "emailPlaceholder": "Putim email bilong yu",
+    "subscribe": "Joinim",
+    "subscribed": "Yu joinim pinis!",
+    "whyChoose": "Bilong Wanem WantokJobs?",
+    "pngFocused": "Bilong PNG Tasol",
+    "pngFocusedDesc": "Wokim bilong maket bilong wok bilong Papua Niugini",
+    "trustedEmployers": "Ol Trupela Kampani",
+    "trustedEmployersDesc": "Ol kampani i gat nem na i stret",
+    "easyApply": "Isi Long Aplaim",
+    "easyApplyDesc": "Aplaim long platform o long WhatsApp",
+    "readyToStart": "Redi Long Stat Wokabaut Bilong Yu?",
+    "readyToStartDesc": "Joinim planti tausen man meri bilong PNG i painim nupela wok",
+    "getStarted": "Stat Nau"
   },
   "jobs": {
     "applyNow": "Aplaim Nau",
@@ -24,7 +68,23 @@
     "hot": "HOT",
     "applicants": "ol aplikesen",
     "views": "ol man i lukluk",
-    "postedAgo": "Putim {time} bipo"
+    "postedAgo": "Putim {time} bipo",
+    "resultsFound": "{count} wok i painim",
+    "sortBy": "Soim long",
+    "relevance": "Moa stret",
+    "datePosted": "De i putim",
+    "salary": "Pe mani",
+    "showFilters": "Ol Filta",
+    "hideFilters": "Haitim Filta",
+    "loadMore": "Soim Moa",
+    "noJobsFound": "Nogat wok",
+    "noJobsFoundDesc": "Traim senisim ol filta bilong yu",
+    "jobType": "Kain Wok",
+    "fullTime": "Fultaim",
+    "partTime": "Pattaim",
+    "contract": "Kontrakt",
+    "casual": "Kasual",
+    "remote": "Rimot"
   },
   "search": {
     "searchJobs": "Sekim Wok",
@@ -32,7 +92,10 @@
     "filterByProvince": "Sekim Long Provins",
     "filterByJobType": "Kain Wok",
     "filterBySalary": "Pe Mani",
-    "allProvinces": "Olgeta Provins"
+    "allProvinces": "Olgeta Provins",
+    "clearFilters": "Klinim Filta",
+    "experience": "Ekspiriens",
+    "category": "Kain Wok"
   },
   "profile": {
     "myProfile": "Profail Bilong Mi",
@@ -51,7 +114,7 @@
     "thankYou": "Tenkyu tru"
   },
   "common": {
-    "loading": "I stap loding...",
+    "loading": "Wetim...",
     "error": "Samting rong",
     "success": "Orait",
     "cancel": "Kanselim",
@@ -66,7 +129,21 @@
     "learnMore": "Lainim Moa",
     "viewAll": "Lukim Olgeta",
     "noResults": "Nogat Samting",
-    "tryAgain": "Traim Gen"
+    "tryAgain": "Traim Gen",
+    "location": "Ples",
+    "salary": "Pe",
+    "experience": "Ekspiriens",
+    "category": "Kain Wok"
+  },
+  "footer": {
+    "tagline": "Bungim ol man meri i gat save wantaim ol gutpela wok long Pasifik.",
+    "quickLinks": "Ol Sotkat",
+    "browseJobs": "Lukim Ol Wok",
+    "companies": "Ol Kampani",
+    "training": "Trening na Kos",
+    "aboutUs": "Abaut Mipela",
+    "contact": "Kontaktim",
+    "copyright": "© 2026 WantokJobs. Olgeta rait i stap."
   },
   "offline": {
     "banner": "Yu stap offlain. Sampela samting bai i no wok.",

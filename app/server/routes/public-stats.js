@@ -1,6 +1,7 @@
 const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
+const cache = require('../lib/cache');
 
 const router = express.Router();
 
@@ -10,6 +11,8 @@ const router = express.Router();
  */
 router.get('/', (req, res) => {
   try {
+    const cached = cache.get('stats:public-detail');
+    if (cached) return res.json(cached);
     // Basic counts
     const activeJobs = db.prepare(`
       SELECT COUNT(*) as count FROM jobs WHERE status = 'active'
@@ -78,7 +81,7 @@ router.get('/', (req, res) => {
       )
     `).get().avg || 0;
 
-    res.json({
+    const result = {
       activeJobs,
       totalEmployers,
       totalJobseekers,
@@ -88,7 +91,9 @@ router.get('/', (req, res) => {
       avgJobsPerEmployer: Math.round(avgJobsPerEmployer * 10) / 10, // 1 decimal place
       topCategories,
       topLocations
-    });
+    };
+    cache.set('stats:public-detail', result, 300);
+    res.json(result);
 
   } catch (error) {
     logger.error('Public stats error', { error: error.message });

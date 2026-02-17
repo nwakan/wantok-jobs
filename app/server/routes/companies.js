@@ -3,9 +3,15 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 
+const cache = require('../lib/cache');
+
 // GET / - Public company directory with pagination and job counts
 router.get('/', (req, res) => {
   try {
+    const cacheKey = 'companies:list:' + JSON.stringify(req.query);
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const { limit = 20, offset = 0, industry, country, featured, search, location } = req.query;
 
     let query = `
@@ -94,7 +100,9 @@ router.get('/', (req, res) => {
 
     const total = db.prepare(countQuery).get(...countParams);
 
-    res.json({ data: companies, total: total.count });
+    const result = { data: companies, total: total.count };
+    cache.set(cacheKey, result, 120);
+    res.json(result);
   } catch (error) {
     logger.error('Error fetching companies', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch companies' });

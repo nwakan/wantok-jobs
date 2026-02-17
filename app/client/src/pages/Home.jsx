@@ -13,6 +13,7 @@ import { JobCardSkeleton } from '../components/SkeletonLoader';
 import { jobs as jobsAPI } from '../api';
 import ActivityToast from '../components/ActivityToast';
 import ActivityFeed from '../components/ActivityFeed';
+import { useLanguage } from '../context/LanguageContext';
 
 // Icon map for categories
 const categoryIcons = {
@@ -58,6 +59,7 @@ const provinces = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [searchData, setSearchData] = useState({ keyword: '', location: '', category: '' });
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -167,14 +169,14 @@ export default function Home() {
             className="text-center mb-12"
           >
             <h1 className="text-3xl md:text-6xl font-bold mb-4 md:mb-6">
-              Find Your Dream Job in<br />
-              <span className="text-secondary-400">Papua New Guinea</span>
+              {t('hero.title1')}<br />
+              <span className="text-secondary-400">{t('hero.title2')}</span>
             </h1>
             <p className="text-lg md:text-2xl text-primary-100 mb-2">
-              Join <strong>{stats.totalJobseekers.toLocaleString()}+</strong> job seekers and <strong>{stats.totalEmployers.toLocaleString()}+</strong> employers
+              {t('hero.subtitle', { jobseekers: stats.totalJobseekers.toLocaleString(), employers: stats.totalEmployers.toLocaleString() })}
             </p>
             <p className="text-lg text-primary-200">
-              <strong>{stats.activeJobs.toLocaleString()}</strong> active opportunities across PNG
+              {t('hero.activeJobs', { count: stats.activeJobs.toLocaleString() })}
             </p>
           </motion.div>
 
@@ -193,7 +195,7 @@ export default function Home() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 md:w-5 md:h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Job title or keywords..."
+                  placeholder={t('hero.searchPlaceholder')}
                   value={searchData.keyword}
                   onChange={(e) => setSearchData({ ...searchData, keyword: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -221,7 +223,7 @@ export default function Home() {
                   className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
                   aria-label="Job category"
                 >
-                  <option value="">All Categories</option>
+                  <option value="">{t('hero.allCategories')}</option>
                   {categories.map((cat) => (
                     <option key={cat.slug} value={cat.slug}>{cat.name} ({cat.job_count})</option>
                   ))}
@@ -233,7 +235,7 @@ export default function Home() {
               className="w-full bg-primary-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
             >
               <Search className="w-5 h-5" />
-              Search {stats.activeJobs > 0 ? `${stats.activeJobs.toLocaleString()} Jobs` : 'Jobs'}
+              {t('hero.searchButton')} {stats.activeJobs > 0 ? `(${stats.activeJobs.toLocaleString()})` : ''}
             </button>
           </motion.form>
 
@@ -294,8 +296,8 @@ export default function Home() {
       <div className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Browse by Industry</h2>
-            <p className="text-xl text-gray-600">Explore opportunities across Papua New Guinea's key sectors</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('home.browseCategories')}</h2>
+            <p className="text-xl text-gray-600">{t('hero.activeJobs', { count: stats.activeJobs.toLocaleString() })}</p>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
@@ -323,7 +325,7 @@ export default function Home() {
 
           <div className="text-center">
             <Link to="/categories" className="text-primary-600 hover:text-primary-700 font-semibold inline-flex items-center gap-2">
-              View All Categories
+              {t('common.viewAll')}
               <ChevronRight className="w-5 h-5" />
             </Link>
           </div>
@@ -335,14 +337,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Latest Jobs</h2>
-              <p className="text-lg text-gray-600">Fresh opportunities added daily</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t('home.featuredJobs')}</h2>
+              <p className="text-lg text-gray-600">{t('home.viewAllJobs')}</p>
             </div>
             <Link
               to="/jobs"
               className="hidden md:inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold"
             >
-              View all jobs <ArrowRight className="w-5 h-5" />
+              {t('home.viewAllJobs')} <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
 
@@ -361,7 +363,7 @@ export default function Home() {
               to="/jobs"
               className="inline-block bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition"
             >
-              View All Jobs
+              {t('home.viewAllJobs')}
             </Link>
           </div>
         </div>

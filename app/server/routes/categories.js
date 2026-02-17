@@ -2,10 +2,14 @@ const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const cache = require('../lib/cache');
 
 // GET / - List all categories with real job counts
 router.get('/', (req, res) => {
   try {
+    const cached = cache.get('categories:all');
+    if (cached) return res.json(cached);
+
     const categories = db.prepare(`
       SELECT 
         c.id, c.name, c.slug, c.parent_id, c.icon, c.icon_name,
@@ -19,7 +23,9 @@ router.get('/', (req, res) => {
       ORDER BY c.sort_order, c.name
     `).all();
     
-    res.json({ categories });
+    const result = { categories };
+    cache.set('categories:all', result, 600);
+    res.json(result);
   } catch (error) {
     logger.error('Error fetching categories', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch categories' });

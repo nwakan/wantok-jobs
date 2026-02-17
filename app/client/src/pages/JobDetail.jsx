@@ -9,6 +9,7 @@ import JobCard from '../components/JobCard';
 import PageHead from '../components/PageHead';
 import { JobDetailSkeleton } from '../components/SkeletonLoader';
 import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp, CheckCircle2, ArrowRight, ArrowLeft, FileText, Mail, Phone, MapPin, Upload, AlertCircle, X, Share2, Facebook, Linkedin, Copy, CheckCheck } from 'lucide-react';
+import OptimizedImage from '../components/OptimizedImage';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -656,7 +657,7 @@ export default function JobDetail() {
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <div className="flex items-start gap-4 mb-6">
                 {job.logo_url && (
-                  <img src={job.logo_url} alt={job.company_name} className="w-16 h-16 rounded-lg object-cover border-2 border-gray-100" />
+                  <OptimizedImage src={job.logo_url} alt={job.company_name} width={64} height={64} className="w-16 h-16 rounded-lg object-cover border-2 border-gray-100" eager />
                 )}
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-4">

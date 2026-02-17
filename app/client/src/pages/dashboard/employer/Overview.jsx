@@ -10,6 +10,7 @@ import {
   Bell, DollarSign, BarChart3, Calendar, FileText, Sparkles,
   MapPin, Star, MessageSquare, UserPlus
 } from 'lucide-react';
+import OptimizedImage from '../../../components/OptimizedImage';
 
 export default function EmployerOverview() {
   const { user } = useAuth();
@@ -105,7 +106,7 @@ export default function EmployerOverview() {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             {profile?.logo_url ? (
-              <img src={profile.logo_url} alt={profile.company_name} className="h-16 w-16 rounded-lg bg-white object-contain p-2" />
+              <OptimizedImage src={profile.logo_url} alt={profile.company_name} width={64} height={64} className="h-16 w-16 rounded-lg bg-white object-contain p-2" eager />
             ) : (
               <div className="h-16 w-16 rounded-lg bg-white/20 flex items-center justify-center">
                 <Building2 className="w-8 h-8 text-white" />

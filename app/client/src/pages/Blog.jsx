@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import PageHead from '../components/PageHead';
 import SkeletonLoader from '../components/SkeletonLoader';
 import api from '../api';
+import OptimizedImage from '../components/OptimizedImage';
 
 export default function Blog() {
   const navigate = useNavigate();
@@ -142,7 +143,7 @@ export default function Blog() {
                     {/* Featured Image */}
                     <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center overflow-hidden">
                       {article.image ? (
-                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+                        <OptimizedImage src={article.image} alt={article.title} className="w-full h-full object-cover" />
                       ) : (
                         <div className="text-6xl">📝</div>
                       )}

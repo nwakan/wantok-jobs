@@ -9,6 +9,7 @@ import PageHead from '../components/PageHead';
 import JobCard from '../components/JobCard';
 import { JobCardSkeleton } from '../components/SkeletonLoader';
 import api from '../api';
+import OptimizedImage from '../components/OptimizedImage';
 
 export default function CompanyProfile() {
   const { id } = useParams();
@@ -151,7 +152,7 @@ export default function CompanyProfile() {
               <div className="flex-shrink-0">
                 <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
                   {company.logo ? (
-                    <img src={company.logo} alt={company.name} className="w-20 h-20 object-contain" />
+                    <OptimizedImage src={company.logo} alt={company.name} width={80} height={80} className="w-20 h-20 object-contain" eager />
                   ) : (
                     <Building2 className="w-12 h-12 text-gray-400" />
                   )}
@@ -847,9 +848,10 @@ function PhotosTab({ photos }) {
         <div className="grid sm:grid-cols-2 gap-4">
           {photos.map((photo) => (
             <div key={photo.id} className="relative group">
-              <img 
+              <OptimizedImage 
                 src={photo.photo_url} 
                 alt={photo.caption || 'Company photo'} 
+                width={400} height={192}
                 className="w-full h-48 object-cover rounded-lg"
               />
               {photo.caption && (

@@ -7,6 +7,7 @@ import {
   FileText, Star, Video, Image, ExternalLink, Plus, X, Check, 
   TrendingUp, Target, Heart, Sparkles, Shield
 } from 'lucide-react';
+import OptimizedImage from '../../../components/OptimizedImage';
 
 export default function JobseekerProfile() {
   const { showToast } = useToast();
@@ -418,7 +419,7 @@ export default function JobseekerProfile() {
               {/* Banner */}
               <div className="h-48 bg-gradient-to-r from-primary-500 to-blue-500 relative">
                 {formData.profile_banner_url && (
-                  <img src={formData.profile_banner_url} alt="Banner" className="w-full h-full object-cover" />
+                  <OptimizedImage src={formData.profile_banner_url} alt="Banner" className="w-full h-full object-cover" eager />
                 )}
                 <button
                   type="button"
@@ -438,10 +439,12 @@ export default function JobseekerProfile() {
                 <div className="flex items-start gap-6 -mt-16 relative">
                   <div className="relative">
                     {formData.profile_photo_url ? (
-                      <img 
+                      <OptimizedImage 
                         src={formData.profile_photo_url} 
                         alt="Profile" 
+                        width={128} height={128}
                         className={`w-32 h-32 rounded-full object-cover border-4 ${formData.open_to_work ? 'border-green-500' : 'border-white'} shadow-lg`} 
+                        eager
                       />
                     ) : (
                       <div className={`w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-4xl text-gray-400 border-4 ${formData.open_to_work ? 'border-green-500' : 'border-white'} shadow-lg`}>

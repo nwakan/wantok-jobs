@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Heart, X } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 import { formatPNGSalary, needsLogoPlaceholder, generateCompanyLogoPlaceholder, getDisplayCompanyName } from '../utils/pngHelpers';
+import OptimizedImage from './OptimizedImage';
 import { useSwipeActions } from '../hooks/useSwipeActions';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -108,11 +109,11 @@ export default function SwipeableJobCard({
           {/* Company Logo or Placeholder */}
           <div className="flex-shrink-0">
             {job.logo_url ? (
-              <img 
+              <OptimizedImage 
                 src={job.logo_url} 
                 alt={job.company_name || job.employer_name} 
+                width={56} height={56}
                 className="w-14 h-14 rounded-lg object-cover border border-gray-200" 
-                loading="lazy"
               />
             ) : logoPlaceholder ? (
               <div className={`w-14 h-14 rounded-lg ${logoPlaceholder.colorClass} flex items-center justify-center text-white font-bold text-lg border border-gray-200`}>

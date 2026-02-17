@@ -6,6 +6,7 @@ import {
   Eye, EyeOff, TrendingUp, Briefcase, Phone, Mail, Facebook, Linkedin,
   Award, Star, Camera, FileText, Shield, Heart, Sparkles, ExternalLink
 } from 'lucide-react';
+import OptimizedImage from '../../../components/OptimizedImage';
 
 const PNG_INDUSTRIES = [
   'Agriculture & Fisheries',
@@ -182,7 +183,7 @@ export default function CompanyProfile() {
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-4">
             {formData.logo_url ? (
-              <img src={formData.logo_url} alt="Logo" className="w-16 h-16 object-contain border rounded-lg p-1" />
+              <OptimizedImage src={formData.logo_url} alt="Logo" width={64} height={64} className="w-16 h-16 object-contain border rounded-lg p-1" />
             ) : (
               <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                 <Building2 className="w-8 h-8 text-gray-400" />
@@ -264,7 +265,7 @@ export default function CompanyProfile() {
           <div className="px-8 pb-8">
             <div className="flex items-start gap-6 -mt-12 relative mb-6">
               {formData.logo_url ? (
-                <img src={formData.logo_url} alt={formData.company_name} className="w-24 h-24 object-contain border-4 border-white rounded-lg bg-white shadow-lg p-2" />
+                <OptimizedImage src={formData.logo_url} alt={formData.company_name} width={96} height={96} className="w-24 h-24 object-contain border-4 border-white rounded-lg bg-white shadow-lg p-2" />
               ) : (
                 <div className="w-24 h-24 bg-white border-4 border-white rounded-lg shadow-lg flex items-center justify-center text-gray-400 text-3xl">🏢</div>
               )}
@@ -323,7 +324,7 @@ export default function CompanyProfile() {
                 <h2 className="text-xl font-bold text-gray-900 mb-3">Our Workplace</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {formData.photos.map((p, i) => (
-                    <img key={i} src={p} alt={`Photo ${i+1}`} className="w-full h-48 object-cover rounded-lg" />
+                    <OptimizedImage key={i} src={p} alt={`Photo ${i+1}`} width={400} height={192} className="w-full h-48 object-cover rounded-lg" />
                   ))}
                 </div>
               </div>
@@ -465,7 +466,7 @@ export default function CompanyProfile() {
                       placeholder="https://example.com/logo.png"
                     />
                     {formData.logo_url && (
-                      <img src={formData.logo_url} alt="Logo" className="h-12 w-auto border rounded" />
+                      <OptimizedImage src={formData.logo_url} alt="Logo" height={48} className="h-12 w-auto border rounded" />
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Upload to an image host and paste the URL. Recommended: square, 200×200px+</p>
@@ -618,7 +619,7 @@ export default function CompanyProfile() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {formData.photos.map((photo, idx) => (
                     <div key={idx} className="relative group">
-                      <img src={photo} alt={`Photo ${idx+1}`} className="w-full h-32 object-cover rounded-lg" />
+                      <OptimizedImage src={photo} alt={`Photo ${idx+1}`} width={300} height={128} className="w-full h-32 object-cover rounded-lg" />
                       <button
                         type="button"
                         onClick={() => removePhoto(idx)}
