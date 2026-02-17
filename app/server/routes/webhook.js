@@ -70,13 +70,11 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   res.json({ status: 'deploying', pusher, commits });
 
   const deployScript = path.join(REPO_DIR, 'deploy-pull.sh');
-  exec(`bash ${deployScript} 2>&1`, { cwd: REPO_DIR, timeout: 120000 }, (err, stdout, stderr) => {
-    if (err) {
-      logger.error('Deploy failed', { error: err.message, stdout: stdout.slice(-500), stderr: (stderr || '').slice(-500) });
-    } else {
-      logger.info('Deploy completed', { output: stdout.slice(-200) });
-    }
-  });
+  const logFile = path.join(REPO_DIR, 'deploy.log');
+  // Fully detach: nohup + redirect so deploy survives service restart
+  const child = exec(`nohup bash ${deployScript} > ${logFile} 2>&1 &`, { cwd: REPO_DIR });
+  child.unref();
+  logger.info('Deploy process spawned (detached)');
 });
 
 module.exports = router;
