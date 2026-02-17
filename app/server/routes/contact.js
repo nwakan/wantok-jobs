@@ -5,23 +5,41 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { sendContactFormAdminEmail, sendContactFormAutoReply } = require('../lib/email');
 const { requireRole } = require('../middleware/role');
+const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
 
 // POST / - Public contact form submission
 router.post('/', validate(schemas.contact), (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
 
-    if (!name || !email || !message) {
+    // Sanitize inputs to prevent XSS
+    const safeName = stripHtml(name);
+    const safeEmail = sanitizeEmail(email);
+    const safeSubject = subject ? stripHtml(subject) : null;
+    const safeMessage = stripHtml(message);
+
+    if (!safeName || !safeEmail || !safeMessage) {
       return res.status(400).json({ error: 'Name, email, and message are required' });
+    }
+    
+    // Validate lengths
+    if (!isValidLength(safeName, 100, 1)) {
+      return res.status(400).json({ error: 'Name must be between 1 and 100 characters' });
+    }
+    if (safeSubject && !isValidLength(safeSubject, 200)) {
+      return res.status(400).json({ error: 'Subject must be 200 characters or less' });
+    }
+    if (!isValidLength(safeMessage, 5000, 1)) {
+      return res.status(400).json({ error: 'Message must be between 1 and 5000 characters' });
     }
 
     const result = db.prepare(`
       INSERT INTO contact_messages (name, email, subject, message)
       VALUES (?, ?, ?, ?)
-    `).run(name, email, subject, message);
+    `).run(safeName, safeEmail, safeSubject, safeMessage);
 
     // Send emails (admin notification + auto-reply)
-    const contactData = { name, email, subject, message };
+    const contactData = { name: safeName, email: safeEmail, subject: safeSubject, message: safeMessage };
     sendContactFormAdminEmail(contactData).catch(() => {});
     sendContactFormAutoReply(contactData).catch(() => {});
 
@@ -67,6 +85,13 @@ router.put('/:id/reply', authenticateToken, requireRole('admin'), (req, res) => 
     const { id } = req.params;
     const { admin_reply } = req.body;
 
+    // Sanitize admin reply
+    const safeAdminReply = admin_reply ? stripHtml(admin_reply) : null;
+    
+    if (safeAdminReply && !isValidLength(safeAdminReply, 5000)) {
+      return res.status(400).json({ error: 'Reply must be 5000 characters or less' });
+    }
+
     const message = db.prepare('SELECT * FROM contact_messages WHERE id = ?').get(id);
     if (!message) {
       return res.status(404).json({ error: 'Contact message not found' });
@@ -76,7 +101,7 @@ router.put('/:id/reply', authenticateToken, requireRole('admin'), (req, res) => 
       UPDATE contact_messages 
       SET admin_reply = ?, status = 'replied'
       WHERE id = ?
-    `).run(admin_reply, id);
+    `).run(safeAdminReply, id);
 
     const updated = db.prepare('SELECT * FROM contact_messages WHERE id = ?').get(id);
     res.json({ message: updated });

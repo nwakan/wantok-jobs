@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './components/Toast';
 
 // Loading fallback
@@ -93,11 +94,12 @@ const AdminFraudSecurity = lazy(() => import('./pages/dashboard/admin/FraudSecur
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Layout />}>
+    <LanguageProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Layout />}>
               {/* Public routes — eager */}
               <Route index element={<Home />} />
               <Route path="jobs" element={<JobSearch />} />
@@ -177,10 +179,11 @@ function App() {
               {/* 404 catch-all */}
               <Route path="*" element={<NotFound />} />
             </Route>
-          </Routes>
-        </Router>
-      </ToastProvider>
-    </AuthProvider>
+            </Routes>
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

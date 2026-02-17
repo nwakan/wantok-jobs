@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { PNG_PROVINCES } from '../data/provinces';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function SearchFilters({ filters, setFilters, onSearch, onClear }) {
+  const { t } = useLanguage();
   const [categories, setCategories] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
     category: true,
     location: true,
+    province: true,
     jobType: true,
     experience: false,
     salary: false,
@@ -130,14 +134,30 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           </select>
         </FilterSection>
 
-        {/* Location */}
-        <FilterSection title="📍 Location" section="location">
+        {/* Province Filter - PNG Specific */}
+        <FilterSection title="🗺️ Province" section="province">
+          <select
+            value={filters.province || ''}
+            onChange={(e) => setFilters({ ...filters, province: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">{t('search.allProvinces')}</option>
+            {PNG_PROVINCES.map(province => (
+              <option key={province.abbr} value={province.name}>
+                {province.name} ({province.abbr})
+              </option>
+            ))}
+          </select>
+        </FilterSection>
+
+        {/* Location (City/Town) */}
+        <FilterSection title="📍 City/Town" section="location">
           <select
             value={filters.location || ''}
             onChange={(e) => setFilters({ ...filters, location: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
           >
-            <option value="">All Locations</option>
+            <option value="">All Cities</option>
             {pngLocations.map(loc => (
               <option key={loc} value={loc}>{loc}</option>
             ))}

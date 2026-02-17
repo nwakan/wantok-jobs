@@ -1,0 +1,82 @@
+{
+  "nav": {
+    "findJobs": "Painim Wok",
+    "search": "Sekim",
+    "postJob": "Putim Wok",
+    "notifications": "Ol Notis",
+    "profile": "Profail",
+    "home": "Haus",
+    "companies": "Ol Kampani",
+    "about": "Abaut",
+    "login": "Sain In",
+    "register": "Rejista",
+    "logout": "Sain Aut",
+    "dashboard": "Dasbot"
+  },
+  "jobs": {
+    "applyNow": "Aplaim Nau",
+    "saveJob": "Seivim Wok",
+    "unsaveJob": "Rausim Wok",
+    "share": "Serim",
+    "viewDetails": "Lukim Moa",
+    "featured": "Nambawan",
+    "new": "NUPELA",
+    "hot": "HOT",
+    "applicants": "ol aplikesen",
+    "views": "ol man i lukluk",
+    "postedAgo": "Putim {time} bipo"
+  },
+  "search": {
+    "searchJobs": "Sekim Wok",
+    "filterByLocation": "Sekim Long Hap",
+    "filterByProvince": "Sekim Long Provins",
+    "filterByJobType": "Kain Wok",
+    "filterBySalary": "Pe Mani",
+    "allProvinces": "Olgeta Provins"
+  },
+  "profile": {
+    "myProfile": "Profail Bilong Mi",
+    "editProfile": "Senisim Profail",
+    "myApplications": "Ol Aplikesen Bilong Mi",
+    "savedJobs": "Ol Wok Mi Seivim",
+    "settings": "Ol Seting"
+  },
+  "application": {
+    "apply": "Aplaim",
+    "applyViaWhatsApp": "Aplaim Long WhatsApp",
+    "coverLetter": "Pas Tok",
+    "resume": "CV",
+    "submit": "Salim Aplikesen",
+    "applicationSent": "Aplikesen I Go!",
+    "thankYou": "Tenkyu tru"
+  },
+  "common": {
+    "loading": "I stap loding...",
+    "error": "Samting rong",
+    "success": "Orait",
+    "cancel": "Kanselim",
+    "save": "Seivim",
+    "delete": "Rausim",
+    "edit": "Senisim",
+    "back": "Go Bek",
+    "next": "Go Het",
+    "previous": "Bipo",
+    "close": "Pasim",
+    "confirm": "Orait Tru",
+    "learnMore": "Lainim Moa",
+    "viewAll": "Lukim Olgeta",
+    "noResults": "Nogat Samting",
+    "tryAgain": "Traim Gen"
+  },
+  "offline": {
+    "banner": "Yu stap offlain. Sampela samting bai i no wok.",
+    "jobsSaved": "Lukim ol wok yu seivim",
+    "reconnect": "I stap konektim gen..."
+  },
+  "salary": {
+    "prefix": "K",
+    "perMonth": "/mun",
+    "perYear": "/yia",
+    "perHour": "/aua"
+  }
+}

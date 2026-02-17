@@ -1,0 +1,82 @@
+{
+  "nav": {
+    "findJobs": "Find Jobs",
+    "search": "Search",
+    "postJob": "Post a Job",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "home": "Home",
+    "companies": "Companies",
+    "about": "About",
+    "login": "Sign In",
+    "register": "Register",
+    "logout": "Logout",
+    "dashboard": "Dashboard"
+  },
+  "jobs": {
+    "applyNow": "Apply Now",
+    "saveJob": "Save Job",
+    "unsaveJob": "Unsave Job",
+    "share": "Share",
+    "viewDetails": "View Details",
+    "featured": "Featured",
+    "new": "NEW",
+    "hot": "HOT",
+    "applicants": "applicants",
+    "views": "views",
+    "postedAgo": "Posted {time} ago"
+  },
+  "search": {
+    "searchJobs": "Search Jobs",
+    "filterByLocation": "Filter by Location",
+    "filterByProvince": "Filter by Province",
+    "filterByJobType": "Job Type",
+    "filterBySalary": "Salary Range",
+    "allProvinces": "All Provinces"
+  },
+  "profile": {
+    "myProfile": "My Profile",
+    "editProfile": "Edit Profile",
+    "myApplications": "My Applications",
+    "savedJobs": "Saved Jobs",
+    "settings": "Settings"
+  },
+  "application": {
+    "apply": "Apply",
+    "applyViaWhatsApp": "Apply via WhatsApp",
+    "coverLetter": "Cover Letter",
+    "resume": "Resume",
+    "submit": "Submit Application",
+    "applicationSent": "Application Sent!",
+    "thankYou": "Thank you for applying"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "confirm": "Confirm",
+    "learnMore": "Learn More",
+    "viewAll": "View All",
+    "noResults": "No results found",
+    "tryAgain": "Try Again"
+  },
+  "offline": {
+    "banner": "You're offline. Some features may not be available.",
+    "jobsSaved": "Viewing saved jobs",
+    "reconnect": "Reconnecting..."
+  },
+  "salary": {
+    "prefix": "K",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "perHour": "/hour"
+  }
+}

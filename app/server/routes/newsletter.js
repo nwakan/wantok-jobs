@@ -3,30 +3,39 @@ const router = express.Router();
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
 
 // ─── Public: Subscribe to newsletter ─────────────────────────────────
 router.post('/', (req, res) => {
   try {
     const { email, name } = req.body;
     
-    if (!email || !email.includes('@')) {
+    // Sanitize inputs
+    const safeEmail = sanitizeEmail(email);
+    const safeName = name ? stripHtml(name) : null;
+    
+    if (!safeEmail) {
       return res.status(400).json({ error: 'Valid email required' });
+    }
+    
+    if (safeName && !isValidLength(safeName, 100)) {
+      return res.status(400).json({ error: 'Name must be 100 characters or less' });
     }
 
     // Check if already subscribed
-    const existing = db.prepare('SELECT * FROM newsletter_subscribers WHERE email = ?').get(email);
+    const existing = db.prepare('SELECT * FROM newsletter_subscribers WHERE email = ?').get(safeEmail);
     if (existing) {
       if (!existing.subscribed) {
         // Re-subscribe
         db.prepare('UPDATE newsletter_subscribers SET subscribed = 1, name = COALESCE(?, name) WHERE email = ?')
-          .run(name, email);
+          .run(safeName, safeEmail);
         return res.json({ message: 'Successfully re-subscribed to newsletter!' });
       }
       return res.json({ message: 'Already subscribed!' });
     }
 
     // New subscriber
-    db.prepare('INSERT INTO newsletter_subscribers (email, name) VALUES (?, ?)').run(email, name || null);
+    db.prepare('INSERT INTO newsletter_subscribers (email, name) VALUES (?, ?)').run(safeEmail, safeName);
     
     res.status(201).json({ message: 'Successfully subscribed to newsletter!' });
   } catch (error) {

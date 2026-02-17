@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
+const { stripHtml, sanitizeEmail, sanitizeUrl, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
 
@@ -68,12 +69,41 @@ router.put('/', authenticateToken, (req, res) => {
         social_links
       } = req.body;
 
+      // Sanitize all text inputs
+      const safePhone = phone ? stripHtml(phone) : null;
+      const safeLocation = location ? stripHtml(location) : null;
+      const safeCountry = country ? stripHtml(country) : null;
+      const safeBio = bio ? stripHtml(bio) : null;
+      const safeHeadline = headline ? stripHtml(headline) : null;
+      const safeSkills = skills ? stripHtml(skills) : null;
+      const safeTopSkills = top_skills ? stripHtml(top_skills) : null;
+      const safeWorkHistory = work_history ? stripHtml(work_history) : null;
+      const safeEducation = education ? stripHtml(education) : null;
+      const safeLanguages = languages ? stripHtml(languages) : null;
+      const safeCertifications = certifications ? stripHtml(certifications) : null;
+      const safeVolunteer = volunteer ? stripHtml(volunteer) : null;
+      const safeProjects = projects ? stripHtml(projects) : null;
+      const safeAwards = awards ? stripHtml(awards) : null;
+      const safeFeatured = featured ? stripHtml(featured) : null;
+      const safeDesiredJobType = desired_job_type ? stripHtml(desired_job_type) : null;
+      const safeAvailability = availability ? stripHtml(availability) : null;
+      const safeProfileSlug = profile_slug ? stripHtml(profile_slug).toLowerCase().replace(/[^a-z0-9-]/g, '') : null;
+      const safeSocialLinks = social_links ? stripHtml(social_links) : null;
+
+      // Validate lengths
+      if (safeBio && !isValidLength(safeBio, 2000)) {
+        return res.status(400).json({ error: 'Bio must be 2000 characters or less' });
+      }
+      if (safeHeadline && !isValidLength(safeHeadline, 200)) {
+        return res.status(400).json({ error: 'Headline must be 200 characters or less' });
+      }
+
       // Check profile completeness
-      const profile_complete = !!(phone && location && bio && skills?.length && cv_url);
+      const profile_complete = !!(safePhone && safeLocation && safeBio && safeSkills?.length && cv_url);
 
       // Check if profile_slug is unique (if provided)
-      if (profile_slug) {
-        const existing = db.prepare('SELECT user_id FROM profiles_jobseeker WHERE profile_slug = ? AND user_id != ?').get(profile_slug, req.user.id);
+      if (safeProfileSlug) {
+        const existing = db.prepare('SELECT user_id FROM profiles_jobseeker WHERE profile_slug = ? AND user_id != ?').get(safeProfileSlug, req.user.id);
         if (existing) {
           return res.status(400).json({ error: 'Profile URL already taken' });
         }
@@ -111,33 +141,33 @@ router.put('/', authenticateToken, (req, res) => {
           profile_complete = ?
         WHERE user_id = ?
       `).run(
-        phone || null,
-        location || null,
-        country || null,
-        bio || null,
-        headline || null,
-        skills || null,
-        top_skills || null,
-        work_history || null,
-        education || null,
-        languages || null,
-        certifications || null,
-        volunteer || null,
-        projects || null,
-        awards || null,
-        featured || null,
+        safePhone,
+        safeLocation,
+        safeCountry,
+        safeBio,
+        safeHeadline,
+        safeSkills,
+        safeTopSkills,
+        safeWorkHistory,
+        safeEducation,
+        safeLanguages,
+        safeCertifications,
+        safeVolunteer,
+        safeProjects,
+        safeAwards,
+        safeFeatured,
         cv_url || null,
         profile_photo_url || null,
         profile_banner_url || null,
         profile_video_url || null,
-        desired_job_type || null,
+        safeDesiredJobType,
         desired_salary_min || null,
         desired_salary_max || null,
-        availability || null,
+        safeAvailability,
         open_to_work !== undefined ? open_to_work : null,
         profile_visibility || null,
-        profile_slug || null,
-        social_links || null,
+        safeProfileSlug,
+        safeSocialLinks,
         profile_complete ? 1 : 0,
         req.user.id
       );
@@ -157,6 +187,23 @@ router.put('/', authenticateToken, (req, res) => {
         description
       } = req.body;
 
+      // Sanitize all text inputs
+      const safeCompanyName = company_name ? stripHtml(company_name) : null;
+      const safeIndustry = industry ? stripHtml(industry) : null;
+      const safeCompanySize = company_size ? stripHtml(company_size) : null;
+      const safeLocation = location ? stripHtml(location) : null;
+      const safeCountry = country ? stripHtml(country) : null;
+      const safeWebsite = website ? sanitizeUrl(website) : null;
+      const safeDescription = description ? stripHtml(description) : null;
+
+      // Validate lengths
+      if (safeCompanyName && !isValidLength(safeCompanyName, 200)) {
+        return res.status(400).json({ error: 'Company name must be 200 characters or less' });
+      }
+      if (safeDescription && !isValidLength(safeDescription, 2000)) {
+        return res.status(400).json({ error: 'Description must be 2000 characters or less' });
+      }
+
       db.prepare(`
         UPDATE profiles_employer SET
           company_name = ?, industry = ?, company_size = ?,
@@ -164,14 +211,14 @@ router.put('/', authenticateToken, (req, res) => {
           logo_url = ?, description = ?
         WHERE user_id = ?
       `).run(
-        company_name,
-        industry,
-        company_size,
-        location,
-        country,
-        website,
+        safeCompanyName,
+        safeIndustry,
+        safeCompanySize,
+        safeLocation,
+        safeCountry,
+        safeWebsite,
         logo_url,
-        description,
+        safeDescription,
         req.user.id
       );
 

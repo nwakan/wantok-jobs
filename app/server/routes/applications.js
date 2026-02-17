@@ -67,12 +67,19 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
         if (tableExists) {
           const insertResponse = db.prepare(`INSERT INTO screening_responses (application_id, question, answer) VALUES (?, ?, ?)`);
           for (const qa of screening_answers) {
-            insertResponse.run(application.id, qa.question, qa.answer);
+            // Sanitize screening answers
+            const safeQuestion = qa.question ? stripHtml(qa.question) : '';
+            const safeAnswer = qa.answer ? stripHtml(qa.answer) : '';
+            insertResponse.run(application.id, safeQuestion, safeAnswer);
           }
         } else {
-          // Store as JSON in application record
+          // Sanitize before storing as JSON
+          const sanitizedAnswers = screening_answers.map(qa => ({
+            question: qa.question ? stripHtml(qa.question) : '',
+            answer: qa.answer ? stripHtml(qa.answer) : ''
+          }));
           db.prepare(`UPDATE applications SET notes = ? WHERE id = ?`).run(
-            JSON.stringify({ screening_answers }),
+            JSON.stringify({ screening_answers: sanitizedAnswers }),
             application.id
           );
         }
@@ -83,17 +90,17 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
     }
 
     // Update profile with latest contact info if provided
-    if (phone || location) {
+    if (safePhone || safeLocation) {
       try {
         const updates = [];
         const params = [];
-        if (phone) {
+        if (safePhone) {
           updates.push('phone = ?');
-          params.push(phone);
+          params.push(safePhone);
         }
-        if (location) {
+        if (safeLocation) {
           updates.push('location = ?');
-          params.push(location);
+          params.push(safeLocation);
         }
         if (updates.length > 0) {
           params.push(req.user.id);

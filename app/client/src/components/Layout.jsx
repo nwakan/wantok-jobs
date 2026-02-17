@@ -1,13 +1,26 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { auth } from '../api';
 import NotificationDropdown from './NotificationDropdown';
+import LanguageToggle from './LanguageToggle';
+import MobileBottomNav from './MobileBottomNav';
+import OfflineBanner from './OfflineBanner';
+import DarkModeToggle from './DarkModeToggle';
+import BackToTop from './BackToTop';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function Layout() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts({
+    onEscape: () => setMobileMenuOpen(false),
+  });
 
   // Refresh user data on mount
   useState(() => {
@@ -30,7 +43,10 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 pb-16 md:pb-0">
+      {/* Offline Banner */}
+      <OfflineBanner />
+      
       {/* Header */}
       <header className="bg-white shadow-sm">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,6 +66,7 @@ export default function Layout() {
             </div>
             
             <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+              <DarkModeToggle />
               {user ? (
                 <>
                   <NotificationDropdown />
@@ -59,7 +76,7 @@ export default function Layout() {
                   >
                     Dashboard
                   </Link>
-                  <span className="text-gray-700">{user.name}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{user.name}</span>
                   <button
                     onClick={handleLogout}
                     className="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700"
@@ -71,7 +88,7 @@ export default function Layout() {
                 <>
                   <Link
                     to="/login"
-                    className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+                    className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium dark:text-gray-300"
                   >
                     Login
                   </Link>
@@ -176,6 +193,12 @@ export default function Layout() {
       <main className="flex-grow">
         <Outlet />
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
+
+      {/* Back to top button */}
+      <BackToTop />
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white mt-12">
