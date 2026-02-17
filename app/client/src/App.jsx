@@ -95,6 +95,7 @@ const AdminMessages = lazy(() => import('./pages/dashboard/admin/Messages'));
 const AdminContactMessages = lazy(() => import('./pages/dashboard/admin/ContactMessages'));
 const AdminAIAgents = lazy(() => import('./pages/dashboard/admin/AIAgents'));
 const AdminFraudSecurity = lazy(() => import('./pages/dashboard/admin/FraudSecurity'));
+const AdminJeanSettings = lazy(() => import('./pages/dashboard/admin/JeanSettings'));
 
 function App() {
   return (
@@ -181,6 +182,7 @@ function App() {
                 <Route path="messages" element={<Lazy component={AdminMessages} />} />
                 <Route path="contact-messages" element={<Lazy component={AdminContactMessages} />} />
                 <Route path="ai-agents" element={<Lazy component={AdminAIAgents} />} />
+                <Route path="jean" element={<Lazy component={AdminJeanSettings} />} />
                 <Route path="security" element={<Lazy component={AdminFraudSecurity} />} />
                 <Route path="settings" element={<Lazy component={AdminSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />

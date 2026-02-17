@@ -191,7 +191,8 @@ const INTENTS = {
   // ─── Categories / Companies ────────────────────────────
   browse_categories: {
     patterns: [
-      /\b(categor|industr|sector|field)\b/i,
+      /\bcategor(y|ies)?\b/i,
+      /\b(industr(y|ies)|sector|field)s?\b/i,
       /\bwhat\s*(type|kind)s?\s*of\s*(job|work|wok)/i,
     ],
     priority: 3,

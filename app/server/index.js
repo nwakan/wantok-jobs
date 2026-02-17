@@ -284,6 +284,9 @@ app.use('/api/stats', require('./routes/stats')); // Provides /api/stats/dashboa
 // Contact with rate limiting
 app.use('/api/contact', contactLimiter, require('./routes/contact'));
 
+// Jean AI Chat routes
+app.use('/api/chat', require('./routes/chat'));
+
 // Admin routes (protected by auth middleware)
 const { authenticateToken } = require('./middleware/auth');
 app.use('/api/admin', authenticateToken, require('./routes/admin'));

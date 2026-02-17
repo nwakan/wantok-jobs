@@ -9,6 +9,7 @@ import MobileBottomNav from './MobileBottomNav';
 import OfflineBanner from './OfflineBanner';
 import DarkModeToggle from './DarkModeToggle';
 import BackToTop from './BackToTop';
+import ChatWidget from './ChatWidget';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function Layout() {
@@ -228,6 +229,9 @@ export default function Layout() {
           </div>
         </div>
       </footer>
+
+      {/* Jean AI Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }

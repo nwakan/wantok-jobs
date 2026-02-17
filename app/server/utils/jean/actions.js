@@ -120,7 +120,7 @@ const actions = {
   applyToJob(db, userId, jobId, coverLetter) {
     // Check already applied
     const existing = db.prepare(
-      'SELECT id FROM applications WHERE user_id = ? AND job_id = ?'
+      'SELECT id FROM applications WHERE jobseeker_id = ? AND job_id = ?'
     ).get(userId, jobId);
     if (existing) return { error: 'already_applied', applicationId: existing.id };
 
@@ -132,7 +132,7 @@ const actions = {
     const profile = db.prepare('SELECT * FROM profiles_jobseeker WHERE user_id = ?').get(userId);
 
     const result = db.prepare(`
-      INSERT INTO applications (user_id, job_id, cover_letter, status, created_at)
+      INSERT INTO applications (jobseeker_id, job_id, cover_letter, status, applied_at)
       VALUES (?, ?, ?, 'pending', datetime('now'))
     `).run(userId, jobId, coverLetter || '');
 
@@ -150,13 +150,13 @@ const actions = {
 
   getMyApplications(db, userId) {
     return db.prepare(`
-      SELECT a.id, a.status, a.created_at, j.title, j.location,
+      SELECT a.id, a.status, a.applied_at, j.title, j.location,
              pe.company_name
       FROM applications a
       JOIN jobs j ON a.job_id = j.id
       LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
-      WHERE a.user_id = ?
-      ORDER BY a.created_at DESC
+      WHERE a.jobseeker_id = ?
+      ORDER BY a.applied_at DESC
       LIMIT 20
     `).all(userId);
   },
@@ -168,13 +168,13 @@ const actions = {
     if (!job) return { error: 'not_your_job' };
 
     const applicants = db.prepare(`
-      SELECT a.id, a.status, a.created_at, a.cover_letter,
+      SELECT a.id, a.status, a.applied_at, a.cover_letter,
              u.name, u.email, pj.headline, pj.skills, pj.location, pj.phone
       FROM applications a
-      JOIN users u ON a.user_id = u.id
-      LEFT JOIN profiles_jobseeker pj ON a.user_id = pj.user_id
+      JOIN users u ON a.jobseeker_id = u.id
+      LEFT JOIN profiles_jobseeker pj ON a.jobseeker_id = pj.user_id
       WHERE a.job_id = ?
-      ORDER BY a.created_at DESC
+      ORDER BY a.applied_at DESC
     `).all(jobId);
 
     return { job, applicants };
@@ -183,7 +183,7 @@ const actions = {
   updateApplicationStatus(db, userId, applicationId, status) {
     // Verify employer owns the job for this application
     const app = db.prepare(`
-      SELECT a.id, a.user_id as applicant_id, j.employer_id, j.title
+      SELECT a.id, a.jobseeker_id as applicant_id, j.employer_id, j.title
       FROM applications a JOIN jobs j ON a.job_id = j.id
       WHERE a.id = ?
     `).get(applicationId);
