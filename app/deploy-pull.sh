@@ -51,3 +51,4 @@ else
   echo "❌ Health check failed!"
   exit 1
 fi
+# Auto-deploy: git push → webhook → systemd deploy
