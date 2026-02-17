@@ -458,54 +458,16 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// GET /:id/similar - Get similar jobs for a specific job (Task 2: Enhanced with category + better scoring)
+// GET /:id/similar - Get similar jobs for a specific job (Smart recommendations engine)
 router.get('/:id/similar', (req, res) => {
   try {
-    const job = db.prepare('SELECT title, industry, location, category_slug, employer_id FROM jobs WHERE id = ?').get(req.params.id);
-    
-    if (!job) {
+    const { getSimilarJobs } = require('../lib/recommendations');
+    const limit = Math.min(parseInt(req.query.limit) || 6, 12);
+    const similarJobs = getSimilarJobs(parseInt(req.params.id), limit);
+
+    if (similarJobs === null) {
       return res.status(404).json({ error: 'Job not found' });
     }
-
-    // Extract title keywords for matching (simple word tokenization)
-    const titleWords = job.title ? job.title.toLowerCase().split(/\s+/).filter(w => w.length > 3) : [];
-
-    const similarJobs = db.prepare(`
-      SELECT j.id, j.title, j.location, j.job_type, j.salary_min, j.salary_max, 
-             j.salary_currency, j.created_at, j.views_count, j.is_featured,
-             u.is_verified as employer_verified,
-             COALESCE(j.company_display_name, pe.company_name) as company_name,
-             COALESCE(j.logo_url, pe.logo_url) as logo_url
-      FROM jobs j
-      JOIN users u ON j.employer_id = u.id
-      LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
-      WHERE j.status = 'active' 
-        AND j.id != ?
-        AND (j.category_slug = ? OR j.industry = ? OR j.location = ? OR j.employer_id = ?)
-      ORDER BY 
-        CASE 
-          WHEN j.category_slug = ? AND j.location = ? THEN 1
-          WHEN j.category_slug = ? THEN 2
-          WHEN j.employer_id = ? THEN 3
-          WHEN j.location = ? THEN 4
-          WHEN j.industry = ? THEN 5
-          ELSE 6
-        END,
-        j.created_at DESC
-      LIMIT 6
-    `).all(
-      req.params.id, 
-      job.category_slug || '', 
-      job.industry || '', 
-      job.location || '',
-      job.employer_id || 0,
-      job.category_slug || '',
-      job.location || '',
-      job.category_slug || '',
-      job.employer_id || 0,
-      job.location || '',
-      job.industry || ''
-    );
 
     res.json({ data: similarJobs });
   } catch (error) {

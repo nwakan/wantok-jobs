@@ -14,6 +14,7 @@ import { jobs as jobsAPI } from '../api';
 import ActivityToast from '../components/ActivityToast';
 import ActivityFeed from '../components/ActivityFeed';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
 function TestimonialsCarousel() {
@@ -36,22 +37,22 @@ function TestimonialsCarousel() {
   const t = testimonials[current];
 
   return (
-    <div className="bg-gray-50 py-16">
+    <div className="bg-gray-50 dark:bg-gray-900 py-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">What People Say</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">What People Say</h2>
         <p className="text-gray-500 mb-10">Real stories from our community</p>
         <div className="relative">
-          <div className="bg-white rounded-2xl shadow-sm border p-8 md:p-10 mx-auto max-w-2xl min-h-[200px] flex flex-col items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-8 md:p-10 mx-auto max-w-2xl min-h-[200px] flex flex-col items-center justify-center">
             <div className="flex gap-0.5 mb-4">
               {[1,2,3,4,5].map(i => (
                 <Star key={i} className={`w-5 h-5 ${i <= t.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
               ))}
             </div>
-            <blockquote className="text-lg md:text-xl text-gray-700 italic mb-6 leading-relaxed">
+            <blockquote className="text-lg md:text-xl text-gray-700 dark:text-gray-300 italic mb-6 leading-relaxed">
               "{t.quote}"
             </blockquote>
             <div>
-              <p className="font-bold text-gray-900">{t.name}</p>
+              <p className="font-bold text-gray-900 dark:text-gray-100">{t.name}</p>
               <p className="text-sm text-gray-500">{t.role}{t.company ? ` at ${t.company}` : ''}</p>
             </div>
           </div>
@@ -116,8 +117,11 @@ const provinces = [
 export default function Home() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [searchData, setSearchData] = useState({ keyword: '', location: '', category: '' });
   const [featuredJobs, setFeaturedJobs] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recType, setRecType] = useState('popular');
   const [categories, setCategories] = useState([]);
   const [topEmployers, setTopEmployers] = useState([]);
   const [stats, setStats] = useState({ totalJobs: 0, activeJobs: 0, totalEmployers: 0, totalJobseekers: 0 });
@@ -168,6 +172,17 @@ export default function Home() {
         fetch('/api/analytics/popular-searches').then(r => r.json()).catch(() => null),
       ]);
       setFeaturedJobs(jobsResponse?.data || jobsResponse || []);
+      // Fetch recommendations
+      try {
+        const headers = {};
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const recRes = await fetch('/api/recommendations?limit=10', { headers }).then(r => r.json());
+        if (recRes?.data?.length > 0) {
+          setRecommendations(recRes.data);
+          setRecType(recRes.type || 'popular');
+        }
+      } catch (e) {}
       if (statsResponse) {
         setStats({
           totalJobs: statsResponse.totalJobs || 0,
@@ -352,7 +367,7 @@ export default function Home() {
       </div>
 
       {/* Stats Bar */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
@@ -371,7 +386,7 @@ export default function Home() {
                 <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-1">
                   {stat.value.toLocaleString()}{typeof stat.value === 'number' && stat.value > 10 ? '+' : ''}
                 </div>
-                <div className="text-sm md:text-base text-gray-600">{stat.label}</div>
+                <div className="text-sm md:text-base text-gray-600 dark:text-gray-400">{stat.label}</div>
               </motion.div>
             ))}
           </div>
@@ -379,10 +394,10 @@ export default function Home() {
       </div>
 
       {/* Browse by Category — REAL data */}
-      <div className="bg-gray-50 py-16">
+      <div className="bg-gray-50 dark:bg-gray-900 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('home.browseCategories')}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t('home.browseCategories')}</h2>
             <p className="text-xl text-gray-600">{t('hero.activeJobs', { count: stats.activeJobs.toLocaleString() })}</p>
           </div>
           
@@ -397,12 +412,12 @@ export default function Home() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: idx * 0.05 }}
                   onClick={() => navigate(`/jobs?category=${cat.slug}`)}
-                  className="bg-white rounded-xl p-6 hover:shadow-lg transition-all hover:-translate-y-1 group"
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 hover:shadow-lg transition-all hover:-translate-y-1 group"
                 >
                   <div className={`w-12 h-12 ${color} rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform`}>
                     <IconComponent className="w-6 h-6" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">{cat.name}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm">{cat.name}</h3>
                   <p className="text-sm text-primary-600 font-medium">{cat.job_count} jobs</p>
                 </motion.button>
               );
@@ -418,12 +433,47 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Recommended Jobs */}
+      {recommendations.length > 0 && (
+        <div className="bg-white py-16 border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-12">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                  <Zap className="w-8 h-8 text-primary-600" />
+                  {recType === 'personalized' ? 'Recommended for You' : 'Trending Jobs'}
+                </h2>
+                <p className="text-lg text-gray-600">
+                  {recType === 'personalized'
+                    ? 'Jobs matched to your skills, experience and preferences'
+                    : 'Popular jobs being viewed and applied to right now'}
+                </p>
+              </div>
+              <Link
+                to="/jobs"
+                className="hidden md:inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold"
+              >
+                View All <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendations.slice(0, 6).map((job) => <JobCard key={job.id} job={job} />)}
+            </div>
+            {recommendations.length > 6 && (
+              <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {recommendations.slice(6, 10).map((job) => <JobCard key={job.id} job={job} compact />)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Latest Jobs */}
-      <div className="bg-white py-16">
+      <div className="bg-white dark:bg-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t('home.featuredJobs')}</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('home.featuredJobs')}</h2>
               <p className="text-lg text-gray-600">{t('home.viewAllJobs')}</p>
             </div>
             <Link
@@ -459,11 +509,11 @@ export default function Home() {
       <ActivityFeed />
 
       {/* How It Works */}
-      <div className="bg-gradient-to-br from-primary-50 to-teal-50 py-16">
+      <div className="bg-gradient-to-br from-primary-50 to-teal-50 dark:from-gray-800 dark:to-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600">Get started in minutes</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">How It Works</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400">Get started in minutes</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -477,7 +527,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: idx * 0.15 }}
-                className="bg-white rounded-xl p-8 text-center shadow-sm relative"
+                className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center shadow-sm relative"
               >
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                   {item.step}
@@ -485,8 +535,8 @@ export default function Home() {
                 <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6 mt-2">
                   <item.icon className="w-8 h-8 text-primary-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{item.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -505,11 +555,11 @@ export default function Home() {
 
       {/* Top Employers — REAL data */}
       {topEmployers.length > 0 && (
-        <div className="bg-white py-16">
+        <div className="bg-white dark:bg-gray-800 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Top Employers</h2>
-              <p className="text-xl text-gray-600">Leading companies hiring on WantokJobs</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">Top Employers</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-400">Leading companies hiring on WantokJobs</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
@@ -517,7 +567,7 @@ export default function Home() {
                 <Link
                   key={employer.id}
                   to={`/companies/${employer.id}`}
-                  className="bg-gray-50 rounded-lg p-5 flex flex-col items-center justify-center hover:bg-gray-100 hover:shadow-md transition group"
+                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-600 hover:shadow-md transition group"
                 >
                   {employer.logo_url ? (
                     <img
@@ -549,11 +599,11 @@ export default function Home() {
       )}
 
       {/* Why WantokJobs */}
-      <div className="bg-gray-50 py-16">
+      <div className="bg-gray-50 dark:bg-gray-900 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why WantokJobs?</h2>
-            <p className="text-xl text-gray-600">Built for Papua New Guinea. Powered by AI.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">Why WantokJobs?</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400">Built for Papua New Guinea. Powered by AI.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -574,7 +624,7 @@ export default function Home() {
                   <item.icon className="w-8 h-8 text-primary-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -623,10 +673,10 @@ export default function Home() {
       </div>
 
       {/* For Employers CTA */}
-      <div className="bg-white py-16">
+      <div className="bg-white dark:bg-gray-800 py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Hiring? Reach {stats.totalJobseekers.toLocaleString()}+ Candidates</h2>
-          <p className="text-xl text-gray-600 mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">Hiring? Reach {stats.totalJobseekers.toLocaleString()}+ Candidates</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
             Post jobs, search candidates, and find the right talent for your team. Start with a free posting.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

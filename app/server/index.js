@@ -319,6 +319,7 @@ app.use('/api/interviews', require('./routes/interviews'));
 app.use('/api/profile', require('./routes/profiles'));
 app.use('/api/saved-jobs', require('./routes/saved-jobs'));
 app.use('/api/saved-searches', require('./routes/saved-searches'));
+app.use('/api/recommendations', require('./routes/recommendations'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/references', require('./routes/references'));

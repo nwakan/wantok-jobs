@@ -165,8 +165,7 @@ export default function JobDetail() {
 
   const loadSimilarJobs = async () => {
     try {
-      // Task 2: Use the new similar jobs endpoint
-      const response = await fetch(`/api/jobs/${id}/similar`);
+      const response = await fetch(`/api/jobs/${id}/similar?limit=8`);
       if (response.ok) {
         const data = await response.json();
         setSimilarJobs(data.data || []);
