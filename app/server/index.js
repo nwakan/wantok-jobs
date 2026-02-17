@@ -317,6 +317,7 @@ app.use('/api/training', require('./routes/training'));
 // Agency & Claims routes
 app.use('/api/agency', require('./routes/agency'));
 app.use('/api/claims', require('./routes/claims'));
+app.use('/api/wallet', require('./routes/wallet'));
 
 // New routes for analytics, stats, and resume features
 app.use('/api/employer/analytics', require('./routes/employer-analytics'));

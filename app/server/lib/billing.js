@@ -337,6 +337,14 @@ function canPostJob(employerId) {
 
   if (!profile) return { allowed: false, reason: 'Employer profile not found' };
 
+  // Check wallet suspension
+  try {
+    const wallet = db.prepare('SELECT status FROM credit_wallets WHERE user_id = ?').get(employerId);
+    if (wallet && wallet.status === 'suspended') {
+      return { allowed: false, reason: 'Wallet is suspended. Contact support.' };
+    }
+  } catch (_e) { /* table may not exist yet */ }
+
   const trial = hasActiveTrial(employerId);
   
   // Premium indefinite trial — unlimited
@@ -539,6 +547,387 @@ function getCreditTransactions(userId, limit = 50, offset = 0) {
   `).all(userId, limit, offset);
 }
 
+// ─── Unified Wallet System ──────────────────────────────────────────
+
+/**
+ * Get or create a wallet for a user
+ */
+function getOrCreateWallet(userId) {
+  let wallet = db.prepare('SELECT * FROM credit_wallets WHERE user_id = ?').get(userId);
+  if (!wallet) {
+    db.prepare('INSERT INTO credit_wallets (user_id, balance, reserved_balance) VALUES (?, 0, 0)').run(userId);
+    wallet = db.prepare('SELECT * FROM credit_wallets WHERE user_id = ?').get(userId);
+  }
+  return wallet;
+}
+
+/**
+ * Rate limit check: max 10 credit ops per hour per user
+ */
+function checkRateLimit(userId) {
+  const count = db.prepare(`
+    SELECT COUNT(*) as n FROM credit_transactions
+    WHERE user_id = ? AND created_at > datetime('now', '-1 hour')
+  `).get(userId).n;
+  if (count >= 10) {
+    return { allowed: false, error: 'Rate limit exceeded: max 10 credit operations per hour' };
+  }
+  return { allowed: true };
+}
+
+/**
+ * Core wallet transaction — ALL credit operations should go through this.
+ * Atomic, idempotent, with rate limiting.
+ */
+function walletTransaction(userId, { amount, direction, type, description, referenceType, referenceId, idempotencyKey }) {
+  if (!amount || amount <= 0) throw new Error('Amount must be positive');
+  if (!['CREDIT', 'DEBIT'].includes(direction)) throw new Error('Direction must be CREDIT or DEBIT');
+
+  // Idempotency check (outside transaction for read)
+  if (idempotencyKey) {
+    const existing = db.prepare('SELECT * FROM credit_transactions WHERE idempotency_key = ?').get(idempotencyKey);
+    if (existing) {
+      const wallet = getOrCreateWallet(userId);
+      return { success: true, transaction: existing, wallet, idempotent: true };
+    }
+  }
+
+  // Rate limit
+  const rateCheck = checkRateLimit(userId);
+  if (!rateCheck.allowed) {
+    return { success: false, error: rateCheck.error, code: 429 };
+  }
+
+  const run = db.transaction(() => {
+    const wallet = getOrCreateWallet(userId);
+
+    if (wallet.status === 'suspended') {
+      throw new Error('Wallet is suspended');
+    }
+
+    const signedAmount = direction === 'DEBIT' ? -amount : amount;
+
+    if (direction === 'DEBIT' && wallet.balance < amount) {
+      throw new Error(`Insufficient balance: have ${wallet.balance}, need ${amount}`);
+    }
+
+    const newBalance = wallet.balance + signedAmount;
+
+    // Update wallet
+    db.prepare(`
+      UPDATE credit_wallets SET balance = ?, updated_at = datetime('now') WHERE user_id = ?
+    `).run(newBalance, userId);
+
+    // Log transaction
+    const result = db.prepare(`
+      INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type, reference_id, idempotency_key, direction, running_balance, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, type || 'wallet', signedAmount, newBalance, description || direction.toLowerCase(), referenceType || null, referenceId || null, idempotencyKey || null, direction, newBalance, description || null);
+
+    // Backward compat: update profile columns if applicable
+    try {
+      _syncProfileCredits(userId, type, signedAmount);
+    } catch (_e) { /* best effort */ }
+
+    const tx = db.prepare('SELECT * FROM credit_transactions WHERE id = ?').get(result.lastInsertRowid);
+    const updatedWallet = db.prepare('SELECT * FROM credit_wallets WHERE user_id = ?').get(userId);
+    return { transaction: tx, wallet: updatedWallet };
+  });
+
+  try {
+    const { transaction, wallet } = run();
+    return { success: true, transaction, wallet };
+  } catch (err) {
+    return { success: false, error: err.message, code: err.message.includes('Insufficient') ? 402 : 400 };
+  }
+}
+
+/**
+ * Sync profile credit columns for backward compatibility
+ */
+function _syncProfileCredits(userId, creditType, signedAmount) {
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  if (!user) return;
+
+  if (user.role === 'employer') {
+    const fieldMap = {
+      'job_posting': 'current_job_posting_credits',
+      'ai_matching': 'current_ai_matching_credits',
+      'candidate_search': 'current_candidate_search_credits',
+    };
+    const field = fieldMap[creditType];
+    if (field) {
+      db.prepare(`UPDATE profiles_employer SET ${field} = MAX(0, ${field} + ?) WHERE user_id = ?`).run(signedAmount, userId);
+    }
+  } else if (user.role === 'jobseeker' && creditType === 'alert') {
+    db.prepare(`UPDATE profiles_jobseeker SET current_alert_credits = MAX(0, current_alert_credits + ?) WHERE user_id = ?`).run(signedAmount, userId);
+  }
+}
+
+/**
+ * Reserve credits (move from balance to reserved_balance)
+ */
+function reserveCredits(userId, amount, jobId) {
+  const iKey = `reserve-${userId}-${jobId}-${Date.now()}`;
+  const run = db.transaction(() => {
+    const wallet = getOrCreateWallet(userId);
+    if (wallet.balance < amount) throw new Error(`Insufficient balance to reserve: have ${wallet.balance}, need ${amount}`);
+
+    db.prepare(`
+      UPDATE credit_wallets SET balance = balance - ?, reserved_balance = reserved_balance + ?, updated_at = datetime('now')
+      WHERE user_id = ?
+    `).run(amount, amount, userId);
+
+    db.prepare(`
+      INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type, reference_id, idempotency_key, direction, description)
+      VALUES (?, 'job_posting', ?, ?, 'credit_reserved', 'job', ?, ?, 'DEBIT', ?)
+    `).run(userId, -amount, wallet.balance - amount, jobId, iKey, `Reserved ${amount} credits for job #${jobId}`);
+
+    return db.prepare('SELECT * FROM credit_wallets WHERE user_id = ?').get(userId);
+  });
+
+  try {
+    const wallet = run();
+    return { success: true, wallet };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Release reserved credits back to balance (job expired/closed without publishing)
+ */
+function releaseReservedCredits(userId, amount, jobId) {
+  const run = db.transaction(() => {
+    const wallet = getOrCreateWallet(userId);
+    const releaseAmt = Math.min(amount, wallet.reserved_balance);
+
+    db.prepare(`
+      UPDATE credit_wallets SET balance = balance + ?, reserved_balance = reserved_balance - ?, updated_at = datetime('now')
+      WHERE user_id = ?
+    `).run(releaseAmt, releaseAmt, userId);
+
+    db.prepare(`
+      INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type, reference_id, direction, description)
+      VALUES (?, 'job_posting', ?, ?, 'credit_released', 'job', ?, 'CREDIT', ?)
+    `).run(userId, releaseAmt, wallet.balance + releaseAmt, jobId, `Released ${releaseAmt} reserved credits from job #${jobId}`);
+
+    return db.prepare('SELECT * FROM credit_wallets WHERE user_id = ?').get(userId);
+  });
+
+  try {
+    const wallet = run();
+    return { success: true, wallet };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Confirm reserved credits (deduct from reserved — job published)
+ */
+function confirmReservedCredits(userId, amount, jobId) {
+  const run = db.transaction(() => {
+    const wallet = getOrCreateWallet(userId);
+    const confirmAmt = Math.min(amount, wallet.reserved_balance);
+
+    db.prepare(`
+      UPDATE credit_wallets SET reserved_balance = reserved_balance - ?, updated_at = datetime('now')
+      WHERE user_id = ?
+    `).run(confirmAmt, userId);
+
+    db.prepare(`
+      INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type, reference_id, direction, description)
+      VALUES (?, 'job_posting', ?, ?, 'credit_confirmed', 'job', ?, 'DEBIT', ?)
+    `).run(userId, -confirmAmt, wallet.balance, jobId, `Confirmed ${confirmAmt} credits for published job #${jobId}`);
+
+    return db.prepare('SELECT * FROM credit_wallets WHERE user_id = ?').get(userId);
+  });
+
+  try {
+    const wallet = run();
+    return { success: true, wallet };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+// ─── Refund System ──────────────────────────────────────────────────
+
+/**
+ * Request a refund for a transaction
+ * Policy: 100% within 24h, 50% within 7 days, 0% after
+ */
+function requestRefund(userId, transactionId) {
+  const tx = db.prepare('SELECT * FROM credit_transactions WHERE id = ? AND user_id = ?').get(transactionId, userId);
+  if (!tx) return { success: false, error: 'Transaction not found or does not belong to user' };
+  if (tx.amount >= 0) return { success: false, error: 'Can only refund debit transactions' };
+
+  // Check if already refunded
+  const existingRefund = db.prepare('SELECT * FROM credit_refunds WHERE original_transaction_id = ? AND status != ?').get(transactionId, 'rejected');
+  if (existingRefund) return { success: false, error: 'Refund already requested for this transaction' };
+
+  // Calculate refund percentage based on age
+  const txAge = Date.now() - new Date(tx.created_at).getTime();
+  const hours24 = 24 * 60 * 60 * 1000;
+  const days7 = 7 * 24 * 60 * 60 * 1000;
+
+  let refundPercentage;
+  if (txAge <= hours24) {
+    refundPercentage = 1.0;
+  } else if (txAge <= days7) {
+    refundPercentage = 0.5;
+  } else {
+    return { success: false, error: 'Transaction is older than 7 days — not eligible for refund' };
+  }
+
+  const refundAmount = Math.round(Math.abs(tx.amount) * refundPercentage);
+
+  const result = db.prepare(`
+    INSERT INTO credit_refunds (user_id, original_transaction_id, refund_amount, refund_percentage, reason, status)
+    VALUES (?, ?, ?, ?, 'user_requested', 'pending')
+  `).run(userId, transactionId, refundAmount, refundPercentage);
+
+  const refund = db.prepare('SELECT * FROM credit_refunds WHERE id = ?').get(result.lastInsertRowid);
+  return { success: true, refund };
+}
+
+/**
+ * Admin processes (approves) a refund
+ */
+function processRefund(refundId, adminId) {
+  const refund = db.prepare('SELECT * FROM credit_refunds WHERE id = ?').get(refundId);
+  if (!refund) return { success: false, error: 'Refund not found' };
+  if (refund.status !== 'pending') return { success: false, error: `Refund is ${refund.status}, not pending` };
+
+  // Credit the wallet
+  const txResult = walletTransaction(refund.user_id, {
+    amount: refund.refund_amount,
+    direction: 'CREDIT',
+    type: 'wallet',
+    description: `Refund for transaction #${refund.original_transaction_id} (${Math.round(refund.refund_percentage * 100)}%)`,
+    referenceType: 'refund',
+    referenceId: refundId,
+    idempotencyKey: `refund-${refundId}`,
+  });
+
+  if (!txResult.success) return txResult;
+
+  db.prepare(`
+    UPDATE credit_refunds SET status = 'completed', approved_by = ?, processed_at = datetime('now')
+    WHERE id = ?
+  `).run(adminId, refundId);
+
+  return { success: true, refund: db.prepare('SELECT * FROM credit_refunds WHERE id = ?').get(refundId), wallet: txResult.wallet };
+}
+
+/**
+ * Admin rejects a refund
+ */
+function rejectRefund(refundId, adminId, reason) {
+  const refund = db.prepare('SELECT * FROM credit_refunds WHERE id = ?').get(refundId);
+  if (!refund) return { success: false, error: 'Refund not found' };
+  if (refund.status !== 'pending') return { success: false, error: `Refund is ${refund.status}, not pending` };
+
+  db.prepare(`
+    UPDATE credit_refunds SET status = 'rejected', approved_by = ?, processed_at = datetime('now'), reason = ?
+    WHERE id = ?
+  `).run(adminId, reason || refund.reason, refundId);
+
+  return { success: true };
+}
+
+// ─── Deposit Intent System ──────────────────────────────────────────
+
+/**
+ * Create a deposit intent (user wants to pay via bank transfer)
+ */
+function createDepositIntent(userId, amount, packageId) {
+  if (!amount || amount <= 0) return { success: false, error: 'Invalid amount' };
+
+  // Generate unique reference
+  const rand = Math.floor(10000 + Math.random() * 90000);
+  const uniqueRef = `WJ-${userId}-${rand}`;
+
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+
+  const result = db.prepare(`
+    INSERT INTO deposit_intents (user_id, amount_expected, unique_reference, package_id, expires_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(userId, amount, uniqueRef, packageId || null, expiresAt);
+
+  return {
+    success: true,
+    depositIntent: db.prepare('SELECT * FROM deposit_intents WHERE id = ?').get(result.lastInsertRowid),
+    reference: uniqueRef,
+    bankDetails: BANK_DETAILS,
+    amount,
+    expiresAt,
+  };
+}
+
+/**
+ * Admin matches a bank deposit to a deposit intent
+ */
+function matchDeposit(depositIntentId, adminId) {
+  const intent = db.prepare('SELECT * FROM deposit_intents WHERE id = ?').get(depositIntentId);
+  if (!intent) return { success: false, error: 'Deposit intent not found' };
+  if (intent.status !== 'awaiting_payment') return { success: false, error: `Intent is ${intent.status}, not awaiting_payment` };
+
+  // Check expiry
+  if (new Date(intent.expires_at) < new Date()) {
+    db.prepare("UPDATE deposit_intents SET status = 'expired', updated_at = datetime('now') WHERE id = ?").run(depositIntentId);
+    return { success: false, error: 'Deposit intent has expired' };
+  }
+
+  const run = db.transaction(() => {
+    // Create an order
+    const orderResult = db.prepare(`
+      INSERT INTO orders (user_id, package_id, amount, currency, payment_method, status, reference_number, created_at)
+      VALUES (?, ?, ?, 'PGK', 'bank_transfer', 'completed', ?, datetime('now'))
+    `).run(intent.user_id, intent.package_id, intent.amount_expected, intent.unique_reference);
+
+    const orderId = orderResult.lastInsertRowid;
+
+    // If package-based, add credits via package
+    let creditResult = null;
+    if (intent.package_id) {
+      creditResult = addCreditPackage(intent.user_id, intent.package_id, orderId);
+      // Also credit the wallet
+      const pkg = db.prepare('SELECT * FROM packages WHERE id = ?').get(intent.package_id);
+      if (pkg) {
+        const totalCredits = (pkg.job_posting_credits || 0) + (pkg.ai_matching_credits || 0) +
+                            (pkg.candidate_search_credits || 0) + (pkg.alert_credits || 0);
+        if (totalCredits > 0) {
+          // Wallet already gets synced via addCreditPackage → logCreditTransaction path
+          // Just ensure wallet exists and update it
+          const wallet = getOrCreateWallet(intent.user_id);
+          db.prepare(`UPDATE credit_wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`)
+            .run(totalCredits, intent.user_id);
+        }
+      }
+    }
+
+    // Update intent
+    db.prepare(`
+      UPDATE deposit_intents SET status = 'matched', matched_order_id = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(orderId, depositIntentId);
+
+    // Mark order approved
+    db.prepare(`UPDATE orders SET approved_by = ?, approved_at = datetime('now') WHERE id = ?`).run(adminId, orderId);
+
+    return { orderId, creditResult };
+  });
+
+  try {
+    const { orderId, creditResult } = run();
+    return { success: true, orderId, creditResult, intent };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 // ─── Legacy Compatibility ───────────────────────────────────────────
 
 /**
@@ -590,4 +979,18 @@ module.exports = {
   // Legacy compat
   getSubscriptionStatus,
   activatePlan,
+  // Wallet system (new)
+  getOrCreateWallet,
+  walletTransaction,
+  reserveCredits,
+  releaseReservedCredits,
+  confirmReservedCredits,
+  checkRateLimit,
+  // Refunds
+  requestRefund,
+  processRefund,
+  rejectRefund,
+  // Deposit intents
+  createDepositIntent,
+  matchDeposit,
 };
