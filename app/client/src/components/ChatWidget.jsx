@@ -98,9 +98,26 @@ export default function ChatWidget() {
         })));
         setHasGreeted(true);
       } else {
-        // Show greeting
-        if (settings?.greeting) {
-          setMessages([{ role: 'jean', content: settings.greeting, time: new Date().toISOString() }]);
+        // No history — send a greeting via the API to get dynamic personality
+        try {
+          const greetRes = await fetch(`${API_URL}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify({ message: 'hi', sessionToken: data.sessionToken || sessionToken }),
+          });
+          const greetData = await greetRes.json();
+          setMessages([{
+            role: 'jean',
+            content: greetData.message,
+            quickReplies: greetData.quickReplies,
+            time: new Date().toISOString(),
+          }]);
+          if (greetData.sessionToken) {
+            setSessionToken(greetData.sessionToken);
+            localStorage.setItem('jean_session', greetData.sessionToken);
+          }
+        } catch {
+          setMessages([{ role: 'jean', content: "Hi! 😊 I'm Jean from WantokJobs. How can I help you?", time: new Date().toISOString() }]);
         }
         setHasGreeted(true);
       }
@@ -109,8 +126,26 @@ export default function ChatWidget() {
         localStorage.setItem('jean_session', data.sessionToken);
       }
     } catch (e) {
-      if (settings?.greeting) {
-        setMessages([{ role: 'jean', content: settings.greeting, time: new Date().toISOString() }]);
+      // Fetch greeting from the chat API to get the dynamic personality-driven one
+      try {
+        const greetRes = await fetch(`${API_URL}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({ message: 'hi', sessionToken }),
+        });
+        const greetData = await greetRes.json();
+        setMessages([{
+          role: 'jean',
+          content: greetData.message,
+          quickReplies: greetData.quickReplies,
+          time: new Date().toISOString(),
+        }]);
+        if (greetData.sessionToken) {
+          setSessionToken(greetData.sessionToken);
+          localStorage.setItem('jean_session', greetData.sessionToken);
+        }
+      } catch {
+        setMessages([{ role: 'jean', content: "Hi! 😊 I'm Jean from WantokJobs. How can I help you?", time: new Date().toISOString() }]);
       }
       setHasGreeted(true);
     }
@@ -251,18 +286,28 @@ export default function ChatWidget() {
     <>
       {/* Chat bubble */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-xl transition-all hover:scale-110 active:scale-95"
-          aria-label="Chat with Jean"
-        >
-          <MessageCircle size={24} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {unreadCount}
-            </span>
+        <div className="fixed bottom-4 right-4 z-50 flex items-end gap-3">
+          {/* Proactive hint (shows briefly for new visitors) */}
+          {!hasGreeted && settings?.proactive && (
+            <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm px-4 py-2.5 rounded-2xl rounded-br-md shadow-lg max-w-[220px] animate-fade-in cursor-pointer border dark:border-gray-700"
+                 onClick={() => setIsOpen(true)}>
+              Hi! 👋 I'm Jean. Need help finding a job or posting one?
+            </div>
           )}
-        </button>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-4 shadow-xl transition-all hover:scale-110 active:scale-95 relative"
+            aria-label="Chat with Jean"
+          >
+            <MessageCircle size={24} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white"></span>
+          </button>
+        </div>
       )}
 
       {/* Chat window */}
@@ -279,12 +324,15 @@ export default function ChatWidget() {
           <div className="flex items-center justify-between px-4 py-3 bg-blue-600 text-white rounded-t-2xl cursor-pointer"
                onClick={() => isMinimized && setIsMinimized(false)}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                <Bot size={18} />
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-lg font-bold shadow-inner">
+                J
               </div>
               <div>
-                <div className="font-semibold text-sm">Jean</div>
-                <div className="text-xs text-blue-100">WantokJobs Assistant</div>
+                <div className="font-semibold text-sm">Jean Kila</div>
+                <div className="text-xs text-blue-100 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
+                  Online · WantokJobs
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -317,12 +365,17 @@ export default function ChatWidget() {
             <>
               <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] ${
+                  <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'jean' && (
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-bold mt-0.5">
+                        J
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] ${
                       msg.role === 'user'
                         ? 'bg-blue-600 text-white rounded-2xl rounded-br-md'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-bl-md'
-                    } px-4 py-2.5 text-sm`}>
+                    } px-4 py-2.5 text-sm leading-relaxed`}>
                       <MessageContent content={msg.content} />
                       <div className={`text-[10px] mt-1 ${msg.role === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>
                         {msg.time ? new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -332,12 +385,18 @@ export default function ChatWidget() {
                 ))}
 
                 {loading && (
-                  <div className="flex justify-start">
+                  <div className="flex gap-2 justify-start">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                      J
+                    </div>
                     <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3">
-                      <div className="flex gap-1.5">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        </div>
+                        <span className="text-xs text-gray-400 ml-1">Jean is typing...</span>
                       </div>
                     </div>
                   </div>
@@ -418,7 +477,7 @@ export default function ChatWidget() {
 
                 <div className="text-center mt-1">
                   <span className="text-[10px] text-gray-400">
-                    Powered by WantokJobs AI
+                    Jean · WantokJobs Customer Success
                   </span>
                 </div>
               </div>

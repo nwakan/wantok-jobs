@@ -8,6 +8,7 @@ const { classify } = require('./intents');
 const { FlowEngine } = require('./flows');
 const { getResponse } = require('./responses');
 const actions = require('./actions');
+const personality = require('./personality');
 const linkedin = require('./scrapers/linkedin');
 const { extractText: extractPdfText } = require('./parsers/pdf');
 const { extractText: extractDocxText, extractDocText } = require('./parsers/docx');
@@ -181,13 +182,28 @@ class Jean {
 
     const { intent, confidence, params } = classify(message, context);
 
+    // Detect mood and prepend empathetic response if needed
+    const mood = personality.detectMood(message);
+    let moodPrefix = '';
+    if (mood) {
+      moodPrefix = personality.empathize(mood) + '\n\n';
+    }
+
     // ─── Route by intent ─────────────────────────────────
     switch (intent) {
       case 'greeting':
-        return this.handleGreeting(user);
+        return this.handleGreeting(user, session);
 
-      case 'farewell':
-        return { message: getResponse('farewell', 'default'), intent };
+      case 'farewell': {
+        const name = user?.name?.split(' ')[0];
+        const farewells = [
+          `See you later${name ? ', ' + name : ''}! Good luck out there. 🤞`,
+          `Bye${name ? ' ' + name : ''}! Don't hesitate to come back — I'm always here. 😊`,
+          `Lukim yu${name ? ', ' + name : ''}! All the best. 🙌`,
+          `Take care! Remember, your dream job might be just one application away. 💪`,
+        ];
+        return { message: farewells[Math.floor(Math.random() * farewells.length)], intent };
+      }
 
       case 'search_jobs':
         return this.handleJobSearch(params, user);
@@ -309,26 +325,40 @@ class Jean {
         // Context-dependent confirm (e.g., draft approval)
         return this.handleConfirmOutOfFlow(session, user);
 
-      default:
-        return { message: getResponse('unknown', 'default'), intent };
+      default: {
+        const fallback = user
+          ? `I'm not quite sure what you need, ${user.name?.split(' ')[0] || 'there'}. But I can help with:\n\n🔍 Finding jobs — just tell me what you're looking for\n👤 Your profile — I'll update it for you through chat\n📄 Your CV — I'll build it from scratch\n📨 Applying — I can apply to jobs for you\n💰 Pricing — I'll explain how it works\n\nJust tell me in your own words what you need!`
+          : "I didn't quite catch that — but no worries! Here's what I can do:\n\n🔍 **Find jobs** — tell me what you're looking for\n📂 **Browse by category** — mining, health, IT, and more\n💰 **Pricing** — it's free for job seekers!\n📝 **Sign up** — I'll walk you through it\n\nWhat would you like to do?";
+        return { message: moodPrefix + fallback, intent };
+      }
     }
   }
 
   // ─── Intent Handlers ───────────────────────────────────
 
-  handleGreeting(user) {
+  handleGreeting(user, session) {
+    // Count previous sessions for this user
+    let sessionCount = 0;
+    if (user) {
+      try {
+        sessionCount = db.prepare('SELECT COUNT(*) as c FROM jean_sessions WHERE user_id = ?').get(user.id).c;
+      } catch (e) {}
+    }
+
+    const greeting = personality.getGreeting(user, null, sessionCount);
+
     if (user) {
       return {
-        message: getResponse('greeting', 'returning', { name: user.name || 'there' }),
+        message: greeting,
         quickReplies: user.role === 'employer'
-          ? ['Post a Job', 'View Applicants', 'My Jobs', 'Analytics']
-          : ['Search Jobs', 'My Applications', 'Update Profile', 'Build CV'],
+          ? ['Post a Job', 'View Applicants', 'My Jobs', 'Upload Job Descriptions']
+          : ['Search Jobs', 'My Applications', 'Update Profile', 'Build My CV'],
         intent: 'greeting',
       };
     }
     return {
-      message: getResponse('greeting', 'default'),
-      quickReplies: ['Search Jobs', 'Browse Categories', 'Register', 'Pricing'],
+      message: greeting,
+      quickReplies: ['Search Jobs', 'Browse Categories', 'Register', 'How Does It Work?'],
       intent: 'greeting',
     };
   }
@@ -337,27 +367,34 @@ class Jean {
     const searchParams = {};
     if (params.location) searchParams.location = params.location;
     if (params.job_type) searchParams.job_type = params.job_type;
+    if (params.search) searchParams.search = params.search;
 
-    // Try to extract search term from params
-    // The original message might have keywords we can use
     const result = actions.searchJobs(db, { ...searchParams, limit: 5 });
 
     if (result.total === 0) {
-      return { message: getResponse('search', 'no_results'), intent: 'search_jobs' };
+      return {
+        message: personality.humanize(
+          "Hmm, nothing matched that search. 😕 Try broader keywords or a different location.\n\nOr tell me what kind of work you're looking for and I'll dig deeper!",
+          { noResults: true }
+        ),
+        quickReplies: ['Show All Jobs', 'Browse Categories', 'Set Up Job Alert'],
+        intent: 'search_jobs',
+      };
     }
 
-    const jobList = result.jobs.map((j, i) => {
-      const salary = j.salary_min
-        ? `K${j.salary_min.toLocaleString()}${j.salary_max ? '-' + j.salary_max.toLocaleString() : '+'}`
-        : 'Negotiable';
-      return `${i + 1}. **${j.title}** — ${j.company_name || 'Company'}\n   📍 ${j.location || 'PNG'} | 💼 ${j.job_type || 'Full-time'} | 💰 ${salary}\n   ➡️ [View Job](/jobs/${j.id})`;
-    }).join('\n\n');
+    const jobList = result.jobs.map((j, i) => personality.formatJobCard(j, i + 1)).join('\n\n');
+
+    const intro = result.total <= 5
+      ? `Here's what I found — ${personality.naturalCount(result.total, 'job')}:`
+      : `Found ${result.total} jobs! Here are the top matches:`;
+
+    const followUp = user
+      ? "\n\nWant details on any of these? I can also apply for you!"
+      : "\n\nInterested in any? [Create a free account](/register) to apply — takes 30 seconds!";
 
     return {
-      message: getResponse('search', 'results', {
-        count: result.total,
-        jobs: jobList,
-      }),
+      message: `${intro}\n\n${jobList}${followUp}`,
+      quickReplies: user ? ['Apply to #1', 'Save #1', 'Show More', 'Set Alert'] : ['Register', 'Show More'],
       intent: 'search_jobs',
     };
   }
