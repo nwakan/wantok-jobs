@@ -133,10 +133,11 @@ function request(method, urlPath, { body, token, headers: extraHeaders } = {}) {
  * Get a CAPTCHA and return { captcha_id, captcha_answer }
  * Parses the math question to get the answer
  */
-async function solveCaptcha() {
+async function solveCaptcha(debug = false) {
   const res = await request('GET', '/api/auth/captcha');
-  if (res.status !== 200) throw new Error('Failed to get captcha');
+  if (res.status !== 200) throw new Error(`Failed to get captcha: ${res.status} ${JSON.stringify(res.body)}`);
   const { id, question } = res.body;
+  if (!id || !question) throw new Error(`Invalid captcha response: ${JSON.stringify(res.body)}`);
   // Parse "What is X + Y?" or "What is X - Y?"
   const match = question.match(/(\d+)\s*([+\-])\s*(\d+)/);
   if (!match) throw new Error(`Cannot parse captcha: ${question}`);

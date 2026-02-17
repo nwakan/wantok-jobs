@@ -8,7 +8,7 @@ module.exports = async function securityTests() {
   const employer = await registerUser('employer');
   const jobseeker = await registerUser('jobseeker');
 
-  let categorySlug = 'general';
+  let categorySlug = 'accounting';
   try {
     const catRes = await request('GET', '/api/categories');
     const cats = catRes.body?.data || catRes.body;

@@ -29,6 +29,8 @@ const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255).trim(),
   role: z.enum(['jobseeker', 'employer'], { message: 'Role must be jobseeker or employer' }),
   phone: z.string().max(20).optional(),
+  captcha_id: z.string().optional(),
+  captcha_answer: z.string().optional(),
 });
 
 const loginSchema = z.object({

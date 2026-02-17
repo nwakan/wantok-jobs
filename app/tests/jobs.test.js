@@ -9,14 +9,13 @@ module.exports = async function jobTests() {
   const employer = await registerUser('employer');
   const jobseeker = await registerUser('jobseeker');
 
-  // We need a valid category slug - fetch from existing data
-  let categorySlug = 'general';
+  // Use a known category slug from the database
+  let categorySlug = 'accounting';
   try {
     const catRes = await request('GET', '/api/categories');
-    if (catRes.status === 200 && Array.isArray(catRes.body?.data) && catRes.body.data.length > 0) {
-      categorySlug = catRes.body.data[0].slug;
-    } else if (catRes.status === 200 && Array.isArray(catRes.body) && catRes.body.length > 0) {
-      categorySlug = catRes.body[0].slug;
+    const cats = catRes.body?.data || catRes.body || [];
+    if (Array.isArray(cats) && cats.length > 0) {
+      categorySlug = cats[0].slug || cats[0].name || categorySlug;
     }
   } catch {}
 
