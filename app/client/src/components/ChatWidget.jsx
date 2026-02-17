@@ -27,11 +27,47 @@ export default function ChatWidget() {
   const [hasGreeted, setHasGreeted] = useState(() => !!localStorage.getItem('jean_session'));
   const [showHint, setShowHint] = useState(false);
 
+  const [contextHint, setContextHint] = useState('');
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
+
+  // Proactive page-context triggers
+  const PAGE_TRIGGERS = [
+    { match: /^\/jobs\/\d+/, delay: 10000, hint: 'Need help applying? I can walk you through it! 😊' },
+    { match: /^\/pricing$/, delay: 5000, hint: 'Questions about our plans? I can help you pick the right one!' },
+    { match: /^\/register$/, delay: 8000, hint: 'Having trouble signing up? I\'m here to help!' },
+    { match: /^\/dashboard\/employer\/post-job$/, delay: 5000, hint: 'Need tips for writing a great job listing? Just ask!' },
+    { match: /^\/companies$/, delay: 8000, hint: 'Looking for a specific employer? I can help you search!' },
+  ];
+
+  // Watch page changes and show contextual hints
+  useEffect(() => {
+    const path = location.pathname;
+    const trigger = PAGE_TRIGGERS.find(t => t.match.test(path));
+    if (!trigger) return;
+
+    const storageKey = `jean_hint_${path}`;
+    if (sessionStorage.getItem(storageKey)) return; // already shown this session
+
+    const timer = setTimeout(() => {
+      // Don't show if chat is already open
+      if (isOpen) return;
+      sessionStorage.setItem(storageKey, '1');
+      setContextHint(trigger.hint);
+      setShowHint(true);
+      // Auto-dismiss after 8s
+      setTimeout(() => {
+        setContextHint('');
+        setShowHint(false);
+      }, 8000);
+    }, trigger.delay);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname, isOpen]);
 
   // Load settings on mount
   useEffect(() => {
@@ -295,11 +331,11 @@ export default function ChatWidget() {
       {/* Chat bubble */}
       {!isOpen && (
         <div className="fixed bottom-4 right-4 z-50 flex items-end gap-3">
-          {/* Proactive hint (shows briefly for new visitors) */}
-          {showHint && !hasGreeted && settings?.proactive && (
+          {/* Proactive hint (contextual page triggers or generic for new visitors) */}
+          {showHint && (contextHint || (!hasGreeted && settings?.proactive)) && (
             <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm px-4 py-2.5 rounded-2xl rounded-br-md shadow-lg max-w-[220px] animate-fade-in cursor-pointer border dark:border-gray-700"
-                 onClick={() => { setShowHint(false); setIsOpen(true); }}>
-              Hi! 👋 I'm Jean. Need help finding a job or posting one?
+                 onClick={() => { setShowHint(false); setContextHint(''); setIsOpen(true); }}>
+              {contextHint || 'Hi! 👋 I\'m Jean. Need help finding a job or posting one?'}
             </div>
           )}
           <button
