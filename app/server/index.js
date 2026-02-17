@@ -314,6 +314,10 @@ app.use('/api/insights', require('./routes/insights'));
 app.use('/api/company-follows', require('./routes/company-follows'));
 app.use('/api/training', require('./routes/training'));
 
+// Agency & Claims routes
+app.use('/api/agency', require('./routes/agency'));
+app.use('/api/claims', require('./routes/claims'));
+
 // New routes for analytics, stats, and resume features
 app.use('/api/employer/analytics', require('./routes/employer-analytics'));
 app.use('/api/employer/pipeline-analytics', require('./routes/pipeline-analytics'));

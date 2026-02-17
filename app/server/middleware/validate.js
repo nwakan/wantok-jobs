@@ -33,6 +33,7 @@ const registerSchema = z.object({
   phone: z.string().max(20).optional(),
   captcha_id: z.string().optional(),
   captcha_answer: z.string().optional(),
+  account_type: z.enum(['employer', 'agency']).optional().default('employer'),
 });
 
 const loginSchema = z.object({
