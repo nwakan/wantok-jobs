@@ -8,7 +8,7 @@ export default function JobCard({ job, compact = false }) {
   const isHot = isHotJob(job.created_at);
   
   // Task 3: Check if job is featured
-  const isFeatured = job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
+  const isFeatured = !!job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
   
   return (
     <Link

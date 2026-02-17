@@ -47,7 +47,7 @@ export default function SwipeableJobCard({
   const excerpt = job.excerpt || truncate(stripHTML(job.description), compact ? 80 : 150);
   const isNew = isNewJob(job.created_at);
   const isHot = isHotJob(job.created_at);
-  const isFeatured = job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
+  const isFeatured = !!job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
   
   // Generate placeholder logo if needed
   const logoPlaceholder = needsLogoPlaceholder(job) 

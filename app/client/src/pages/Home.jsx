@@ -435,7 +435,7 @@ export default function Home() {
                     <Building2 className="w-8 h-8 text-primary-400" />
                   </div>
                   <p className="text-sm font-medium text-gray-700 text-center line-clamp-2">{employer.company_name}</p>
-                  {employer.job_count > 0 && (
+                  {employer.job_count > 0 ? (
                     <p className="text-xs text-primary-600 mt-1">{employer.job_count} active jobs</p>
                   )}
                 </Link>

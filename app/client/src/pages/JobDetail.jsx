@@ -582,13 +582,13 @@ export default function JobDetail() {
                       <h1 className="text-3xl font-bold text-gray-900 mb-2">
                         {job.title}
                         {/* Task 3: Featured badge */}
-                        {job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date()) && (
+                        {(!!job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date())) ? (
                           <span className="ml-3 inline-flex items-center px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-semibold rounded-full shadow-sm">
                             ⭐ Featured
                           </span>
-                        )}
+                        ) : null}
                       </h1>
-                      {job.company_name && job.company_name !== 'WantokJobs Imports' && (
+                      {job.company_name && job.company_name !== 'Various Employers' && (
                         <p className="text-lg text-gray-700 font-medium flex items-center gap-2">
                           {job.company_name}
                           {/* Task 5: Verification badge */}
@@ -606,30 +606,30 @@ export default function JobDetail() {
               </div>
 
               {/* Social Proof Bar */}
-              {(job.applications_count > 0 || job.views_count > 0) && (
+              {(job.applications_count > 0 || job.views_count > 0) ? (
                 <div className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-gray-100">
-                  {job.applications_count > 0 && (
+                  {job.applications_count > 0 ? (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Users className="w-4 h-4 text-primary-600" />
                       <span className="text-sm font-medium">
                         {job.applications_count} {job.applications_count === 1 ? 'applicant' : 'applicants'}
                       </span>
                     </div>
-                  )}
-                  {job.views_count > 0 && (
+                  ) : null}
+                  {job.views_count > 0 ? (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Eye className="w-4 h-4 text-gray-500" />
                       <span className="text-sm">{job.views_count} views</span>
                     </div>
-                  )}
-                  {companyReviews.count > 0 && (
+                  ) : null}
+                  {companyReviews.count > 0 ? (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       <span className="text-sm font-medium">
                         {companyReviews.rating.toFixed(1)} ({companyReviews.count} reviews)
                       </span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -808,7 +808,7 @@ export default function JobDetail() {
             )}
 
             {/* Enhanced Company Info (Glassdoor-style) */}
-            {(companyInfo || job.company_description || job.website) && job.company_name !== 'WantokJobs Imports' && !job.company_description?.includes('System account for imported') && (
+            {(companyInfo || job.company_description || job.website) && job.company_name !== 'Various Employers' && !job.company_description?.includes('System account for imported') && (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <div className="flex items-start justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900">About {job.company_name}</h2>
@@ -834,7 +834,7 @@ export default function JobDetail() {
                         <div className="font-semibold text-gray-900">{companyInfo.industry}</div>
                       </div>
                     )}
-                    {companyReviews.count > 0 && (
+                    {companyReviews.count > 0 ? (
                       <div>
                         <div className="text-xs text-gray-600 mb-1">Rating</div>
                         <div className="font-semibold text-gray-900 flex items-center gap-1">
@@ -842,13 +842,13 @@ export default function JobDetail() {
                           {companyReviews.rating.toFixed(1)}
                         </div>
                       </div>
-                    )}
-                    {companyInfo.total_jobs_posted > 0 && (
+                    ) : null}
+                    {companyInfo.total_jobs_posted > 0 ? (
                       <div>
                         <div className="text-xs text-gray-600 mb-1">Jobs Posted</div>
                         <div className="font-semibold text-gray-900">{companyInfo.total_jobs_posted}</div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
 
@@ -879,7 +879,7 @@ export default function JobDetail() {
                       See {jobsByCompany.length}+ more jobs
                     </Link>
                   )}
-                  {companyReviews.count > 0 && (
+                  {companyReviews.count > 0 ? (
                     <Link
                       to={`/company/${job.employer_id}/reviews`}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors font-medium"
@@ -887,7 +887,7 @@ export default function JobDetail() {
                       <Star className="w-4 h-4" />
                       Read {companyReviews.count} reviews
                     </Link>
-                  )}
+                  ) : null}
                 </div>
               </div>
             )}
@@ -1011,19 +1011,25 @@ export default function JobDetail() {
             </div>
 
             {/* Company Snapshot */}
-            {(job.location || (job.company_name && job.company_name !== 'WantokJobs Imports')) && (
+            {(job.location || job.company_name) ? (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <h3 className="font-bold text-gray-900 mb-4">Company Snapshot</h3>
                 <div className="space-y-3 text-sm">
-                  {job.company_name && job.company_name !== 'WantokJobs Imports' && (
+                  {job.company_name ? (
                     <div className="flex items-start gap-2">
                       <span className="text-gray-500 min-w-[24px]">🏢</span>
                       <div>
                         <div className="text-gray-600">Company</div>
-                        <div className="font-medium text-gray-900">{job.company_name}</div>
+                        {job.company_name !== 'Various Employers' && job.employer_id ? (
+                          <Link to={`/companies/${job.employer_id}`} className="font-medium text-primary-600 hover:text-primary-700 hover:underline">
+                            {job.company_name}
+                          </Link>
+                        ) : (
+                          <div className="font-medium text-gray-900">{job.source ? 'Imported Job' : job.company_name}</div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                   {job.location && (
                     <div className="flex items-start gap-2">
                       <span className="text-gray-500 min-w-[24px]">📍</span>
