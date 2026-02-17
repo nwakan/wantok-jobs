@@ -771,4 +771,62 @@ router.get('/export/jobs', (req, res) => {
   }
 });
 
+// GET /api/admin/reviews — List reviews with optional status filter
+router.get('/reviews', (req, res) => {
+  try {
+    const { status, limit = 50, offset = 0 } = req.query;
+    let query = `
+      SELECT r.*, u.name as reviewer_name, c.name as company_name
+      FROM company_reviews r
+      LEFT JOIN users u ON r.reviewer_id = u.id
+      LEFT JOIN users c ON r.company_id = c.id
+    `;
+    const params = [];
+    if (status === 'pending') {
+      query += ' WHERE r.approved = 0';
+    } else if (status === 'approved') {
+      query += ' WHERE r.approved = 1';
+    } else if (status === 'rejected') {
+      query += ' WHERE r.approved = -1';
+    }
+    query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    const reviews = db.prepare(query).all(...params);
+    const counts = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN approved = 0 THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN approved = 1 THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN approved = -1 THEN 1 ELSE 0 END) as rejected
+      FROM company_reviews
+    `).get();
+
+    res.json({ reviews, counts });
+  } catch (error) {
+    logger.error('Admin get reviews error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+// PATCH /api/admin/reviews/:id — Approve or reject a review
+router.patch('/reviews/:id', (req, res) => {
+  try {
+    const { action } = req.body; // 'approve' or 'reject'
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: 'action must be "approve" or "reject"' });
+    }
+    const review = db.prepare('SELECT * FROM company_reviews WHERE id = ?').get(req.params.id);
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    const approved = action === 'approve' ? 1 : -1;
+    db.prepare('UPDATE company_reviews SET approved = ? WHERE id = ?').run(approved, req.params.id);
+    res.json({ message: `Review ${action}d successfully` });
+  } catch (error) {
+    logger.error('Admin update review error', { error: error.message });
+    res.status(500).json({ error: 'Failed to update review' });
+  }
+});
+
 module.exports = router;

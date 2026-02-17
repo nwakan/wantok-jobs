@@ -133,18 +133,57 @@ export default function Privacy() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Cookies and Tracking</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Cookie Policy</h2>
               <p className="text-gray-600 mb-3">
-                We use cookies and similar technologies to:
+                We use cookies and similar technologies to operate and improve our services. When you first visit WantokJobs, you will be shown a cookie consent banner where you can manage your preferences.
+              </p>
+
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">6.1 Types of Cookies We Use</h3>
+              <ul className="list-disc pl-6 text-gray-600 space-y-2 mb-4">
+                <li><strong>Essential Cookies:</strong> Required for basic site functionality such as authentication, security, and session management. These cannot be disabled.</li>
+                <li><strong>Analytics Cookies:</strong> Help us understand how visitors interact with our site (pages visited, time spent, navigation patterns). Only loaded with your consent.</li>
+                <li><strong>Marketing Cookies:</strong> Used to deliver personalized job recommendations and measure campaign effectiveness. Only loaded with your consent.</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">6.2 Managing Your Cookie Preferences</h3>
+              <p className="text-gray-600 mb-3">
+                You can change your cookie preferences at any time by clearing your browser's local storage or cookies for wantokjobs.com, which will re-display the consent banner. You can also control cookies through your browser settings, but disabling essential cookies may limit your ability to use certain features.
+              </p>
+              <p className="text-gray-600">
+                Your cookie consent preferences are stored locally on your device and expire after 6 months, at which point you will be asked again.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">6A. Data Retention Policy</h2>
+              <p className="text-gray-600 mb-3">
+                We retain your personal information for as long as necessary to provide our services and fulfill the purposes described in this policy. Specifically:
               </p>
               <ul className="list-disc pl-6 text-gray-600 space-y-2 mb-4">
-                <li>Remember your preferences and settings</li>
-                <li>Analyze site traffic and usage patterns</li>
-                <li>Provide personalized content and job recommendations</li>
-                <li>Measure the effectiveness of our marketing campaigns</li>
+                <li><strong>Active accounts:</strong> Data is retained for the lifetime of your account.</li>
+                <li><strong>Deleted accounts:</strong> Personal data is anonymized within 30 days of account deletion. Anonymized records may be retained for analytics purposes.</li>
+                <li><strong>Job applications:</strong> Application records are retained for 24 months after the job posting closes, then automatically archived.</li>
+                <li><strong>Messages:</strong> Conversation data is retained for 12 months after the last activity.</li>
+                <li><strong>Log data:</strong> Server logs and analytics data are retained for up to 12 months.</li>
+                <li><strong>Cookie consent records:</strong> Stored on your device for 6 months.</li>
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">6B. Your Data Rights</h2>
+              <p className="text-gray-600 mb-3">
+                You have the following rights regarding your personal data. To exercise any of these rights, please contact us at{' '}
+                <a href="mailto:privacy@wantokjobs.com" className="text-primary-600 hover:underline">privacy@wantokjobs.com</a> or use the tools available in your account dashboard.
+              </p>
+              <ul className="list-disc pl-6 text-gray-600 space-y-2 mb-4">
+                <li><strong>Right to Access:</strong> You can request a complete copy of all personal data we hold about you. Use the "Export My Data" option in your account settings or contact us.</li>
+                <li><strong>Right to Deletion:</strong> You can request deletion of your account and all associated personal data. This can be done from your account settings or by contacting us. Deletion is processed as a soft delete (data is anonymized).</li>
+                <li><strong>Right to Data Export (Portability):</strong> You can download your data in a machine-readable JSON format including your profile, applications, saved jobs, and messages.</li>
+                <li><strong>Right to Correction:</strong> You can update or correct any inaccurate information directly in your profile or by contacting us.</li>
+                <li><strong>Right to Object:</strong> You can object to processing of your data for marketing purposes at any time through cookie preferences or notification settings.</li>
               </ul>
               <p className="text-gray-600">
-                You can control cookies through your browser settings, but disabling cookies may limit your ability to use certain features.
+                We will respond to all data rights requests within 30 days. For complex requests, we may extend this by an additional 30 days with prior notice.
               </p>
             </section>
 

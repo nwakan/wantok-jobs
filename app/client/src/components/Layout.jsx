@@ -11,6 +11,7 @@ import DarkModeToggle from './DarkModeToggle';
 import BackToTop from './BackToTop';
 import { CompareFloatingBar } from './JobCard';
 import ChatWidget from './ChatWidget';
+import CookieConsent from './CookieConsent';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function Layout() {
@@ -291,6 +292,9 @@ export default function Layout() {
 
       {/* Jean AI Chat Widget */}
       <ChatWidget />
+
+      {/* Cookie Consent Banner */}
+      <CookieConsent />
     </div>
   );
 }

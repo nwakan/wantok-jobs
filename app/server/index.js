@@ -382,6 +382,7 @@ app.use('/api/testimonials', require('./routes/testimonials'));
 app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 app.use('/api/export', require('./routes/export'));
+app.use('/api/account', require('./routes/account'));
 
 // Sitemap routes (SEO)
 app.use('/', require('./routes/sitemap'));
