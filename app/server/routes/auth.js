@@ -257,6 +257,11 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Security: Block spam/disabled accounts
+    if (user.account_status === 'spam') {
+      return res.status(403).json({ error: 'This account has been disabled. Contact support if you believe this is an error.' });
+    }
+
     // Security: Check if account is locked
     if (user.lockout_until) {
       const lockoutTime = new Date(user.lockout_until);

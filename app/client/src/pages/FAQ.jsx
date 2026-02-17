@@ -43,7 +43,7 @@ const faqData = [
       },
       {
         q: 'What are the pricing plans?',
-        a: 'We offer four plans: Free (1 job), Starter (K2,500/mo for 5 jobs), Professional (K7,500/mo for 20 jobs with premium features), and Enterprise (K20,000/mo for unlimited jobs). Visit our Pricing page for full details.',
+        a: 'We use a credit-based system — no monthly subscriptions. Buy credits when you need them: Free (1 active job), Starter Pack (K500 for 5 jobs), Pro Pack (K1,800 for 20 jobs), and Enterprise Pack (K7,500 for 100 jobs). Visit our Pricing page for full details.',
       },
       {
         q: 'How long does my job posting stay active?',

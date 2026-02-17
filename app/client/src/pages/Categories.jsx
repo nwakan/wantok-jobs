@@ -43,8 +43,8 @@ export default function Categories() {
   const [stats, setStats] = useState({
     totalCategories: 0,
     totalJobs: 0,
-    totalEmployers: 330,
-    totalOpportunities: 'K1.1M+'
+    totalEmployers: 0,
+    totalJobseekers: 0
   });
 
   useEffect(() => {
@@ -68,13 +68,16 @@ export default function Categories() {
       setFeaturedCategories(featuredData.categories || []);
       setTrendingCategories(trendingData.categories || []);
 
-      // Calculate stats
+      // Calculate stats from categories + live API
       const totalJobs = allData.categories?.reduce((sum, cat) => sum + (cat.active_jobs || 0), 0) || 0;
+      const statsRes = await fetch('/api/stats');
+      const statsData = await statsRes.json();
+      const liveStats = statsData.data || statsData || {};
       setStats({
         totalCategories: allData.categories?.length || 0,
-        totalJobs,
-        totalEmployers: 330,
-        totalOpportunities: 'K1.1M+'
+        totalJobs: liveStats.activeJobs || totalJobs,
+        totalEmployers: liveStats.totalEmployers || 0,
+        totalJobseekers: liveStats.totalJobseekers || 0
       });
     } catch (error) {
       console.error('Error loading categories:', error);
@@ -164,12 +167,12 @@ export default function Categories() {
                 <div className="text-sm text-gray-600">Active Jobs</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-primary-600">{stats.totalEmployers}+</div>
+                <div className="text-3xl font-bold text-primary-600">{stats.totalEmployers.toLocaleString()}+</div>
                 <div className="text-sm text-gray-600">Employers</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-primary-600">{stats.totalOpportunities}</div>
-                <div className="text-sm text-gray-600">in Opportunities</div>
+                <div className="text-3xl font-bold text-primary-600">{stats.totalJobseekers.toLocaleString()}+</div>
+                <div className="text-sm text-gray-600">Job Seekers</div>
               </div>
             </div>
           </div>

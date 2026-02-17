@@ -206,12 +206,12 @@ app.get('/api/stats', (req, res) => {
   try {
     const db = require('./database');
     const stats = {
-      totalJobseekers: db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'jobseeker'").get().count,
-      totalEmployers: db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'employer'").get().count,
+      totalJobseekers: db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'jobseeker' AND COALESCE(account_status, 'active') != 'spam'").get().count,
+      totalEmployers: db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'employer' AND COALESCE(account_status, 'active') != 'spam'").get().count,
       totalJobs: db.prepare('SELECT COUNT(*) as count FROM jobs').get().count,
       activeJobs: db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'active'").get().count,
     };
-    res.json({ data: stats });
+    res.json(stats);
   } catch (error) {
     logger.error('Stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch stats' });
@@ -269,6 +269,9 @@ app.use('/api/jobseeker/resume', require('./routes/resume'));
 // New metadata and stats routes
 app.use('/api', require('./routes/metadata')); // Provides /api/locations and /api/industries
 app.use('/api/stats', require('./routes/stats')); // Provides /api/stats/dashboard
+
+// GitHub webhook (no auth — uses signature verification)
+app.use('/api/webhook', require('./routes/webhook'));
 
 // Contact with rate limiting
 app.use('/api/contact', contactLimiter, require('./routes/contact'));

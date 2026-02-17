@@ -9,6 +9,7 @@ export default function Companies() {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
     industry: '',
@@ -17,6 +18,7 @@ export default function Companies() {
 
   useEffect(() => {
     fetchCompanies();
+    fetch('/api/stats').then(r => r.json()).then(d => setStats(d.data || d)).catch(() => {});
   }, []);
 
   const fetchCompanies = async () => {
@@ -60,7 +62,7 @@ export default function Companies() {
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Company Directory</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Discover 330+ verified employers hiring across Papua New Guinea and the Pacific region.
+              Discover {stats ? `${stats.totalEmployers.toLocaleString()}+` : ''} verified employers hiring across Papua New Guinea and the Pacific region.
             </p>
           </div>
 
@@ -189,7 +191,7 @@ export default function Companies() {
           <div className="mt-16 bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg p-8 text-center text-white">
             <h2 className="text-3xl font-bold mb-3">Is Your Company Listed?</h2>
             <p className="text-primary-100 mb-6 max-w-2xl mx-auto">
-              Join 330+ employers finding great talent on WantokJobs. Post jobs, build your employer brand, and connect with qualified candidates.
+              Join {stats ? `${stats.totalEmployers.toLocaleString()}+` : ''} employers finding great talent on WantokJobs. Post jobs, build your employer brand, and connect with qualified candidates.
             </p>
             <button
               onClick={() => navigate('/register?type=employer')}

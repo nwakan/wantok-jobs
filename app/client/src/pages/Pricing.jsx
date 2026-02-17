@@ -244,6 +244,20 @@ function FAQItem({ question, answer }) {
 
 export default function Pricing() {
   const [tab, setTab] = useState('employer');
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => setStats(data.data || data))
+      .catch(() => {});
+  }, []);
+
+  const formatCount = (n) => {
+    if (!n) return '0';
+    if (n >= 1000) return Math.floor(n / 1000).toLocaleString() + 'K+';
+    return n.toLocaleString() + '+';
+  };
 
   return (
     <>
@@ -284,16 +298,16 @@ export default function Pricing() {
             <p className="text-gray-500 mb-8">Trusted by PNG's leading employers</p>
             <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
               <div>
-                <div className="text-4xl font-bold text-primary-600 mb-2">330+</div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">{stats ? formatCount(stats.totalEmployers) : '...'}</div>
                 <p className="text-gray-600">Active Employers</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-primary-600 mb-2">30,000+</div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">{stats ? formatCount(stats.totalJobseekers) : '...'}</div>
                 <p className="text-gray-600">Job Seekers</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-primary-600 mb-2">5X</div>
-                <p className="text-gray-600">More Applications</p>
+                <div className="text-4xl font-bold text-primary-600 mb-2">{stats ? formatCount(stats.activeJobs) : '...'}</div>
+                <p className="text-gray-600">Active Jobs</p>
               </div>
             </div>
           </div>
