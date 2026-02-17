@@ -614,11 +614,33 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
       status
     } = req.body;
 
+    // Sanitize all text inputs to prevent XSS
+    const safeTitle = title ? stripHtml(title) : job.title;
+    const safeDescription = description ? stripHtml(description) : job.description;
+    const safeRequirements = requirements !== undefined ? (requirements ? stripHtml(requirements) : null) : job.requirements;
+    const safeLocation = location !== undefined ? (location ? stripHtml(location) : null) : job.location;
+    const safeCountry = country !== undefined ? (country ? stripHtml(country) : null) : job.country;
+    const safeIndustry = industry !== undefined ? (industry ? stripHtml(industry) : null) : job.industry;
+    const safeSkills = skills !== undefined ? (skills ? stripHtml(skills) : null) : job.skills;
+    const safeApplicationEmail = application_email !== undefined ? (application_email ? sanitizeEmail(application_email) : null) : job.application_email;
+    const safeScreeningQuestions = screening_questions !== undefined ? (screening_questions ? stripHtml(screening_questions) : null) : job.screening_questions;
+
+    // Validate lengths
+    if (title && !isValidLength(safeTitle, 200, 1)) {
+      return res.status(400).json({ error: 'Title must be between 1 and 200 characters' });
+    }
+    if (description && !isValidLength(safeDescription, 10000, 10)) {
+      return res.status(400).json({ error: 'Description must be between 10 and 10000 characters' });
+    }
+
     // Get category_id from slug if provided
     let category_id = job.category_id;
     if (category_slug) {
       const category = db.prepare('SELECT id FROM categories WHERE slug = ?').get(category_slug);
-      category_id = category?.id || job.category_id;
+      if (!category) {
+        return res.status(400).json({ error: 'Invalid category' });
+      }
+      category_id = category.id;
     }
 
     db.prepare(`
@@ -631,17 +653,17 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
         status = ?, updated_at = datetime('now')
       WHERE id = ?
     `).run(
-      title || job.title,
-      description || job.description,
-      requirements !== undefined ? requirements : job.requirements,
-      location !== undefined ? location : job.location,
-      country !== undefined ? country : job.country,
+      safeTitle,
+      safeDescription,
+      safeRequirements,
+      safeLocation,
+      safeCountry,
       job_type || job.job_type,
       experience_level !== undefined ? experience_level : job.experience_level,
-      industry !== undefined ? industry : job.industry,
+      safeIndustry,
       category_slug !== undefined ? category_slug : job.category_slug,
       category_id,
-      skills !== undefined ? skills : job.skills,
+      safeSkills,
       remote_work !== undefined ? (remote_work ? 1 : 0) : job.remote_work,
       salary_min !== undefined ? salary_min : job.salary_min,
       salary_max !== undefined ? salary_max : job.salary_max,
@@ -649,8 +671,8 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
       application_deadline !== undefined ? application_deadline : job.application_deadline,
       application_method !== undefined ? application_method : job.application_method,
       application_url !== undefined ? application_url : job.application_url,
-      application_email !== undefined ? application_email : job.application_email,
-      screening_questions !== undefined ? screening_questions : job.screening_questions,
+      safeApplicationEmail,
+      safeScreeningQuestions,
       status || job.status,
       req.params.id
     );
