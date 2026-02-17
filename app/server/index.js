@@ -40,6 +40,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Request metrics tracking
+const { trackRequests } = require('./routes/metrics');
+app.use(trackRequests);
+
 // Compression (gzip/deflate for all responses)
 try {
   const compression = require('compression');
@@ -374,6 +378,7 @@ app.use('/api/whatsapp', require('./routes/whatsapp-webhook'));
 // Admin routes (protected by auth middleware)
 const { authenticateToken } = require('./middleware/auth');
 app.use('/api/testimonials', require('./routes/testimonials'));
+app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 app.use('/api/export', require('./routes/export'));
 
