@@ -58,3 +58,4 @@ else
   exit 1
 fi
 # Auto-deploy: git push → webhook → systemd deploy
+# Tested 2026-02-17T02:39:21Z
