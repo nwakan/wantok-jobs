@@ -401,8 +401,15 @@ if (process.env.NODE_ENV === 'production') {
   const clientDist = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
     ? path.join(__dirname, 'public')
     : path.join(__dirname, '..', 'client', 'dist');
-  app.use(express.static(clientDist));
-  app.get('*', (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+  // Hashed assets get long-lived cache (already handled by the global middleware above)
+  app.use(express.static(clientDist, { index: false }));
+  // index.html must never be cached — prevents stale JS after deploys
+  app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
 }
 
 // Token refresh endpoint

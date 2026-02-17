@@ -12,6 +12,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'Job Alerts', path: '/dashboard/jobseeker/job-alerts', icon: '🔔' },
     { name: 'Followed Companies', path: '/dashboard/jobseeker/followed-companies', icon: '🏢' },
     { name: 'Recommendations', path: '/dashboard/jobseeker/recommendations', icon: '✨' },
+    { name: 'Wallet', path: '/dashboard/jobseeker/wallet', icon: '💰' },
     { name: 'Messages', path: '/dashboard/jobseeker/messages', icon: '💬' },
     { name: 'My Profile', path: '/dashboard/jobseeker/profile', icon: '👤' },
     { name: 'Settings', path: '/dashboard/jobseeker/settings', icon: '⚙️' },
@@ -28,6 +29,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'Saved Candidates', path: '/dashboard/employer/saved-candidates', icon: '⭐' },
     { name: 'Analytics', path: '/dashboard/employer/analytics', icon: '📈' },
     { name: 'Orders & Billing', path: '/dashboard/employer/orders-billing', icon: '💳' },
+    { name: 'Wallet', path: '/dashboard/employer/wallet', icon: '💰' },
     { name: 'Company Profile', path: '/dashboard/employer/profile', icon: '🏢' },
     { name: 'Messages', path: '/dashboard/employer/messages', icon: '💬' },
     { name: 'Change Password', path: '/dashboard/employer/change-password', icon: '🔒' },
@@ -48,6 +50,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'AI Agents', path: '/dashboard/admin/ai-agents', icon: '🤖' },
     { name: 'Jean AI', path: '/dashboard/admin/jean', icon: '🧠' },
     { name: 'Security', path: '/dashboard/admin/security', icon: '🔐' },
+    { name: 'Wallet Admin', path: '/dashboard/admin/wallet', icon: '💰' },
     { name: 'Settings', path: '/dashboard/admin/settings', icon: '⚙️' },
     { name: 'Change Password', path: '/dashboard/admin/change-password', icon: '🔒' },
   ];

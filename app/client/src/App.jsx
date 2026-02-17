@@ -66,6 +66,7 @@ const JobseekerMessages = lazy(() => import('./pages/dashboard/jobseeker/Message
 const Recommendations = lazy(() => import('./pages/dashboard/jobseeker/Recommendations'));
 const JobseekerSettings = lazy(() => import('./pages/dashboard/jobseeker/Settings'));
 const FollowedCompanies = lazy(() => import('./pages/dashboard/jobseeker/FollowedCompanies'));
+const JobseekerWallet = lazy(() => import('./pages/dashboard/jobseeker/Wallet'));
 
 // === Employer dashboard ===
 const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'));
@@ -81,6 +82,7 @@ const EmployerAnalytics = lazy(() => import('./pages/dashboard/employer/Analytic
 const EmployerOrdersBilling = lazy(() => import('./pages/dashboard/employer/OrdersBilling'));
 const EmployerMessages = lazy(() => import('./pages/dashboard/employer/Messages'));
 const AgencyClients = lazy(() => import('./pages/dashboard/employer/AgencyClients'));
+const EmployerWallet = lazy(() => import('./pages/dashboard/employer/Wallet'));
 
 // === Admin dashboard ===
 const AdminOverview = lazy(() => import('./pages/dashboard/admin/Overview'));
@@ -99,6 +101,7 @@ const AdminContactMessages = lazy(() => import('./pages/dashboard/admin/ContactM
 const AdminAIAgents = lazy(() => import('./pages/dashboard/admin/AIAgents'));
 const AdminFraudSecurity = lazy(() => import('./pages/dashboard/admin/FraudSecurity'));
 const AdminJeanSettings = lazy(() => import('./pages/dashboard/admin/JeanSettings'));
+const AdminWallet = lazy(() => import('./pages/dashboard/admin/WalletAdmin'));
 
 function App() {
   return (
@@ -149,6 +152,7 @@ function App() {
                 <Route path="profile" element={<Lazy component={JobseekerProfile} />} />
                 <Route path="settings" element={<Lazy component={JobseekerSettings} />} />
                 <Route path="followed-companies" element={<Lazy component={FollowedCompanies} />} />
+                <Route path="wallet" element={<Lazy component={JobseekerWallet} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 
@@ -169,6 +173,7 @@ function App() {
                 <Route path="orders-billing" element={<Lazy component={EmployerOrdersBilling} />} />
                 <Route path="messages" element={<Lazy component={EmployerMessages} />} />
                 <Route path="clients" element={<Lazy component={AgencyClients} />} />
+                <Route path="wallet" element={<Lazy component={EmployerWallet} />} />
                 <Route path="profile" element={<Lazy component={CompanyProfile} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
@@ -190,6 +195,7 @@ function App() {
                 <Route path="ai-agents" element={<Lazy component={AdminAIAgents} />} />
                 <Route path="jean" element={<Lazy component={AdminJeanSettings} />} />
                 <Route path="security" element={<Lazy component={AdminFraudSecurity} />} />
+                <Route path="wallet" element={<Lazy component={AdminWallet} />} />
                 <Route path="settings" element={<Lazy component={AdminSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
