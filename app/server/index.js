@@ -335,6 +335,9 @@ app.use('/api/contact', contactLimiter, require('./routes/contact'));
 // Jean AI Chat routes (with stricter rate limiting)
 app.use('/api/chat', chatLimiter, require('./routes/chat'));
 
+// WhatsApp webhook for Jean AI
+app.use('/api/whatsapp', require('./routes/whatsapp-webhook'));
+
 // Admin routes (protected by auth middleware)
 const { authenticateToken } = require('./middleware/auth');
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
