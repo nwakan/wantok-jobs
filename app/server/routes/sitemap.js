@@ -9,6 +9,9 @@ const db = require('../database.js');
 
 const router = Router();
 
+// Base URL from environment or default
+const BASE_URL = (process.env.SITE_URL || 'https://tolarai.com').replace(/\/+$/, '');
+
 // Cache configuration
 const CACHE_DURATION = 3600000; // 1 hour
 let sitemapCache = {};
@@ -67,19 +70,19 @@ router.get('/sitemap.xml', (req, res) => {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://wantokjobs.com/sitemap-static.xml</loc>
+    <loc>${BASE_URL}/sitemap-static.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://wantokjobs.com/sitemap-jobs.xml</loc>
+    <loc>${BASE_URL}/sitemap-jobs.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://wantokjobs.com/sitemap-companies.xml</loc>
+    <loc>${BASE_URL}/sitemap-companies.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://wantokjobs.com/sitemap-categories.xml</loc>
+    <loc>${BASE_URL}/sitemap-categories.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
 </sitemapindex>`;
@@ -100,7 +103,7 @@ router.get('/sitemap-static.xml', (req, res) => {
   try {
     const sitemap = getCachedOrGenerate('static', () => {
       const now = new Date().toISOString().split('T')[0];
-      const baseUrl = 'https://wantokjobs.com';
+      const baseUrl = BASE_URL;
       
       const pages = [
         { path: '/', priority: '1.0', changefreq: 'daily' },
@@ -151,7 +154,7 @@ router.get('/sitemap-jobs.xml', (req, res) => {
         LIMIT 5000
       `).all();
 
-      const baseUrl = 'https://wantokjobs.com';
+      const baseUrl = BASE_URL;
       let xml = xmlHeader;
 
       jobs.forEach(job => {
@@ -196,7 +199,7 @@ router.get('/sitemap-companies.xml', (req, res) => {
         LIMIT 2000
       `).all();
 
-      const baseUrl = 'https://wantokjobs.com';
+      const baseUrl = BASE_URL;
       let xml = xmlHeader;
 
       companies.forEach(company => {
@@ -239,7 +242,7 @@ router.get('/sitemap-categories.xml', (req, res) => {
         ORDER BY job_count DESC
       `).all();
 
-      const baseUrl = 'https://wantokjobs.com';
+      const baseUrl = BASE_URL;
       let xml = xmlHeader;
 
       categories.forEach(cat => {

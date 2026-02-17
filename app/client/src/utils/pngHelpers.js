@@ -211,9 +211,13 @@ export function formatJobSource(source) {
   const sourceMap = {
     'headhunter:pngworkforce': { label: 'Imported from PNGWorkforce', short: 'via PNGWorkforce' },
     'headhunter:pngjobseek': { label: 'Imported from PNGJobSeek', short: 'via PNGJobSeek' },
+    'deep-scrape:pngworkforce': { label: 'Imported from PNGWorkforce', short: 'via PNGWorkforce' },
     'pngworkforce': { label: 'Imported from PNGWorkforce', short: 'via PNGWorkforce' },
     'pngjobseek': { label: 'Imported from PNGJobSeek', short: 'via PNGJobSeek' },
     'headhunter': { label: 'Imported listing', short: 'Imported' },
+    'reliefweb': { label: 'Imported from ReliefWeb', short: 'via ReliefWeb' },
+    'seed': { label: 'Sample listing', short: 'Sample' },
+    'seeded': { label: 'Sample listing', short: 'Sample' },
   };
 
   const lower = source.toLowerCase().trim();

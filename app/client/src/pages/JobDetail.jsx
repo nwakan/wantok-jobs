@@ -4,6 +4,7 @@ import { jobs, applications, savedJobs } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
+import { formatJobSource } from '../utils/pngHelpers';
 import JobCard from '../components/JobCard';
 import PageHead from '../components/PageHead';
 import { JobDetailSkeleton } from '../components/SkeletonLoader';
@@ -643,6 +644,16 @@ export default function JobDetail() {
                           )}
                         </p>
                       )}
+                      {(() => {
+                        const src = formatJobSource(job.source);
+                        return src ? (
+                          <p className="text-xs text-gray-500 mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                              {src.label}
+                            </span>
+                          </p>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </div>

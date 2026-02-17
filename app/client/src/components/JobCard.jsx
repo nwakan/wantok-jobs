@@ -61,6 +61,12 @@ export default function JobCard({ job, compact = false }) {
               {!!job.employer_verified && (
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
               )}
+              {(() => {
+                const src = formatJobSource(job.source);
+                return src && (job.company_name === 'Various Employers' || job.company_name === 'WantokJobs Imports' || !job.company_name) ? null : src ? (
+                  <span className="text-xs text-gray-400 ml-1">{src.short}</span>
+                ) : null;
+              })()}
             </p>
           </div>
           
