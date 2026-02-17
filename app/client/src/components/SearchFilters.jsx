@@ -79,10 +79,10 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
   };
 
   const FilterSection = ({ title, section, children }) => (
-    <div className="border-b border-gray-100 last:border-0">
+    <div className="border-b border-gray-100 dark:border-gray-700 last:border-0">
       <button
         onClick={() => toggleSection(section)}
-        className="w-full flex items-center justify-between py-3 text-sm font-semibold text-gray-900 hover:text-primary-600 transition-colors"
+        className="w-full flex items-center justify-between py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600 transition-colors"
       >
         <span>{title}</span>
         {expandedSections[section] ? (
@@ -98,10 +98,10 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
   );
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-      <div className="p-6 border-b border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             Filters
             {activeFilterCount > 0 && (
               <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full font-semibold">
@@ -126,7 +126,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           <select
             value={filters.category || ''}
             onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Categories</option>
             {categories.map(cat => (
@@ -140,7 +140,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           <select
             value={filters.province || ''}
             onChange={(e) => setFilters({ ...filters, province: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">{t('search.allProvinces')}</option>
             {PNG_PROVINCES.map(province => (
@@ -156,7 +156,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           <select
             value={filters.location || ''}
             onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
           >
             <option value="">All Cities</option>
             {pngLocations.map(loc => (
@@ -164,14 +164,14 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
             ))}
           </select>
           
-          <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 transition-colors">
+          <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <input
               type="checkbox"
               checked={filters.remote === 'true'}
               onChange={(e) => setFilters({ ...filters, remote: e.target.checked ? 'true' : '' })}
               className="text-primary-600 focus:ring-primary-500 rounded"
             />
-            <span className="text-sm text-gray-700 font-medium">🌏 Remote only</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">🌏 Remote only</span>
           </label>
         </FilterSection>
 
@@ -179,14 +179,14 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
         <FilterSection title="💼 Job Type" section="jobType">
           <div className="space-y-2">
             {jobTypes.map(type => (
-              <label key={type.value} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <label key={type.value} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <input
                   type="checkbox"
                   checked={isJobTypeSelected(type.value)}
                   onChange={() => toggleJobType(type.value)}
                   className="text-primary-600 focus:ring-primary-500 rounded"
                 />
-                <span className="text-sm text-gray-700">{type.label}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{type.label}</span>
               </label>
             ))}
           </div>
@@ -197,7 +197,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           <select
             value={filters.experience || ''}
             onChange={(e) => setFilters({ ...filters, experience: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Levels</option>
             {experienceLevels.map(level => (
@@ -216,7 +216,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
                 value={filters.salary_min || ''}
                 onChange={(e) => setFilters({ ...filters, salary_min: e.target.value })}
                 placeholder="e.g. 30000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
@@ -226,7 +226,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
                 value={filters.salary_max || ''}
                 onChange={(e) => setFilters({ ...filters, salary_max: e.target.value })}
                 placeholder="e.g. 100000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           <select
             value={filters.date_posted || ''}
             onChange={(e) => setFilters({ ...filters, date_posted: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">Any time</option>
             {datePostedOptions.map(option => (
@@ -251,7 +251,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           <select
             value={filters.company_size || ''}
             onChange={(e) => setFilters({ ...filters, company_size: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Sizes</option>
             <option value="startup">Startup (1-10)</option>
@@ -269,7 +269,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
             value={filters.company || ''}
             onChange={(e) => setFilters({ ...filters, company: e.target.value })}
             placeholder="Company name..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           />
         </FilterSection>
       </div>

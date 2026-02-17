@@ -50,7 +50,7 @@ export default function MobileBottomNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 safe-area-bottom">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -65,7 +65,7 @@ export default function MobileBottomNav() {
               className={`flex flex-col items-center justify-center flex-1 h-full min-w-[56px] transition-colors ${
                 active 
                   ? 'text-primary-600' 
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
               } ${item.highlight ? 'relative' : ''}`}
             >
               {item.highlight && (

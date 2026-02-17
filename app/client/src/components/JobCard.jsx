@@ -72,8 +72,8 @@ export default function JobCard({ job, compact = false }) {
     <article className="relative" aria-label={`${job.title} at ${getDisplayCompanyName(job)}`}>
     <Link
       to={`/jobs/${job.id}`}
-      className={`block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border hover:border-primary-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 relative ${
-        isFeatured ? 'border-yellow-300 bg-gradient-to-br from-yellow-50 to-white' : 'border-gray-100'
+      className={`block bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border hover:border-primary-200 dark:hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 relative ${
+        isFeatured ? 'border-yellow-300 dark:border-yellow-600 bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900/20 dark:to-gray-800' : 'border-gray-100 dark:border-gray-700'
       }`}
       aria-label={`View job: ${job.title}`}
     >
@@ -113,10 +113,10 @@ export default function JobCard({ job, compact = false }) {
         <div className="flex-1 min-w-0">
           {/* Title & Company */}
           <div className="mb-2">
-            <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors mb-1 line-clamp-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-1 line-clamp-1">
               {job.title}
             </h3>
-            <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium flex items-center gap-1">
               {getDisplayCompanyName(job)}
               {!!job.employer_verified && (
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" aria-label="Verified employer" role="img" />
@@ -133,17 +133,17 @@ export default function JobCard({ job, compact = false }) {
           {/* Tags */}
           <div className="flex flex-wrap gap-2 mb-3">
             {job.location && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
                 📍 {job.location}
               </span>
             )}
             {job.job_type && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                 {job.job_type}
               </span>
             )}
             {job.salary_min && job.salary_max && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
                 💰 {job.salary_currency || 'PGK'} {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
               </span>
             )}
@@ -161,13 +161,13 @@ export default function JobCard({ job, compact = false }) {
 
           {/* Excerpt */}
           {!compact && excerpt && (
-            <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
               {excerpt}
             </p>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span className="font-medium">
               {job.created_at && timeAgo(job.created_at)}
             </span>

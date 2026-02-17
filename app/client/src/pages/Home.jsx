@@ -623,7 +623,7 @@ export default function Home() {
                 <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <item.icon className="w-8 h-8 text-primary-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{item.title}</h3>
                 <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
               </motion.div>
             ))}

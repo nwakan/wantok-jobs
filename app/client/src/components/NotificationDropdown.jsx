@@ -175,11 +175,11 @@ export default function NotificationDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] flex flex-col">
+        <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
             <div>
-              <h3 className="text-lg font-semibold">Notifications</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Notifications</h3>
               {unreadCount > 0 && (
                 <span className="text-sm text-gray-500">{unreadCount} unread</span>
               )}
@@ -208,7 +208,7 @@ export default function NotificationDropdown() {
                   {notification.isGroup ? (
                     // Grouped notification
                     <div
-                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                      className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
                         !notification.read ? 'bg-blue-50' : ''
                       }`}
                       onClick={() => {
@@ -244,7 +244,7 @@ export default function NotificationDropdown() {
                   ) : (
                     // Individual notification
                     <div
-                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                      className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                         !notification.read ? 'bg-blue-50' : ''
                       }`}
                     >
@@ -299,7 +299,7 @@ export default function NotificationDropdown() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 text-center flex-shrink-0">
+            <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-center flex-shrink-0">
               <button
                 onClick={() => {
                   navigate('/dashboard/notifications');

@@ -65,8 +65,8 @@ export default function DashboardLayout({ role, children }) {
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar */}
         <aside className="w-full md:w-64 flex-shrink-0">
-          <nav className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-lg font-semibold mb-4 capitalize">{role} Dashboard</h2>
+          <nav className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+            <h2 className="text-lg font-semibold mb-4 capitalize text-gray-900 dark:text-gray-100">{role} Dashboard</h2>
             <ul className="space-y-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
@@ -76,8 +76,8 @@ export default function DashboardLayout({ role, children }) {
                       to={item.path}
                       className={`flex items-center px-4 py-2 rounded-md transition-colors ${
                         isActive
-                          ? 'bg-primary-100 text-primary-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
                       <span className="mr-3">{item.icon}</span>

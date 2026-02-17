@@ -147,10 +147,14 @@ export default function Layout() {
 
           {/* Mobile menu - enhanced touch targets (min 44px) */}
           {mobileMenuOpen && (
-            <div className="sm:hidden py-3 border-t border-gray-100">
+            <div className="sm:hidden py-3 border-t border-gray-100 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center gap-3 px-4 py-2 mb-2">
+                <LanguageToggle variant="compact" />
+                <DarkModeToggle />
+              </div>
               <Link 
                 to="/jobs" 
-                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                className="block px-4 py-3 text-base font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 🔍 {t('nav.findJobs')}

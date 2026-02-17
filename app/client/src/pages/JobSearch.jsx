@@ -222,7 +222,7 @@ export default function JobSearch() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <PageHead
         title={filters.keyword ? `${filters.keyword} Jobs in PNG` : 'Search Jobs in Papua New Guinea'}
         description={`Browse ${pagination.total || ''}+ job opportunities in Papua New Guinea. Filter by category, location, salary, and more.`}
@@ -230,12 +230,12 @@ export default function JobSearch() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Your Next Opportunity</h1>
-          <p className="text-gray-600">Discover jobs across Papua New Guinea and the Pacific</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Find Your Next Opportunity</h1>
+          <p className="text-gray-600 dark:text-gray-400">Discover jobs across Papua New Guinea and the Pacific</p>
         </div>
         
         {/* Search Bar with Autocomplete */}
-        <div className="mb-6 bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-700">
           <div className="flex gap-3">
             <div className="flex-1 relative" ref={suggestionsRef}>
               <input
@@ -245,7 +245,7 @@ export default function JobSearch() {
                 onKeyDown={(e) => e.key === 'Enter' && handleFiltersApply()}
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 placeholder="🔍 Search by job title, keyword, or company..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 aria-label="Search by job title, keyword, or company"
                 role="combobox"
                 aria-expanded={showSuggestions && suggestions.length > 0}
@@ -254,12 +254,12 @@ export default function JobSearch() {
               
               {/* Autocomplete Suggestions */}
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-gray-700 border-b border-gray-100 last:border-0"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700 last:border-0"
                     >
                       🔍 {suggestion}
                     </button>
@@ -283,7 +283,7 @@ export default function JobSearch() {
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
               filters.date_posted === '1'
                 ? 'bg-red-100 text-red-700 border-2 border-red-300'
-                : 'bg-white text-gray-700 border border-gray-300 hover:border-red-300 hover:bg-red-50'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
             }`}
           >
             <Flame className="w-4 h-4" />
@@ -295,7 +295,7 @@ export default function JobSearch() {
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
               filters.date_posted === '7'
                 ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-300 hover:bg-blue-50'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
             }`}
           >
             <Sparkles className="w-4 h-4" />
@@ -307,7 +307,7 @@ export default function JobSearch() {
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
               filters.remote === 'true'
                 ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                : 'bg-white text-gray-700 border border-gray-300 hover:border-green-300 hover:bg-green-50'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20'
             }`}
           >
             <Globe className="w-4 h-4" />
@@ -319,7 +319,7 @@ export default function JobSearch() {
         <div className="lg:hidden mb-4">
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors min-h-[48px]"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[48px]"
           >
             <SlidersHorizontal className="w-5 h-5" />
             {showMobileFilters ? 'Hide Filters' : 'Show Filters'}
@@ -347,7 +347,7 @@ export default function JobSearch() {
           {/* Results */}
           <div className="flex-1">
             {/* Results Header */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6 border border-gray-100 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="text-gray-700">
                   {loading ? (
@@ -369,7 +369,7 @@ export default function JobSearch() {
                     id="sort-select"
                     value={sortBy}
                     onChange={(e) => handleSortChange(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="relevance">Relevance</option>
                     <option value="date">Date Posted</option>
@@ -479,11 +479,11 @@ export default function JobSearch() {
             {loading ? (
               <JobSearchSkeleton />
             ) : jobs.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100" role="status" aria-label="No results found">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center border border-gray-100 dark:border-gray-700" role="status" aria-label="No results found">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Briefcase className="w-10 h-10 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs match your search</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No jobs match your search</h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
                   {filters.keyword
                     ? `We couldn't find jobs matching "${filters.keyword}". Try different keywords or broader filters.`
@@ -556,7 +556,7 @@ export default function JobSearch() {
 
                 {/* Pagination (Desktop) */}
                 {pagination.totalPages > 1 && (
-                  <div className="hidden lg:block bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                  <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
                     <div className="flex items-center justify-between gap-4">
                       <div className="text-sm text-gray-600">
                         Page {pagination.page} of {pagination.totalPages}
@@ -620,22 +620,22 @@ export default function JobSearch() {
 
       {/* Save Search Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSaveModal(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Save This Search</h3>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowSaveModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Save This Search</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Search Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Name</label>
                 <input
                   type="text"
                   value={saveSearchName}
                   onChange={e => setSaveSearchName(e.target.value)}
                   placeholder="e.g. Engineering jobs in Port Moresby"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   autoFocus
                 />
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400">
                 <p className="font-medium text-gray-700 mb-1">Search criteria:</p>
                 {filters.keyword && <p>Keywords: {filters.keyword}</p>}
                 {filters.category && <p>Category: {filters.category}</p>}

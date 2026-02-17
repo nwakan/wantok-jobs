@@ -32,14 +32,23 @@
   --border-color: #374151;
 }
 
-.dark body {
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
   @apply bg-gray-900 text-gray-100;
 }
 
-.dark input,
-.dark textarea,
-.dark select {
-  @apply bg-gray-800 border-gray-700 text-gray-100;
+html.dark input,
+html.dark textarea,
+html.dark select {
+  @apply bg-gray-700 border-gray-600 text-gray-100;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  @apply text-gray-400;
 }
 
 .dark .card {
@@ -160,6 +169,20 @@ a:active {
     #e0e0e0 50%,
     #f0f0f0 75%
   );
+}
+
+html.dark .skeleton {
+  background: linear-gradient(
+    90deg,
+    #374151 25%,
+    #4b5563 50%,
+    #374151 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.skeleton {
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }
