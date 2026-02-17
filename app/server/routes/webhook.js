@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 const router = express.Router();
 
 const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || '';
-const APP_DIR = path.resolve(__dirname, '../..');
+const REPO_DIR = '/opt/wantokjobs';
 const DEPLOY_BRANCH = process.env.DEPLOY_BRANCH || 'main';
 
 function verifySignature(rawBody, sig) {
@@ -69,8 +69,8 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   // Respond immediately, deploy in background
   res.json({ status: 'deploying', pusher, commits });
 
-  const deployScript = path.join(APP_DIR, 'deploy-pull.sh');
-  exec(`bash ${deployScript} 2>&1`, { cwd: APP_DIR, timeout: 120000 }, (err, stdout, stderr) => {
+  const deployScript = path.join(REPO_DIR, 'deploy-pull.sh');
+  exec(`bash ${deployScript} 2>&1`, { cwd: REPO_DIR, timeout: 120000 }, (err, stdout, stderr) => {
     if (err) {
       logger.error('Deploy failed', { error: err.message, stdout: stdout.slice(-500), stderr: (stderr || '').slice(-500) });
     } else {

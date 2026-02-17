@@ -3,8 +3,9 @@
 # Pulls latest code, rebuilds client, restarts service
 set -euo pipefail
 
+REPO_DIR="/opt/wantokjobs"
 APP_DIR="/opt/wantokjobs/app"
-cd "$APP_DIR"
+cd "$REPO_DIR"
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Deploy started"
 
@@ -14,20 +15,22 @@ git reset --hard origin/main
 echo "Git pull done: $(git log --oneline -1)"
 
 # Rebuild client if any client/ changes
-if git diff HEAD~1 --name-only | grep -q "^client/"; then
+if git diff HEAD~1 --name-only | grep -q "^app/client/"; then
   echo "Client changes detected, rebuilding..."
-  cd client
+  cd "$APP_DIR/client"
   npx vite build
-  cd ..
+  cd "$REPO_DIR"
   echo "Client build done"
 fi
 
 # Run migrations
 echo "Running migrations..."
+cd "$APP_DIR"
 node server/migrations/runner.js || echo "Migrations: no new migrations"
+cd "$REPO_DIR"
 
 # Fix ownership
-chown -R wantokjobs:wantokjobs "$APP_DIR"
+chown -R wantokjobs:wantokjobs "$REPO_DIR"
 
 # Restart service
 echo "Restarting service..."
