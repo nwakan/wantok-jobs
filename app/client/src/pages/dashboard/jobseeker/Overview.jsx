@@ -29,9 +29,11 @@ export default function JobseekerOverview() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [salaryInsights, setSalaryInsights] = useState(null);
+  const { checkBadges } = useBadgeCheck();
 
   useEffect(() => {
     loadData();
+    checkBadges();
   }, []);
 
   const loadData = async () => {
@@ -448,6 +450,11 @@ export default function JobseekerOverview() {
           </div>
         </div>
       )}
+
+      {/* Achievement Badges */}
+      <div className="mb-6">
+        <BadgeGrid />
+      </div>
 
       {/* Stats Row 1 - Core Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

@@ -29,6 +29,14 @@ export default function Register() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [pendingOauthData, setPendingOauthData] = useState(null);
   
+  // Track referral code from URL
+  const refCode = searchParams.get('ref');
+  useEffect(() => {
+    if (refCode) {
+      referrals.track(refCode).catch(() => {});
+    }
+  }, [refCode]);
+
   // Fetch CAPTCHA
   const fetchCaptcha = async () => {
     setCaptchaLoading(true);
@@ -141,6 +149,7 @@ export default function Register() {
         captcha_id: captcha?.id,
         captcha_answer: formData.captcha_answer,
         ...(formData.role === 'employer' && formData.isAgency ? { account_type: 'agency' } : {}),
+        ...(refCode ? { referral_code: refCode } : {}),
       });
       
       login(response.token, response.user);

@@ -8,6 +8,7 @@ import {
   TrendingUp, Target, Heart, Sparkles, Shield
 } from 'lucide-react';
 import OptimizedImage from '../../../components/OptimizedImage';
+import BadgeGrid from '../../../components/BadgeGrid';
 
 export default function JobseekerProfile() {
   const { showToast } = useToast();
@@ -385,6 +386,11 @@ export default function JobseekerProfile() {
             </div>
           </div>
         )}
+
+        {/* Achievement Badges */}
+        <div className="mt-4">
+          <BadgeGrid compact />
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mt-4 border-t pt-4">
