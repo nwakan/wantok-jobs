@@ -90,7 +90,7 @@ export default function Home() {
         setCategories(catResponse.data.filter(c => c.job_count > 0).slice(0, 10));
       }
       if (employerResponse?.data) {
-        setTopEmployers(employerResponse.data.filter(e => e.company_name && e.company_name !== 'WantokJobs Imports'));
+        setTopEmployers(employerResponse.data.filter(e => e.company_name && e.company_name !== 'Various Employers'));
       }
     } catch (error) {
       console.error('Failed to load data:', error);

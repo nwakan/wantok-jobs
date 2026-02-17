@@ -270,7 +270,7 @@ export default function MyJobs() {
                     to={`/dashboard/employer/applicants/${job.id}`}
                     className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm"
                   >
-                    View Applicants {job.applications_count > 0 && `(${job.applications_count})`}
+                    View Applicants {job.applications_count > 0 ? `(${job.applications_count})` : ''}
                   </Link>
                   <Link
                     to={`/dashboard/employer/edit-job/${job.id}`}

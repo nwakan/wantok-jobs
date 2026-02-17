@@ -164,7 +164,7 @@ export default function CompanyProfile() {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <h1 className="text-3xl font-bold text-gray-900">{company.name || company.company_display_name}</h1>
-                      {company.verified && (
+                      {!!company.verified && (
                         <div className="flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
                           <CheckCircle2 className="w-4 h-4" />
                           Verified

@@ -631,7 +631,7 @@ export default function JobDetail() {
                     </div>
                   ) : null}
                 </div>
-              )}
+              ) : null}
 
               {/* Key Info Bar */}
               <div className="flex flex-wrap gap-3 mb-6 pb-6 border-b border-gray-100">
@@ -812,7 +812,7 @@ export default function JobDetail() {
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <div className="flex items-start justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900">About {job.company_name}</h2>
-                  {companyInfo?.verified && (
+                  {!!companyInfo?.verified && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                       ✓ Verified
                     </span>
@@ -1065,7 +1065,7 @@ export default function JobDetail() {
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Similar Jobs + Jobs from Company */}
             {(similarJobs.length > 0 || jobsByCompany.length > 0) && (

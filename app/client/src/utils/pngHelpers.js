@@ -80,7 +80,7 @@ export function generateCompanyLogoPlaceholder(companyName) {
 export function needsLogoPlaceholder(job) {
   return !job.logo_url && 
          job.company_name && 
-         job.company_name !== 'WantokJobs Imports' &&
+         job.company_name !== 'Various Employers' &&
          !job.company_name.includes('System account');
 }
 
@@ -198,4 +198,48 @@ export function getWhatsAppShareUrl(job, includeApply = false) {
   
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/?text=${encodedMessage}`;
+}
+
+/**
+ * Get a nice display name for a job source
+ * @param {string} source - Raw source field like "headhunter:pngworkforce", "pngjobseek", etc.
+ * @returns {{ label: string, short: string } | null}
+ */
+export function formatJobSource(source) {
+  if (!source) return null;
+  
+  const sourceMap = {
+    'headhunter:pngworkforce': { label: 'Imported from PNGWorkforce', short: 'via PNGWorkforce' },
+    'headhunter:pngjobseek': { label: 'Imported from PNGJobSeek', short: 'via PNGJobSeek' },
+    'pngworkforce': { label: 'Imported from PNGWorkforce', short: 'via PNGWorkforce' },
+    'pngjobseek': { label: 'Imported from PNGJobSeek', short: 'via PNGJobSeek' },
+    'headhunter': { label: 'Imported listing', short: 'Imported' },
+  };
+
+  const lower = source.toLowerCase().trim();
+  if (sourceMap[lower]) return sourceMap[lower];
+  
+  // Handle "headhunter:something" pattern
+  if (lower.startsWith('headhunter:')) {
+    const name = source.split(':')[1].trim();
+    const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
+    return { label: `Imported from ${capitalized}`, short: `via ${capitalized}` };
+  }
+
+  return null;
+}
+
+/**
+ * Get display company name for a job, handling imported jobs
+ * @param {object} job
+ * @returns {string}
+ */
+export function getDisplayCompanyName(job) {
+  if (!job) return '';
+  const name = job.company_name || job.employer_name || '';
+  if (name === 'Various Employers' || name === 'WantokJobs Imports') {
+    const src = formatJobSource(job.source);
+    return src ? src.short : 'Various Employers';
+  }
+  return name;
 }

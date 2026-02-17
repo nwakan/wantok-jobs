@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
+import { getDisplayCompanyName, formatJobSource } from '../utils/pngHelpers';
 
 export default function JobCard({ job, compact = false }) {
   const excerpt = job.excerpt || truncate(stripHTML(job.description), compact ? 80 : 150);
@@ -58,7 +59,7 @@ export default function JobCard({ job, compact = false }) {
             <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
               {job.company_name || job.employer_name}
               {/* Task 5: Verification badge */}
-              {job.employer_verified && (
+              {!!job.employer_verified && (
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
               )}
             </p>

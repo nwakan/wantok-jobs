@@ -239,7 +239,7 @@ export default function ManageJobs() {
                             >
                               {job.title}
                             </Link>
-                            {job.is_flagged && (
+                            {!!job.is_flagged && (
                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
                                 🚩 Flagged
                               </span>
