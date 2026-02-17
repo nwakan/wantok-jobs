@@ -1,0 +1,20 @@
+[Unit]
+Description=Jean WhatsApp Client (WantokJobs)
+After=network.target wantokjobs.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/wantokjobs/app
+ExecStart=/usr/bin/node server/services/whatsapp-client.js
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jean-whatsapp
+
+[Install]
+WantedBy=multi-user.target
