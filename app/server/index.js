@@ -347,6 +347,7 @@ app.use('/api/activity', require('./routes/activity'));
 app.use('/api/insights', require('./routes/insights'));
 app.use('/api/company-follows', require('./routes/company-follows'));
 app.use('/api/training', require('./routes/training'));
+app.use('/api/transparency', require('./routes/transparency'));
 
 // Agency & Claims routes
 app.use('/api/agency', require('./routes/agency'));
