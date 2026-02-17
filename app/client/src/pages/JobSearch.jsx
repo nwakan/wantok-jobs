@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { jobs as jobsAPI } from '../api';
+import { jobs as jobsAPI, savedSearches } from '../api';
+import { useAuth } from '../context/AuthContext';
 import JobCard from '../components/JobCard';
 import SearchFilters from '../components/SearchFilters';
-import { Flame, Sparkles, Globe, Bell, Briefcase, SlidersHorizontal, X } from 'lucide-react';
+import { Flame, Sparkles, Globe, Bell, Briefcase, SlidersHorizontal, X, Bookmark } from 'lucide-react';
 import PageHead from '../components/PageHead';
 import { JobSearchSkeleton } from '../components/SkeletonLoader';
 
 export default function JobSearch() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,7 @@ export default function JobSearch() {
     date_posted: searchParams.get('date_posted') || '',
     remote: searchParams.get('remote') || '',
     company: searchParams.get('company') || '',
+    company_size: searchParams.get('company_size') || '',
   });
   const [sortBy, setSortBy] = useState('relevance');
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
@@ -31,6 +34,10 @@ export default function JobSearch() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const suggestionsRef = useRef(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchNotify, setSaveSearchNotify] = useState(true);
+  const [savingSearch, setSavingSearch] = useState(false);
 
   useEffect(() => {
     searchJobs();
@@ -160,6 +167,7 @@ export default function JobSearch() {
       date_posted: '',
       remote: '',
       company: '',
+      company_size: '',
     };
     setFilters(clearedFilters);
     setSearchParams(new URLSearchParams());
@@ -179,6 +187,32 @@ export default function JobSearch() {
     
     setFilters(newFilters);
     searchJobs(1, newFilters);
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v);
+
+  const handleSaveSearch = async () => {
+    if (!saveSearchName.trim()) return;
+    setSavingSearch(true);
+    try {
+      await savedSearches.create({
+        name: saveSearchName.trim(),
+        query: filters.keyword || '',
+        category: filters.category || '',
+        location: filters.location || '',
+        experience_level: filters.experience || '',
+        salary_min: filters.salary_min ? Number(filters.salary_min) : null,
+        salary_max: filters.salary_max ? Number(filters.salary_max) : null,
+        notify: saveSearchNotify,
+      });
+      setShowSaveModal(false);
+      setSaveSearchName('');
+      alert('Search saved! View it in your dashboard.');
+    } catch (error) {
+      alert(error.message || 'Failed to save search');
+    } finally {
+      setSavingSearch(false);
+    }
   };
 
   const removeFilter = (key) => {
@@ -344,6 +378,19 @@ export default function JobSearch() {
                 </div>
               </div>
 
+              {/* Save Search Button */}
+              {user && hasActiveFilters && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setShowSaveModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-lg hover:bg-primary-100 border border-primary-200 transition-colors"
+                  >
+                    <Bookmark className="w-4 h-4" />
+                    Save this search
+                  </button>
+                </div>
+              )}
+
               {/* Active Filters */}
               {Object.entries(filters).some(([k, v]) => k !== 'keyword' && v) && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
@@ -382,6 +429,13 @@ export default function JobSearch() {
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         🏢 {filters.company}
                         <button onClick={() => removeFilter('company')} className="ml-1 hover:text-primary-900" aria-label="Remove company filter">×</button>
+                      </span>
+                    )}
+
+                    {filters.company_size && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
+                        🏢 {filters.company_size.charAt(0).toUpperCase() + filters.company_size.slice(1)} company
+                        <button onClick={() => removeFilter('company_size')} className="ml-1 hover:text-primary-900" aria-label="Remove company size filter">×</button>
                       </span>
                     )}
                     
@@ -563,6 +617,61 @@ export default function JobSearch() {
           </div>
         </div>
       </div>
+
+      {/* Save Search Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSaveModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Save This Search</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Search Name</label>
+                <input
+                  type="text"
+                  value={saveSearchName}
+                  onChange={e => setSaveSearchName(e.target.value)}
+                  placeholder="e.g. Engineering jobs in Port Moresby"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  autoFocus
+                />
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                <p className="font-medium text-gray-700 mb-1">Search criteria:</p>
+                {filters.keyword && <p>Keywords: {filters.keyword}</p>}
+                {filters.category && <p>Category: {filters.category}</p>}
+                {filters.location && <p>Location: {filters.location}</p>}
+                {filters.experience && <p>Experience: {filters.experience}</p>}
+                {filters.salary_min && <p>Min salary: K{Number(filters.salary_min).toLocaleString()}</p>}
+                {filters.salary_max && <p>Max salary: K{Number(filters.salary_max).toLocaleString()}</p>}
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveSearchNotify}
+                  onChange={e => setSaveSearchNotify(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700">Notify me when new matching jobs are posted</span>
+              </label>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSearch}
+                disabled={!saveSearchName.trim() || savingSearch}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              >
+                {savingSearch ? 'Saving...' : 'Save Search'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

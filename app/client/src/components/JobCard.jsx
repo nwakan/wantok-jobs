@@ -147,6 +147,11 @@ export default function JobCard({ job, compact = false }) {
                 💰 {job.salary_currency || 'PGK'} {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
               </span>
             )}
+            {job.company_size && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                🏢 {job.company_size}
+              </span>
+            )}
             {formatJobSource(job.source) ? (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                 🤖 {formatJobSource(job.source).short}

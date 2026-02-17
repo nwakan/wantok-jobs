@@ -112,7 +112,8 @@ router.get('/', (req, res) => {
       sort = 'date',
       page = 1,
       limit = 20,
-      employer_id
+      employer_id,
+      company_size
     } = req.query;
 
     let query = `
@@ -121,7 +122,8 @@ router.get('/', (req, res) => {
              u.is_verified as employer_verified,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              COALESCE(j.logo_url, pe.logo_url) as logo_url,
-             pe.industry as company_industry
+             pe.industry as company_industry,
+             pe.company_size as company_size
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
@@ -223,6 +225,26 @@ router.get('/', (req, res) => {
       // Filter by employer ID
       query += ' AND j.employer_id = ?';
       params.push(parseInt(employer_id));
+    }
+
+    if (company_size) {
+      // Filter by company size category
+      const sizeRanges = {
+        'startup': [1, 10],
+        'small': [11, 50],
+        'medium': [51, 200],
+        'large': [201, 1000],
+        'enterprise': [1001, 999999]
+      };
+      const range = sizeRanges[company_size.toLowerCase()];
+      if (range) {
+        // Match normalized numeric company_size or text patterns
+        query += ` AND (
+          (CAST(pe.company_size AS INTEGER) BETWEEN ? AND ?)
+          OR pe.company_size LIKE ? ESCAPE '\\'
+        )`;
+        params.push(range[0], range[1], containsPattern(company_size));
+      }
     }
 
     // Count total

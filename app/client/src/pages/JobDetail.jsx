@@ -748,6 +748,12 @@ export default function JobDetail() {
                     </span>
                   </div>
                 )}
+                {job.company_size && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <span className="text-lg">🏢</span>
+                    <span className="font-medium">{job.company_size} employees</span>
+                  </div>
+                )}
                 {job.created_at && (
                   <div className="flex items-center gap-2 text-gray-700">
                     <span className="text-lg">🕒</span>

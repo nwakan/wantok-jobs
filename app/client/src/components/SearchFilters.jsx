@@ -14,6 +14,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
     experience: false,
     salary: false,
     date: false,
+    companySize: false,
     other: false,
   });
   
@@ -245,8 +246,24 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
           </select>
         </FilterSection>
 
+        {/* Company Size */}
+        <FilterSection title="🏢 Company Size" section="companySize">
+          <select
+            value={filters.company_size || ''}
+            onChange={(e) => setFilters({ ...filters, company_size: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">All Sizes</option>
+            <option value="startup">Startup (1-10)</option>
+            <option value="small">Small (11-50)</option>
+            <option value="medium">Medium (51-200)</option>
+            <option value="large">Large (201-1000)</option>
+            <option value="enterprise">Enterprise (1000+)</option>
+          </select>
+        </FilterSection>
+
         {/* Company Name */}
-        <FilterSection title="🏢 Company" section="other">
+        <FilterSection title="🔤 Company Name" section="other">
           <input
             type="text"
             value={filters.company || ''}
