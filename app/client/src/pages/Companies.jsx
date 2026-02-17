@@ -153,7 +153,7 @@ export default function Companies() {
                           <h3 className="font-bold text-gray-900 group-hover:text-primary-600 transition">
                             {company.name}
                           </h3>
-                          {company.verified && (
+                          {!!company.verified && (
                             <CheckCircle2 className="w-5 h-5 text-primary-600" title="Verified Employer" />
                           )}
                         </div>

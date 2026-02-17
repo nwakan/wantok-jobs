@@ -349,11 +349,11 @@ export default function AdminNewsletter() {
                       <span className="text-green-600">
                         Sent: <strong>{item.sent_count}</strong>
                       </span>
-                      {item.failed_count > 0 && (
+                      {item.failed_count > 0 ? (
                         <span className="text-red-600">
                           Failed: <strong>{item.failed_count}</strong>
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 ))}

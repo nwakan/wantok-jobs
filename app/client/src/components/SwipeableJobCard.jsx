@@ -130,7 +130,7 @@ export default function SwipeableJobCard({
               </h3>
               <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
                 {job.company_name || job.employer_name}
-                {job.employer_verified && (
+                {!!job.employer_verified && (
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
                 )}
               </p>

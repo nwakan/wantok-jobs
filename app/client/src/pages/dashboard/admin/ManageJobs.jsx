@@ -244,7 +244,7 @@ export default function ManageJobs() {
                                 🚩 Flagged
                               </span>
                             )}
-                            {job.is_featured && (
+                            {!!job.is_featured && (
                               <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
                                 ⭐ Featured
                               </span>

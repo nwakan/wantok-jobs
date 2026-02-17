@@ -437,7 +437,7 @@ export default function Home() {
                   <p className="text-sm font-medium text-gray-700 text-center line-clamp-2">{employer.company_name}</p>
                   {employer.job_count > 0 ? (
                     <p className="text-xs text-primary-600 mt-1">{employer.job_count} active jobs</p>
-                  )}
+                  ) : null}
                 </Link>
               ))}
             </div>
