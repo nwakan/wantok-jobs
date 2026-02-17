@@ -75,6 +75,7 @@ const JobseekerWallet = lazy(() => import('./pages/dashboard/jobseeker/Wallet'))
 const ResumeBuilder = lazy(() => import('./pages/dashboard/jobseeker/ResumeBuilder'));
 const JobseekerInterviews = lazy(() => import('./pages/dashboard/jobseeker/Interviews'));
 const SavedSearches = lazy(() => import('./pages/dashboard/jobseeker/SavedSearches'));
+const JobseekerAnalytics = lazy(() => import('./pages/dashboard/jobseeker/Analytics'));
 
 // === Employer dashboard ===
 const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'));
@@ -114,6 +115,7 @@ const AdminFraudSecurity = lazy(() => import('./pages/dashboard/admin/FraudSecur
 const AdminRateLimits = lazy(() => import('./pages/dashboard/admin/RateLimits'));
 const AdminJeanSettings = lazy(() => import('./pages/dashboard/admin/JeanSettings'));
 const AdminWallet = lazy(() => import('./pages/dashboard/admin/WalletAdmin'));
+const AdminReviewManagement = lazy(() => import('./pages/dashboard/admin/ReviewManagement'));
 
 function App() {
   return (
@@ -173,6 +175,7 @@ function App() {
                 <Route path="wallet" element={<Lazy component={JobseekerWallet} />} />
                 <Route path="resume-builder" element={<Lazy component={ResumeBuilder} />} />
                 <Route path="interviews" element={<Lazy component={JobseekerInterviews} />} />
+                <Route path="analytics" element={<Lazy component={JobseekerAnalytics} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 
@@ -218,6 +221,7 @@ function App() {
                 <Route path="ai-agents" element={<Lazy component={AdminAIAgents} />} />
                 <Route path="jean" element={<Lazy component={AdminJeanSettings} />} />
                 <Route path="security" element={<Lazy component={AdminFraudSecurity} />} />
+                <Route path="reviews" element={<Lazy component={AdminReviewManagement} />} />
                 <Route path="rate-limits" element={<Lazy component={AdminRateLimits} />} />
                 <Route path="wallet" element={<Lazy component={AdminWallet} />} />
                 <Route path="settings" element={<Lazy component={AdminSettings} />} />

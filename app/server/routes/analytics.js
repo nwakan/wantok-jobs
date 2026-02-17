@@ -174,4 +174,105 @@ router.get('/admin/overview', authenticateToken, requireRole('admin'), (req, res
   }
 });
 
+// GET /jobseeker - Jobseeker application analytics
+router.get('/jobseeker', authenticateToken, requireRole('jobseeker'), (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Application funnel
+    const funnel = db.prepare(`
+      SELECT status, COUNT(*) as count
+      FROM applications
+      WHERE jobseeker_id = ?
+      GROUP BY status
+    `).all(userId);
+
+    const funnelMap = {};
+    funnel.forEach(r => { funnelMap[r.status] = r.count; });
+    const funnelStages = ['pending', 'reviewed', 'shortlisted', 'interviewed', 'offered', 'hired'];
+    const funnelData = funnelStages.map(s => ({ stage: s, count: funnelMap[s] || 0 }));
+
+    // Timeline - applications per week (last 8 weeks)
+    const timeline = db.prepare(`
+      SELECT strftime('%Y-%W', applied_at) as week,
+             MIN(date(applied_at, 'weekday 0', '-6 days')) as week_start,
+             COUNT(*) as count
+      FROM applications
+      WHERE jobseeker_id = ?
+        AND applied_at >= datetime('now', '-56 days')
+      GROUP BY week
+      ORDER BY week ASC
+    `).all(userId);
+
+    // Response rate
+    const totalApps = db.prepare(`SELECT COUNT(*) as c FROM applications WHERE jobseeker_id = ?`).get(userId).c;
+    const reviewedApps = db.prepare(`
+      SELECT COUNT(*) as c FROM applications 
+      WHERE jobseeker_id = ? AND status NOT IN ('pending', 'withdrawn')
+    `).get(userId).c;
+    const responseRate = totalApps > 0 ? Math.round((reviewedApps / totalApps) * 100) : 0;
+
+    // Average response time (days between applied_at and status_updated_at for non-pending)
+    const avgResponse = db.prepare(`
+      SELECT AVG(julianday(status_updated_at) - julianday(applied_at)) as avg_days
+      FROM applications
+      WHERE jobseeker_id = ? AND status NOT IN ('pending', 'withdrawn')
+        AND status_updated_at IS NOT NULL AND applied_at IS NOT NULL
+    `).get(userId);
+    const avgResponseDays = avgResponse?.avg_days ? Math.round(avgResponse.avg_days * 10) / 10 : null;
+
+    // Top categories
+    const topCategories = db.prepare(`
+      SELECT j.category_slug as category, COUNT(*) as count
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.jobseeker_id = ?
+      GROUP BY j.category_slug
+      ORDER BY count DESC
+      LIMIT 10
+    `).all(userId);
+
+    // All categories for tips
+    const allCategories = topCategories.map(c => ({ name: c.category || 'Uncategorized', count: c.count }));
+
+    // Generate tips
+    const tips = [];
+    if (totalApps === 0) {
+      tips.push("You haven't applied to any jobs yet. Start browsing and apply to roles that match your skills!");
+    } else {
+      if (responseRate < 30) {
+        tips.push('Your response rate is low. Try tailoring your cover letter to each job for better results.');
+      }
+      if (allCategories.length === 1) {
+        tips.push(`All your applications are in ${allCategories[0].name}. Consider diversifying across categories.`);
+      } else if (allCategories.length > 0) {
+        const top = allCategories[0];
+        if (top.count > totalApps * 0.7) {
+          tips.push(`You've applied to ${top.count} ${top.name} jobs. Try exploring other categories to increase your chances.`);
+        }
+      }
+      if (totalApps < 5) {
+        tips.push('Applying to more jobs increases your chances. Aim for at least 10 applications.');
+      }
+      if (avgResponseDays && avgResponseDays > 14) {
+        tips.push('Employers are taking a while to respond. Follow up on applications older than 2 weeks.');
+      }
+    }
+
+    res.json({
+      funnel: funnelData,
+      timeline,
+      responseRate,
+      avgResponseDays,
+      totalApplications: totalApps,
+      reviewedApplications: reviewedApps,
+      topCategories: allCategories,
+      tips
+    });
+  } catch (error) {
+    logger.error('Error fetching jobseeker analytics', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
 module.exports = router;
