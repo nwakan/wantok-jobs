@@ -51,9 +51,8 @@ export default function ManageJobs() {
     if (!confirm(`Are you sure you want to ${action} ${selectedJobs.length} job(s)?`)) return;
 
     try {
-      // Mock bulk action - in real app, call API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      showToast(`Bulk action "${action}" completed for ${selectedJobs.length} job(s)`, 'success');
+      const result = await adminAPI.bulkJobs(action, selectedJobs);
+      showToast(`Bulk ${action} completed: ${result.affected} job(s) affected`, 'success');
       setSelectedJobs([]);
       loadJobs();
     } catch (error) {
@@ -170,22 +169,28 @@ export default function ManageJobs() {
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => handleBulkAction('close expired')}
+                onClick={() => handleBulkAction('approve')}
+                className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium"
+              >
+                Approve Selected
+              </button>
+              <button
+                onClick={() => handleBulkAction('close')}
                 className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm font-medium"
               >
-                Close Expired
+                Close Selected
               </button>
               <button
                 onClick={() => handleBulkAction('feature')}
                 className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 text-sm font-medium"
               >
-                Feature Jobs
+                Feature Selected
               </button>
               <button
                 onClick={() => handleBulkAction('delete')}
                 className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium"
               >
-                Delete
+                Delete Selected
               </button>
               <button
                 onClick={() => setSelectedJobs([])}

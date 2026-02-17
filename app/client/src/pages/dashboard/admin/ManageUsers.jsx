@@ -9,6 +9,7 @@ export default function ManageUsers() {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
 
   useEffect(() => {
@@ -52,6 +53,35 @@ export default function ManageUsers() {
       loadUsers();
     } catch (error) {
       showToast(`Failed to ${action} user: ${error.message}`, 'error');
+    }
+  };
+
+  const toggleUserSelection = (userId) => {
+    setSelectedUsers(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleSelectAllUsers = () => {
+    setSelectedUsers(prev =>
+      prev.length === filteredUsers.length ? [] : filteredUsers.map(u => u.id)
+    );
+  };
+
+  const handleBulkAction = async (action) => {
+    if (selectedUsers.length === 0) {
+      showToast('Please select users first', 'error');
+      return;
+    }
+    if (!confirm(`Are you sure you want to ${action} ${selectedUsers.length} user(s)?`)) return;
+
+    try {
+      const result = await adminAPI.bulkUsers(action, selectedUsers);
+      showToast(`Bulk ${action} completed: ${result.affected} user(s) affected`, 'success');
+      setSelectedUsers([]);
+      loadUsers();
+    } catch (error) {
+      showToast('Bulk action failed: ' + error.message, 'error');
     }
   };
 
@@ -154,12 +184,76 @@ export default function ManageUsers() {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedUsers.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-900">
+              {selectedUsers.length} user(s) selected
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleBulkAction('activate')}
+                className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium"
+              >
+                Activate Selected
+              </button>
+              <button
+                onClick={() => handleBulkAction('deactivate')}
+                className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm font-medium"
+              >
+                Deactivate Selected
+              </button>
+              <button
+                onClick={() => handleBulkAction('reset-password')}
+                className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm font-medium"
+              >
+                Reset Passwords
+              </button>
+              <button
+                onClick={() => handleBulkAction('delete')}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium"
+              >
+                Delete Selected
+              </button>
+              <button
+                onClick={() => setSelectedUsers([])}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Select All */}
+      <div className="bg-white rounded-lg shadow-sm px-6 py-3 mb-4 flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+          onChange={toggleSelectAllUsers}
+          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+        />
+        <span className="text-sm font-medium text-gray-700">Select All</span>
+      </div>
+
       {/* Content */}
       {viewMode === 'cards' ? (
         /* Card View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map(user => (
             <div key={user.id} className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
+              {/* Checkbox */}
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  checked={selectedUsers.includes(user.id)}
+                  onChange={() => toggleUserSelection(user.id)}
+                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                />
+                <span className="text-xs text-gray-400">Select</span>
+              </div>
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -274,6 +368,14 @@ export default function ManageUsers() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                      onChange={toggleSelectAllUsers}
+                      className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -285,6 +387,14 @@ export default function ManageUsers() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map(user => (
                   <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                        className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold">

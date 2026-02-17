@@ -239,6 +239,116 @@ router.get("/jobs", (req, res) => {
   }
 });
 
+// POST /jobs/bulk — Bulk actions on jobs
+router.post('/jobs/bulk', (req, res) => {
+  try {
+    const { action, ids } = req.body;
+    if (!action || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'action and ids[] required' });
+    }
+    if (ids.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 IDs per request' });
+    }
+    const validActions = ['approve', 'close', 'delete', 'feature'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` });
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    let result;
+
+    switch (action) {
+      case 'approve':
+        result = db.prepare(`UPDATE jobs SET status = 'active', updated_at = datetime('now') WHERE id IN (${placeholders})`).run(...ids);
+        break;
+      case 'close':
+        result = db.prepare(`UPDATE jobs SET status = 'closed', updated_at = datetime('now') WHERE id IN (${placeholders})`).run(...ids);
+        break;
+      case 'delete':
+        result = db.prepare(`DELETE FROM jobs WHERE id IN (${placeholders})`).run(...ids);
+        break;
+      case 'feature':
+        result = db.prepare(`UPDATE jobs SET is_featured = 1, updated_at = datetime('now') WHERE id IN (${placeholders})`).run(...ids);
+        break;
+    }
+
+    const affected = result.changes;
+
+    // Audit log
+    logger.info('Admin bulk job action', { action, ids, affected, adminId: req.user.id });
+    try {
+      db.prepare(`INSERT INTO audit_log (admin_id, action, entity_type, entity_ids, affected_count, created_at) VALUES (?, ?, 'job', ?, ?, datetime('now'))`)
+        .run(req.user.id, action, JSON.stringify(ids), affected);
+    } catch (_e) { /* audit_log table may not exist */ }
+
+    res.json({ message: `Bulk ${action} completed`, affected });
+  } catch (error) {
+    logger.error('Bulk job action error', { error: error.message });
+    res.status(500).json({ error: 'Failed to execute bulk action' });
+  }
+});
+
+// POST /users/bulk — Bulk actions on users
+router.post('/users/bulk', (req, res) => {
+  try {
+    const { action, ids } = req.body;
+    if (!action || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'action and ids[] required' });
+    }
+    if (ids.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 IDs per request' });
+    }
+    const validActions = ['activate', 'deactivate', 'delete', 'reset-password'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` });
+    }
+
+    // Prevent admin from bulk-modifying themselves
+    if (ids.includes(req.user.id)) {
+      return res.status(400).json({ error: 'Cannot include your own account in bulk actions' });
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    let result;
+
+    switch (action) {
+      case 'activate':
+        result = db.prepare(`UPDATE users SET status = 'active', updated_at = datetime('now') WHERE id IN (${placeholders})`).run(...ids);
+        break;
+      case 'deactivate':
+        result = db.prepare(`UPDATE users SET status = 'suspended', updated_at = datetime('now') WHERE id IN (${placeholders})`).run(...ids);
+        break;
+      case 'delete':
+        result = db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...ids);
+        break;
+      case 'reset-password': {
+        // Set a flag so users must reset on next login
+        const stmt = db.prepare(`UPDATE users SET password_reset_required = 1, updated_at = datetime('now') WHERE id = ?`);
+        let count = 0;
+        for (const id of ids) {
+          try { stmt.run(id); count++; } catch (_e) { /* column may not exist, skip */ }
+        }
+        result = { changes: count };
+        break;
+      }
+    }
+
+    const affected = result.changes;
+
+    // Audit log
+    logger.info('Admin bulk user action', { action, ids, affected, adminId: req.user.id });
+    try {
+      db.prepare(`INSERT INTO audit_log (admin_id, action, entity_type, entity_ids, affected_count, created_at) VALUES (?, ?, 'user', ?, ?, datetime('now'))`)
+        .run(req.user.id, action, JSON.stringify(ids), affected);
+    } catch (_e) { /* audit_log table may not exist */ }
+
+    res.json({ message: `Bulk ${action} completed`, affected });
+  } catch (error) {
+    logger.error('Bulk user action error', { error: error.message });
+    res.status(500).json({ error: 'Failed to execute bulk action' });
+  }
+});
+
 // Delete job
 router.delete("/jobs/:id", (req, res) => {
   try {
@@ -605,6 +715,59 @@ router.put('/reports/:id', (req, res) => {
   } catch (error) {
     logger.error('Update report error', { error: error.message });
     res.status(500).json({ error: 'Failed to update report' });
+  }
+});
+
+// --- CSV Export endpoints ---
+const BOM = '\uFEFF';
+function escapeCSV(value) {
+  if (value == null) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+function csvRow(fields) { return fields.map(escapeCSV).join(','); }
+function sendCSV(res, filename, headers, rows) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  let csv = BOM + csvRow(headers) + '\n';
+  for (const row of rows) csv += csvRow(row) + '\n';
+  res.send(csv);
+}
+
+// GET /api/admin/export/users
+router.get('/export/users', (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, name, email, role, phone, created_at FROM users ORDER BY created_at DESC').all();
+    const headers = ['ID', 'Name', 'Email', 'Role', 'Phone', 'Registered At'];
+    const rows = users.map(u => [u.id, u.name, u.email, u.role, u.phone, u.created_at]);
+    sendCSV(res, `users_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+  } catch (error) {
+    logger.error('Admin export users error', { error: error.message });
+    res.status(500).json({ error: 'Failed to export users' });
+  }
+});
+
+// GET /api/admin/export/jobs
+router.get('/export/jobs', (req, res) => {
+  try {
+    const jobsList = db.prepare(`
+      SELECT j.id, j.title, j.status, j.location, j.job_type, u.name AS employer_name,
+             j.salary_min, j.salary_max, j.salary_currency, j.views_count,
+             (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.id) AS applications_count,
+             j.created_at
+      FROM jobs j
+      LEFT JOIN users u ON u.id = j.employer_id
+      ORDER BY j.created_at DESC
+    `).all();
+    const headers = ['ID', 'Title', 'Status', 'Location', 'Type', 'Employer', 'Salary Min', 'Salary Max', 'Currency', 'Views', 'Applications', 'Posted At'];
+    const rows = jobsList.map(j => [j.id, j.title, j.status, j.location, j.job_type, j.employer_name, j.salary_min, j.salary_max, j.salary_currency, j.views_count, j.applications_count, j.created_at]);
+    sendCSV(res, `jobs_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+  } catch (error) {
+    logger.error('Admin export jobs error', { error: error.message });
+    res.status(500).json({ error: 'Failed to export jobs' });
   }
 });
 

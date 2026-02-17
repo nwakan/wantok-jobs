@@ -195,6 +195,21 @@ export const notifications = {
     }).then(handleResponse),
 };
 
+// Notification Preferences
+export const notificationPreferences = {
+  get: () =>
+    fetch(`${API_URL}/notification-preferences`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  update: (prefs) =>
+    fetch(`${API_URL}/notification-preferences`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(prefs),
+    }).then(handleResponse),
+};
+
 // Admin
 export const admin = {
   getStats: () =>
@@ -232,6 +247,20 @@ export const admin = {
     fetch(`${API_URL}/admin/jobs/${id}`, {
       method: 'DELETE',
       headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  bulkJobs: (action, ids) =>
+    fetch(`${API_URL}/admin/jobs/bulk`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ids }),
+    }).then(handleResponse),
+
+  bulkUsers: (action, ids) =>
+    fetch(`${API_URL}/admin/users/bulk`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ids }),
     }).then(handleResponse),
 };
 
