@@ -311,6 +311,8 @@ app.use('/api', require('./routes/reviews')); // Note: reviews uses /api directl
 app.use('/api/email-templates', require('./routes/email-templates'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/insights', require('./routes/insights'));
+app.use('/api/company-follows', require('./routes/company-follows'));
+app.use('/api/training', require('./routes/training'));
 
 // New routes for analytics, stats, and resume features
 app.use('/api/employer/analytics', require('./routes/employer-analytics'));

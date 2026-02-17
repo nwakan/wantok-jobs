@@ -14,13 +14,28 @@ export default function MyApplications() {
 
   const loadApplications = async () => {
     try {
-      const data = await applications.getMy();
-      setMyApplications(Array.isArray(data) ? data : []);
+      const response = await applications.getMy();
+      // API returns { data: [...], pagination: {...} }
+      const list = response?.data || (Array.isArray(response) ? response : []);
+      setMyApplications(list);
     } catch (error) {
       console.error('Failed to load applications:', error);
       setMyApplications([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleWithdraw = async (appId) => {
+    if (!confirm('Are you sure you want to withdraw this application? This cannot be undone.')) return;
+    try {
+      await fetch(`/api/applications/${appId}/withdraw`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      });
+      loadApplications();
+    } catch (error) {
+      console.error('Failed to withdraw application:', error);
     }
   };
 
@@ -354,6 +369,14 @@ export default function MyApplications() {
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition"
                     >
                       📧 Contact Employer
+                    </button>
+                  )}
+                  {!['withdrawn', 'rejected', 'hired'].includes(app.status) && (
+                    <button
+                      onClick={() => handleWithdraw(app.id)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-red-100 hover:text-red-700 font-medium text-sm transition"
+                    >
+                      ↩️ Withdraw
                     </button>
                   )}
                 </div>

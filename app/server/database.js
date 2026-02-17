@@ -541,7 +541,48 @@ function initializeDatabase() {
       FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS company_follows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      employer_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, employer_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS training_providers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      website TEXT,
+      location TEXT,
+      category TEXT,
+      logo_url TEXT,
+      featured INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS training_courses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      duration TEXT,
+      price REAL,
+      currency TEXT DEFAULT 'PGK',
+      mode TEXT DEFAULT 'in-person',
+      url TEXT,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (provider_id) REFERENCES training_providers(id) ON DELETE CASCADE
+    );
+
     -- Additional indexes for new tables
+    CREATE INDEX IF NOT EXISTS idx_company_follows_user ON company_follows(user_id);
+    CREATE INDEX IF NOT EXISTS idx_company_follows_employer ON company_follows(employer_id);
     CREATE INDEX IF NOT EXISTS idx_orders_employer ON orders(employer_id);
     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
     CREATE INDEX IF NOT EXISTS idx_job_categories_job ON job_categories(job_id);

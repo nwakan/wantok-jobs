@@ -49,6 +49,7 @@ const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const Stats = lazy(() => import('./pages/Stats'));
+const Training = lazy(() => import('./pages/Training'));
 const ReferenceResponse = lazy(() => import('./pages/ReferenceResponse'));
 
 // === Shared dashboard ===
@@ -64,6 +65,7 @@ const JobAlerts = lazy(() => import('./pages/dashboard/jobseeker/JobAlerts'));
 const JobseekerMessages = lazy(() => import('./pages/dashboard/jobseeker/Messages'));
 const Recommendations = lazy(() => import('./pages/dashboard/jobseeker/Recommendations'));
 const JobseekerSettings = lazy(() => import('./pages/dashboard/jobseeker/Settings'));
+const FollowedCompanies = lazy(() => import('./pages/dashboard/jobseeker/FollowedCompanies'));
 
 // === Employer dashboard ===
 const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'));
@@ -127,6 +129,7 @@ function App() {
               <Route path="blog" element={<Lazy component={Blog} />} />
               <Route path="blog/:slug" element={<Lazy component={BlogPost} />} />
               <Route path="stats" element={<Lazy component={Stats} />} />
+              <Route path="training" element={<Lazy component={Training} />} />
               <Route path="forgot-password" element={<Lazy component={ForgotPassword} />} />
               <Route path="reset-password" element={<Lazy component={ResetPassword} />} />
               <Route path="verify-email" element={<Lazy component={VerifyEmail} />} />
@@ -144,6 +147,7 @@ function App() {
                 <Route path="messages" element={<Lazy component={JobseekerMessages} />} />
                 <Route path="profile" element={<Lazy component={JobseekerProfile} />} />
                 <Route path="settings" element={<Lazy component={JobseekerSettings} />} />
+                <Route path="followed-companies" element={<Lazy component={FollowedCompanies} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 

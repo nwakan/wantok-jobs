@@ -50,11 +50,12 @@ export default function Applicants() {
 
   const loadData = async () => {
     try {
-      const [jobData, appsData] = await Promise.all([
+      const [jobData, appsResponse] = await Promise.all([
         jobs.getById(jobId),
         applications.getForJob(jobId),
       ]);
       setJob(jobData);
+      const appsData = appsResponse?.data || (Array.isArray(appsResponse) ? appsResponse : []);
       setApplicants(appsData.map(app => ({
         ...app,
         skills: app.skills ? JSON.parse(app.skills) : [],

@@ -556,6 +556,46 @@ export const reviews = {
     }).then(handleResponse),
 };
 
+// Company Follows
+export const companyFollows = {
+  getAll: () =>
+    fetch(`${API_URL}/company-follows`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  follow: (employerId) =>
+    fetch(`${API_URL}/company-follows/${employerId}`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  unfollow: (employerId) =>
+    fetch(`${API_URL}/company-follows/${employerId}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  check: (employerId) =>
+    fetch(`${API_URL}/company-follows/check/${employerId}`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  getFollowerCount: (employerId) =>
+    fetch(`${API_URL}/company-follows/followers/${employerId}`).then(handleResponse),
+};
+
+// Training
+export const training = {
+  getProviders: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetch(`${API_URL}/training/providers${qs ? '?' + qs : ''}`).then(handleResponse);
+  },
+  getCourses: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetch(`${API_URL}/training/courses${qs ? '?' + qs : ''}`).then(handleResponse);
+  },
+};
+
 // Default export for convenience
 const api = {
   get: (url) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { headers: getAuthHeader() }).then(handleResponse),

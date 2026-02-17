@@ -60,8 +60,11 @@ export default function Layout() {
                 <Link to="/jobs" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
                   Find Jobs
                 </Link>
-                <Link to="/about" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
-                  About
+                <Link to="/companies" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
+                  Companies
+                </Link>
+                <Link to="/training" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
+                  Training
                 </Link>
               </div>
             </div>
@@ -140,6 +143,13 @@ export default function Layout() {
                 🏢 Companies
               </Link>
               <Link 
+                to="/training" 
+                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                📚 Training
+              </Link>
+              <Link 
                 to="/about" 
                 className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
@@ -215,6 +225,8 @@ export default function Layout() {
               <h3 className="text-lg font-bold mb-4">Quick Links</h3>
               <ul className="space-y-2">
                 <li><Link to="/jobs" className="text-gray-400 hover:text-white">Browse Jobs</Link></li>
+                <li><Link to="/companies" className="text-gray-400 hover:text-white">Companies</Link></li>
+                <li><Link to="/training" className="text-gray-400 hover:text-white">Training & Courses</Link></li>
                 <li><Link to="/about" className="text-gray-400 hover:text-white">About Us</Link></li>
               </ul>
             </div>

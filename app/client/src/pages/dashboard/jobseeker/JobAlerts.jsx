@@ -26,7 +26,7 @@ export default function JobAlerts() {
   const loadAlerts = async () => {
     try {
       const data = await jobAlerts.getAll();
-      const alertsList = Array.isArray(data) ? data : [];
+      const alertsList = data?.alerts || (Array.isArray(data) ? data : []);
       setAlerts(alertsList);
       
       // Load matching jobs count for each alert

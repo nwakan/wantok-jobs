@@ -185,7 +185,13 @@ router.put('/', authenticateToken, (req, res) => {
         country,
         website,
         logo_url,
-        description
+        description,
+        benefits,
+        photos,
+        social_links,
+        culture,
+        founded_year,
+        phone: empPhone
       } = req.body;
 
       // Sanitize all text inputs
@@ -196,20 +202,36 @@ router.put('/', authenticateToken, (req, res) => {
       const safeCountry = country ? stripHtml(country) : null;
       const safeWebsite = website ? sanitizeUrl(website) : null;
       const safeDescription = description ? stripHtml(description) : null;
+      const safeBenefits = benefits ? stripHtml(benefits) : null;
+      const safePhotos = photos ? stripHtml(photos) : null;
+      const safeSocialLinks = social_links ? stripHtml(social_links) : null;
+      const safeCulture = culture ? stripHtml(culture) : null;
+      const safePhone = empPhone ? stripHtml(empPhone) : null;
 
       // Validate lengths
       if (safeCompanyName && !isValidLength(safeCompanyName, 200)) {
         return res.status(400).json({ error: 'Company name must be 200 characters or less' });
       }
-      if (safeDescription && !isValidLength(safeDescription, 2000)) {
-        return res.status(400).json({ error: 'Description must be 2000 characters or less' });
+      if (safeDescription && !isValidLength(safeDescription, 5000)) {
+        return res.status(400).json({ error: 'Description must be 5000 characters or less' });
       }
 
       db.prepare(`
         UPDATE profiles_employer SET
-          company_name = ?, industry = ?, company_size = ?,
-          location = ?, country = ?, website = ?,
-          logo_url = ?, description = ?
+          company_name = COALESCE(?, company_name),
+          industry = COALESCE(?, industry),
+          company_size = COALESCE(?, company_size),
+          location = COALESCE(?, location),
+          country = COALESCE(?, country),
+          website = COALESCE(?, website),
+          logo_url = COALESCE(?, logo_url),
+          description = COALESCE(?, description),
+          benefits = COALESCE(?, benefits),
+          photos = COALESCE(?, photos),
+          social_links = COALESCE(?, social_links),
+          culture = COALESCE(?, culture),
+          founded_year = COALESCE(?, founded_year),
+          phone = COALESCE(?, phone)
         WHERE user_id = ?
       `).run(
         safeCompanyName,
@@ -218,8 +240,14 @@ router.put('/', authenticateToken, (req, res) => {
         safeLocation,
         safeCountry,
         safeWebsite,
-        logo_url,
+        logo_url || null,
         safeDescription,
+        safeBenefits,
+        safePhotos,
+        safeSocialLinks,
+        safeCulture,
+        founded_year || null,
+        safePhone,
         req.user.id
       );
 
@@ -249,12 +277,25 @@ router.get('/:userId', (req, res) => {
     if (user.role === 'jobseeker') {
       // Only public info
       profile = db.prepare(`
-        SELECT location, country, bio, skills, work_history, education, desired_job_type, availability
+        SELECT location, country, bio, headline, skills, top_skills, work_history, education, 
+               certifications, projects, awards, volunteer, languages, featured,
+               desired_job_type, availability, open_to_work, profile_photo_url, 
+               profile_banner_url, profile_video_url, social_links, profile_slug, profile_views
         FROM profiles_jobseeker WHERE user_id = ?
       `).get(req.params.userId);
+
+      // Track profile view
+      try {
+        db.prepare(`
+          INSERT INTO activity_log (user_id, action, entity_type, entity_id, created_at)
+          VALUES (NULL, 'profile_view', 'profile', ?, datetime('now'))
+        `).run(req.params.userId);
+      } catch (e) { /* ignore tracking errors */ }
     } else if (user.role === 'employer') {
       profile = db.prepare(`
-        SELECT company_name, industry, company_size, location, country, website, logo_url, description, verified
+        SELECT company_name, industry, company_size, location, country, website, 
+               logo_url, description, verified, benefits, photos, social_links, 
+               culture, founded_year, phone
         FROM profiles_employer WHERE user_id = ?
       `).get(req.params.userId);
     }

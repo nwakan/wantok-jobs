@@ -45,10 +45,11 @@ export default function JobseekerOverview() {
         fetchSalaryInsights().catch(() => null),
       ]);
       
-      setMyApplications(Array.isArray(appsData) ? appsData : []);
+      const appsList = appsData?.data || (Array.isArray(appsData) ? appsData : []);
+      setMyApplications(appsList);
       
       // Calculate application stats
-      const stats = calculateApplicationStats(Array.isArray(appsData) ? appsData : []);
+      const stats = calculateApplicationStats(appsList);
       setApplicationStats(stats);
       
       // Mock AI matching for recommendations (improved scoring)
