@@ -70,7 +70,7 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   res.json({ status: 'deploying', pusher, commits });
 
   // Trigger systemd deploy service (runs independently of this process)
-  exec('sudo systemctl start wantokjobs-deploy', (err) => {
+  exec('sudo systemctl start --no-block wantokjobs-deploy', (err) => {
     if (err) logger.error('Failed to trigger deploy service', { error: err.message });
     else logger.info('Deploy service triggered');
   });
