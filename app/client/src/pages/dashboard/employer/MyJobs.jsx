@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { jobs as jobsAPI } from '../../../api';
 import { useToast } from '../../../components/Toast';
 import { timeAgo } from '../../../utils/helpers';
+import { Download } from 'lucide-react';
 
 export default function MyJobs() {
   const { showToast } = useToast();
   const [myJobs, setMyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
@@ -43,6 +45,29 @@ export default function MyJobs() {
     // navigate('/dashboard/employer/post-job', { state: { cloneFrom: job } });
   };
 
+  const exportJobs = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/export/jobs', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my-jobs-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      showToast('Jobs exported successfully', 'success');
+    } catch (error) {
+      showToast('Failed to export jobs', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const filteredJobs = filter === 'all' 
     ? myJobs 
     : myJobs.filter(job => job.status === filter);
@@ -71,12 +96,22 @@ export default function MyJobs() {
           <h1 className="text-3xl font-bold text-gray-900">My Jobs</h1>
           <p className="text-gray-600 mt-1">Manage your job listings and applications</p>
         </div>
-        <Link
-          to="/dashboard/employer/post-job"
-          className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 shadow-sm"
-        >
-          + Post New Job
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={exportJobs}
+            disabled={exporting}
+            className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 disabled:opacity-50 font-semibold"
+          >
+            {exporting ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Download className="w-4 h-4" />}
+            Export CSV
+          </button>
+          <Link
+            to="/dashboard/employer/post-job"
+            className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 shadow-sm"
+          >
+            + Post New Job
+          </Link>
+        </div>
       </div>
 
       {/* Stats Dashboard */}

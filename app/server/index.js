@@ -375,6 +375,7 @@ app.use('/api/whatsapp', require('./routes/whatsapp-webhook'));
 const { authenticateToken } = require('./middleware/auth');
 app.use('/api/testimonials', require('./routes/testimonials'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
+app.use('/api/export', require('./routes/export'));
 
 // Sitemap routes (SEO)
 app.use('/', require('./routes/sitemap'));

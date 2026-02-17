@@ -71,7 +71,15 @@ export default function Settings() {
   const handleSaveNotifications = async () => {
     setSaving(true);
     try {
-      await notificationPreferences.update(prefs);
+      await notificationPreferences.update({
+        email_new_application: prefs.email_new_application,
+        email_status_change: prefs.email_status_change,
+        email_new_message: prefs.email_new_message,
+        email_job_alert: prefs.email_job_alert,
+        email_newsletter: prefs.email_newsletter,
+        push_enabled: prefs.push_enabled,
+        sms_enabled: prefs.sms_enabled,
+      });
       showToast('Notification preferences saved', 'success');
     } catch (error) {
       showToast('Failed to save preferences', 'error');

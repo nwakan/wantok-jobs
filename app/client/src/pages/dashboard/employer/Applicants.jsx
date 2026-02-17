@@ -151,28 +151,52 @@ export default function Applicants() {
     }
   };
 
-  const exportApplicants = () => {
-    const csv = [
-      ['Name', 'Email', 'Status', 'Match Score', 'Rating', 'Source', 'Applied Date', 'Tags'].join(','),
-      ...filteredApplicants.map(app => [
-        app.applicant_name,
-        app.applicant_email,
-        app.status,
-        app.match_score,
-        app.rating,
-        app.source,
-        new Date(app.applied_at).toLocaleDateString(),
-        app.tags.join('; ')
-      ].join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `applicants-${job?.title || 'export'}-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    showToast('Applicants exported successfully', 'success');
+  const [exporting, setExporting] = useState(false);
+
+  const exportApplicants = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/export/applicants?job_id=${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `applicants-${job?.title || 'export'}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      showToast('Applicants exported successfully', 'success');
+    } catch (error) {
+      showToast('Failed to export applicants', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportAllApplicants = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/export/applicants/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `all-applicants-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      showToast('All applicants exported successfully', 'success');
+    } catch (error) {
+      showToast('Failed to export applicants', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -251,13 +275,22 @@ export default function Applicants() {
         </div>
         
         <div className="flex gap-2 items-center flex-wrap">
-          {/* Export Button */}
+          {/* Export Buttons */}
           <button
             onClick={exportApplicants}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+            disabled={exporting}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
+            {exporting ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Download className="w-4 h-4" />}
             Export CSV
+          </button>
+          <button
+            onClick={exportAllApplicants}
+            disabled={exporting}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 disabled:opacity-50"
+          >
+            {exporting ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Download className="w-4 h-4" />}
+            Export All
           </button>
 
           {/* View Mode Toggle */}
