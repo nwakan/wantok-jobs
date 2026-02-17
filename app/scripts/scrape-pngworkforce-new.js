@@ -50,20 +50,13 @@ function guessCategory(title) {
 
 async function scrapeListings() {
   console.log('Fetching pngworkforce.com job listings...');
-  const html = await fetch('https://www.pngworkforce.com/search/jobs');
+  const html = await fetch('https://www.pngworkforce.com/jobs/view-latest-jobs');
 
-  // Extract job links - try multiple patterns
+  // Extract job detail links - pattern: /jobs/view/slug/id
   const links = [];
-  const linkRegex = /href="(\/job\/[^"]+)"/g;
+  const linkRegex = /href="(\/jobs\/view\/[^"]+)"/g;
   let m;
   while ((m = linkRegex.exec(html)) !== null) {
-    const url = 'https://www.pngworkforce.com' + m[1];
-    if (!links.includes(url)) links.push(url);
-  }
-
-  // Also try /jobs/ pattern
-  const linkRegex2 = /href="(\/jobs\/[^"]+)"/g;
-  while ((m = linkRegex2.exec(html)) !== null) {
     const url = 'https://www.pngworkforce.com' + m[1];
     if (!links.includes(url)) links.push(url);
   }
@@ -91,14 +84,15 @@ async function scrapeListings() {
       await new Promise(r => setTimeout(r, 1500)); // Rate limit
       const page = await fetch(url);
 
-      // Extract title
-      const titleMatch = page.match(/<h1[^>]*>(.*?)<\/h1>/is);
-      const title = titleMatch ? extractText(titleMatch[1]) : null;
+      // Extract title from og:title or <title> tag
+      const titleMatch = page.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i) ||
+                         page.match(/<title>([^<]+)/i);
+      let title = titleMatch ? extractText(titleMatch[1]).replace(/ - .*$/, '').trim() : null;
       if (!title) { skipped++; continue; }
 
-      // Extract company
-      const companyMatch = page.match(/company[^>]*>([^<]+)/i) ||
-                           page.match(/employer[^>]*>([^<]+)/i) ||
+      // Extract company from the page - look for employer link or source info
+      const companyMatch = page.match(/class="employer-btn"[^>]*>([^<]+)/i) ||
+                           page.match(/itemprop="hiringOrganization"[^>]*>([^<]+)/i) ||
                            page.match(/<meta[^>]*property="og:site_name"[^>]*content="([^"]+)"/i);
       const company_name = companyMatch ? extractText(companyMatch[1]) : 'PNG Workforce Listing';
 
@@ -106,13 +100,13 @@ async function scrapeListings() {
       const key = (title + '||' + company_name).toLowerCase();
       if (existing.has(key)) { skipped++; continue; }
 
-      // Extract description
-      const descMatch = page.match(/description[^>]*>([\s\S]*?)<\/div>/i) ||
-                         page.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+      // Extract description from itemprop="description" div
+      const descMatch = page.match(/itemprop="description"[^>]*>([\s\S]*?)<div class="clear">/i) ||
+                         page.match(/class="jobadvert"[^>]*>([\s\S]*?)<div class="clear">/i);
       const description = descMatch ? extractText(descMatch[1]).slice(0, 3000) : title;
 
-      // Extract location
-      const locMatch = page.match(/location[^>]*>([^<]+)/i);
+      // Extract location from itemprop="addressRegion"
+      const locMatch = page.match(/itemprop="addressRegion"[^>]*>([^<]+)/i);
       const location = locMatch ? extractText(locMatch[1]) : 'Papua New Guinea';
 
       // Job type
