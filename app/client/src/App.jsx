@@ -51,6 +51,8 @@ const BlogPost = lazy(() => import('./pages/BlogPost'));
 const Stats = lazy(() => import('./pages/Stats'));
 const Training = lazy(() => import('./pages/Training'));
 const ReferenceResponse = lazy(() => import('./pages/ReferenceResponse'));
+const SalaryCalculator = lazy(() => import('./pages/SalaryCalculator'));
+const CompareJobs = lazy(() => import('./pages/CompareJobs'));
 
 // === Shared dashboard ===
 const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePassword'));
@@ -138,7 +140,9 @@ function App() {
               <Route path="forgot-password" element={<Lazy component={ForgotPassword} />} />
               <Route path="reset-password" element={<Lazy component={ResetPassword} />} />
               <Route path="verify-email" element={<Lazy component={VerifyEmail} />} />
+              <Route path="compare" element={<Lazy component={CompareJobs} />} />
               <Route path="references/respond/:token" element={<Lazy component={ReferenceResponse} />} />
+              <Route path="salary-calculator" element={<Lazy component={SalaryCalculator} />} />
 
               {/* Jobseeker dashboard */}
               <Route path="dashboard/jobseeker" element={<ProtectedRoute role="jobseeker" />}>

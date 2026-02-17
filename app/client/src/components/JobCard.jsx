@@ -1,8 +1,64 @@
-import { Link } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { CheckCircle2, GitCompareArrows } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 import { getDisplayCompanyName, formatJobSource } from '../utils/pngHelpers';
 import OptimizedImage from './OptimizedImage';
+
+function getCompareIds() {
+  return JSON.parse(sessionStorage.getItem('compareJobs') || '[]');
+}
+function setCompareIds(ids) {
+  sessionStorage.setItem('compareJobs', JSON.stringify(ids));
+  window.dispatchEvent(new Event('compareUpdate'));
+}
+
+export function CompareFloatingBar() {
+  const [ids, setIds] = useState(getCompareIds());
+  const navigate = useNavigate();
+  useEffect(() => {
+    const handler = () => setIds(getCompareIds());
+    window.addEventListener('compareUpdate', handler);
+    window.addEventListener('storage', handler);
+    return () => { window.removeEventListener('compareUpdate', handler); window.removeEventListener('storage', handler); };
+  }, []);
+  if (ids.length < 2) return null;
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-primary-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 animate-bounce-once">
+      <GitCompareArrows className="w-5 h-5" />
+      <span className="font-medium">Compare {ids.length} jobs</span>
+      <button onClick={() => navigate(`/compare?jobs=${ids.join(',')}`)} className="bg-white text-primary-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-primary-50">
+        Compare
+      </button>
+      <button onClick={() => { setCompareIds([]); }} className="text-primary-200 hover:text-white text-sm ml-1">Clear</button>
+    </div>
+  );
+}
+
+function CompareCheckbox({ jobId }) {
+  const [checked, setChecked] = useState(() => getCompareIds().includes(jobId));
+  useEffect(() => {
+    const handler = () => setChecked(getCompareIds().includes(jobId));
+    window.addEventListener('compareUpdate', handler);
+    return () => window.removeEventListener('compareUpdate', handler);
+  }, [jobId]);
+  const toggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ids = getCompareIds();
+    if (ids.includes(jobId)) {
+      setCompareIds(ids.filter(id => id !== jobId));
+    } else if (ids.length < 3) {
+      setCompareIds([...ids, jobId]);
+    }
+  };
+  return (
+    <button onClick={toggle} className={`absolute bottom-2 right-2 z-10 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${checked ? 'bg-primary-100 text-primary-700 border border-primary-300' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'}`} title={checked ? 'Remove from compare' : 'Add to compare (max 3)'}>
+      <GitCompareArrows className="w-3 h-3" />
+      {checked ? 'Comparing' : 'Compare'}
+    </button>
+  );
+}
 
 export default function JobCard({ job, compact = false }) {
   const excerpt = job.excerpt || truncate(stripHTML(job.description), compact ? 80 : 150);
@@ -122,6 +178,7 @@ export default function JobCard({ job, compact = false }) {
         </div>
       </div>
     </Link>
+    <CompareCheckbox jobId={job.id} />
     </article>
   );
 }

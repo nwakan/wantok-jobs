@@ -308,6 +308,47 @@ router.get('/my', authenticateToken, requireRole('employer'), (req, res) => {
 });
 
 // Get single job (enhanced with company info and similar jobs)
+// GET /compare?ids=1,2,3 - Compare jobs side by side (max 5)
+router.get('/compare', (req, res) => {
+  try {
+    const { ids } = req.query;
+    if (!ids) return res.status(400).json({ error: 'ids parameter required' });
+    
+    const idList = ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    if (idList.length === 0) return res.status(400).json({ error: 'No valid IDs provided' });
+    if (idList.length > 5) return res.status(400).json({ error: 'Maximum 5 jobs allowed' });
+    
+    const placeholders = idList.map(() => '?').join(',');
+    const jobs = db.prepare(`
+      SELECT j.*, 
+             u.name as employer_name,
+             COALESCE(j.company_display_name, pe.company_name) as company_name,
+             pe.industry as company_industry,
+             pe.website,
+             COALESCE(j.logo_url, pe.logo_url) as logo_url,
+             pe.location as company_location
+      FROM jobs j
+      JOIN users u ON j.employer_id = u.id
+      LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+      WHERE j.id IN (${placeholders}) AND j.status = 'active'
+    `).all(...idList);
+
+    // Get categories for each job
+    for (const job of jobs) {
+      job.categories = db.prepare(`
+        SELECT c.name FROM categories c
+        INNER JOIN job_categories jc ON c.id = jc.category_id
+        WHERE jc.job_id = ?
+      `).all(job.id);
+    }
+
+    res.json(jobs);
+  } catch (err) {
+    logger.error('Compare jobs error:', err);
+    res.status(500).json({ error: 'Failed to fetch jobs for comparison' });
+  }
+});
+
 router.get('/:id', (req, res) => {
   try {
     const job = db.prepare(`

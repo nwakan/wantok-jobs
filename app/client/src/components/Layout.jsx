@@ -9,6 +9,7 @@ import MobileBottomNav from './MobileBottomNav';
 import OfflineBanner from './OfflineBanner';
 import DarkModeToggle from './DarkModeToggle';
 import BackToTop from './BackToTop';
+import { CompareFloatingBar } from './JobCard';
 import ChatWidget from './ChatWidget';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
@@ -74,6 +75,16 @@ export default function Layout() {
                 <Link to="/training" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
                   {t('nav.training')}
                 </Link>
+                <div className="relative group">
+                  <button className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
+                    Tools ▾
+                  </button>
+                  <div className="absolute left-0 top-full mt-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <Link to="/salary-calculator" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
+                      🧮 Salary Calculator
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -219,6 +230,7 @@ export default function Layout() {
 
       {/* Back to top button */}
       <BackToTop />
+      <CompareFloatingBar />
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white mt-12" role="contentinfo">

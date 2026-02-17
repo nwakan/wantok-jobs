@@ -341,6 +341,7 @@ app.use('/api/wallet', require('./routes/wallet'));
 app.use('/api/employer/analytics', require('./routes/employer-analytics'));
 app.use('/api/employer/pipeline-analytics', require('./routes/pipeline-analytics'));
 app.use('/api/stats/public', require('./routes/public-stats'));
+app.use('/api', require('./routes/salary'));
 app.use('/api/jobseeker/resume', require('./routes/resume'));
 
 // New metadata and stats routes
