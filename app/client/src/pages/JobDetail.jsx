@@ -62,7 +62,22 @@ export default function JobDetail() {
     }
   }, [job, user]);
 
-  // Add structured data for SEO
+  // Map job_type to Google-recognized employmentType values
+  const mapEmploymentType = (type) => {
+    if (!type) return 'FULL_TIME';
+    const map = {
+      'full-time': 'FULL_TIME', 'full_time': 'FULL_TIME', 'fulltime': 'FULL_TIME',
+      'part-time': 'PART_TIME', 'part_time': 'PART_TIME', 'parttime': 'PART_TIME',
+      'contract': 'CONTRACTOR', 'contractor': 'CONTRACTOR',
+      'temporary': 'TEMPORARY', 'temp': 'TEMPORARY',
+      'intern': 'INTERN', 'internship': 'INTERN',
+      'volunteer': 'VOLUNTEER',
+      'casual': 'OTHER',
+    };
+    return map[type.toLowerCase()] || 'FULL_TIME';
+  };
+
+  // Add structured data for SEO (Google for Jobs)
   useEffect(() => {
     if (!job) return;
 
@@ -74,37 +89,48 @@ export default function JobDetail() {
       "identifier": {
         "@type": "PropertyValue",
         "name": "WantokJobs",
-        "value": job.id
+        "value": String(job.id)
       },
       "datePosted": job.created_at,
-      "validThrough": job.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      "employmentType": job.job_type?.toUpperCase() || "FULL_TIME",
+      "validThrough": job.expires_at || job.application_deadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      "employmentType": mapEmploymentType(job.job_type),
       "hiringOrganization": {
         "@type": "Organization",
-        "name": job.company_name,
-        "logo": job.logo_url || undefined
+        "name": job.company_name || 'Confidential',
+        ...(job.logo_url && { "logo": job.logo_url }),
+        ...(job.website && { "sameAs": job.website })
       },
       "jobLocation": {
         "@type": "Place",
         "address": {
           "@type": "PostalAddress",
-          "addressLocality": job.location,
+          "addressLocality": job.location || 'Papua New Guinea',
           "addressCountry": job.country || "PG"
         }
-      }
+      },
+      "directApply": true
     };
 
-    if (job.salary_min && job.salary_max) {
+    if (job.salary_min || job.salary_max) {
       structuredData.baseSalary = {
         "@type": "MonetaryAmount",
-        "currency": job.currency || "PGK",
+        "currency": job.salary_currency || job.currency || "PGK",
         "value": {
           "@type": "QuantitativeValue",
-          "minValue": job.salary_min,
-          "maxValue": job.salary_max,
-          "unitText": job.salary_period === 'yearly' ? 'YEAR' : 'MONTH'
+          ...(job.salary_min && { "minValue": job.salary_min }),
+          ...(job.salary_max && { "maxValue": job.salary_max }),
+          ...(job.salary_min && !job.salary_max && { "value": job.salary_min }),
+          "unitText": job.salary_period === 'monthly' ? 'MONTH' : job.salary_period === 'hourly' ? 'HOUR' : 'YEAR'
         }
       };
+    }
+
+    if (job.industry) {
+      structuredData.industry = job.industry;
+    }
+
+    if (job.experience_level) {
+      structuredData.experienceRequirements = job.experience_level;
     }
 
     const script = document.createElement('script');

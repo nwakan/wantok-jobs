@@ -42,6 +42,38 @@ export default function CompanyProfile() {
     else if (activeTab === 'benefits') fetchBenefits();
   }, [activeTab, reviewSort]);
 
+  // Organization JSON-LD structured data
+  useEffect(() => {
+    if (!company) return;
+
+    const orgData = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": company.name || company.company_name,
+      ...(company.description && { "description": company.description }),
+      ...(company.logo_url && { "logo": company.logo_url }),
+      ...(company.website && { "url": company.website, "sameAs": company.website }),
+      ...(company.industry && { "industry": company.industry }),
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": company.location || 'Papua New Guinea',
+        "addressCountry": "PG"
+      },
+      ...(company.company_size && { "numberOfEmployees": { "@type": "QuantitativeValue", "value": company.company_size } })
+    };
+
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(orgData);
+    script.id = 'company-structured-data';
+    document.head.appendChild(script);
+
+    return () => {
+      const existing = document.getElementById('company-structured-data');
+      if (existing) existing.remove();
+    };
+  }, [company]);
+
   const fetchCompanyData = async () => {
     setLoading(true);
     try {

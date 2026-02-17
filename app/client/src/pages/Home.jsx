@@ -128,6 +128,36 @@ export default function Home() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // WebSite JSON-LD structured data with SearchAction for sitelinks
+  useEffect(() => {
+    const websiteData = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "WantokJobs",
+      "url": "https://wantokjobs.com",
+      "description": "Papua New Guinea's leading job board. Find jobs, post vacancies, and connect with employers across PNG.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://wantokjobs.com/jobs?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    };
+
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(websiteData);
+    script.id = 'website-structured-data';
+    document.head.appendChild(script);
+
+    return () => {
+      const existing = document.getElementById('website-structured-data');
+      if (existing) existing.remove();
+    };
+  }, []);
+
   const fetchData = async () => {
     try {
       const [jobsResponse, statsResponse, catResponse, employerResponse, trendingResponse] = await Promise.all([
