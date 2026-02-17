@@ -3,8 +3,8 @@
  * Generates dynamic XML sitemaps for search engine crawling
  */
 
-import { Router } from 'express';
-import db from '../database.js';
+const { Router } = require('express');
+const db = require('../database.js');
 
 const router = Router();
 
@@ -277,4 +277,4 @@ router.post('/sitemap/clear-cache', (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;

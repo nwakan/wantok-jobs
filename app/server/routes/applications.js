@@ -14,8 +14,18 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
   try {
     const { job_id, cover_letter, cv_url, phone, location, screening_answers } = req.body;
 
+    // Sanitize all text inputs to prevent XSS
+    const safeCoverLetter = cover_letter ? stripHtml(cover_letter) : null;
+    const safePhone = phone ? stripHtml(phone) : null;
+    const safeLocation = location ? stripHtml(location) : null;
+
     if (!job_id) {
       return res.status(400).json({ error: 'Job ID required' });
+    }
+    
+    // Validate lengths
+    if (safeCoverLetter && !isValidLength(safeCoverLetter, 5000)) {
+      return res.status(400).json({ error: 'Cover letter must be 5000 characters or less' });
     }
 
     // Check if job exists and is active
@@ -44,7 +54,7 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
     const result = db.prepare(`
       INSERT INTO applications (job_id, jobseeker_id, cover_letter, cv_url)
       VALUES (?, ?, ?, ?)
-    `).run(job_id, req.user.id, cover_letter, finalCvUrl);
+    `).run(job_id, req.user.id, safeCoverLetter, finalCvUrl);
 
     const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(result.lastInsertRowid);
     
