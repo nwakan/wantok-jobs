@@ -7,6 +7,7 @@ const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 const { events: notifEvents } = require('../lib/notifications');
 const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../lib/email');
+const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
 
@@ -160,9 +161,17 @@ router.post('/register', validate(schemas.register), async (req, res) => {
       return res.status(400).json({ error: captchaValidation.error });
     }
 
+    // Sanitize inputs to prevent XSS
+    const safeName = stripHtml(name);
+    const safeEmail = sanitizeEmail(email);
+
     // Validation
-    if (!email || !password || !role || !name) {
+    if (!safeEmail || !password || !role || !safeName) {
       return res.status(400).json({ error: 'All fields required' });
+    }
+    
+    if (!isValidLength(safeName, 100, 1)) {
+      return res.status(400).json({ error: 'Name must be between 1 and 100 characters' });
     }
 
     if (!['jobseeker', 'employer', 'admin'].includes(role)) {
@@ -184,7 +193,7 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     }
 
     // Check if user exists
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(safeEmail);
     if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
     }
@@ -198,7 +207,7 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     // Create user (with verification token, email_verified = 0)
     const result = db.prepare(
       'INSERT INTO users (email, password_hash, role, name, verification_token, email_verified) VALUES (?, ?, ?, ?, ?, 0)'
-    ).run(email, password_hash, role, name, verificationToken);
+    ).run(safeEmail, password_hash, role, safeName, verificationToken);
 
     const userId = result.lastInsertRowid;
 
@@ -210,20 +219,20 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     }
 
     // Generate token
-    const token = jwt.sign({ id: userId, email, role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: userId, email: safeEmail, role }, JWT_SECRET, { expiresIn: '7d' });
 
     // Welcome notification + admin alert
-    notifEvents.onUserRegistered({ id: userId, email, role, name });
+    notifEvents.onUserRegistered({ id: userId, email: safeEmail, role, name: safeName });
 
     // Send verification email (async, don't block response)
-    sendVerificationEmail({ email, name, role }, verificationToken).catch(e => console.error('Verification email error:', e.message));
+    sendVerificationEmail({ email: safeEmail, name: safeName, role }, verificationToken).catch(e => console.error('Verification email error:', e.message));
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(userId, 'register', 'user', userId, JSON.stringify({ role })); } catch(e) {}
 
     res.status(201).json({
       token,
-      user: { id: userId, email, role, name, email_verified: false },
+      user: { id: userId, email: safeEmail, role, name: safeName, email_verified: false },
       message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {

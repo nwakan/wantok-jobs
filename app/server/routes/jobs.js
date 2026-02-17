@@ -760,6 +760,9 @@ router.post('/report', async (req, res) => {
     if (!validReasons.includes(reason)) {
       return res.status(400).json({ error: 'Invalid reason. Must be one of: scam, misleading, inappropriate, duplicate, other' });
     }
+    
+    // Sanitize details input
+    const safeDetails = details ? stripHtml(details) : null;
 
     // Check if job exists (if job_id provided)
     if (job_id) {
@@ -786,7 +789,7 @@ router.post('/report', async (req, res) => {
       job_id || null,
       employer_id || null,
       reason,
-      details || null
+      safeDetails
     );
 
     // Notify admins

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
+const { stripHtml, isValidLength } = require('../utils/sanitizeHtml');
 
 // GET /reviews — Get all reviews (with optional filters)
 router.get('/reviews', (req, res) => {
@@ -184,8 +185,30 @@ router.post('/reviews', authenticateToken, (req, res) => {
       recommend_to_friend
     } = req.body;
 
+    // Sanitize all text inputs to prevent XSS
+    const safeTitle = title ? stripHtml(title) : '';
+    const safePros = pros ? stripHtml(pros) : '';
+    const safeCons = cons ? stripHtml(cons) : '';
+    const safeAdvice = advice ? stripHtml(advice) : '';
+    const safeJobTitle = job_title ? stripHtml(job_title) : null;
+    const safeWorkLocation = work_location ? stripHtml(work_location) : null;
+
     if (!company_id || !rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'company_id and valid rating (1-5) required' });
+    }
+    
+    // Validate lengths
+    if (safeTitle && !isValidLength(safeTitle, 200)) {
+      return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    }
+    if (safePros && !isValidLength(safePros, 2000)) {
+      return res.status(400).json({ error: 'Pros must be 2000 characters or less' });
+    }
+    if (safeCons && !isValidLength(safeCons, 2000)) {
+      return res.status(400).json({ error: 'Cons must be 2000 characters or less' });
+    }
+    if (safeAdvice && !isValidLength(safeAdvice, 2000)) {
+      return res.status(400).json({ error: 'Advice must be 2000 characters or less' });
     }
 
     // Check if company exists
@@ -212,8 +235,8 @@ router.post('/reviews', authenticateToken, (req, res) => {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     `).run(
-      company_id, req.user.id, rating, title || '', pros || '', cons || '', advice || '',
-      is_current_employee ? 1 : 0, job_title || null, work_location || null, years_worked || null,
+      company_id, req.user.id, rating, safeTitle, safePros, safeCons, safeAdvice,
+      is_current_employee ? 1 : 0, safeJobTitle, safeWorkLocation, years_worked || null,
       work_life_balance || 0, culture_values || 0, career_opportunities || 0,
       compensation_benefits || 0, senior_management || 0, ceo_approval || null,
       recommend_to_friend || 0

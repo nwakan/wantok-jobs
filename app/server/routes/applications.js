@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { events: notifEvents } = require('../lib/notifications');
 const { sendApplicationStatusEmail, sendNewApplicationEmail, sendApplicationConfirmationEmail } = require('../lib/email');
+const { stripHtml, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
 
