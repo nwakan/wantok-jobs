@@ -601,6 +601,38 @@ export const training = {
   },
 };
 
+// Conversations (employer-jobseeker messaging)
+export const conversations = {
+  list: () =>
+    fetch(`${API_URL}/conversations`, { headers: getAuthHeader() }).then(handleResponse),
+
+  get: (id) =>
+    fetch(`${API_URL}/conversations/${id}`, { headers: getAuthHeader() }).then(handleResponse),
+
+  create: (data) =>
+    fetch(`${API_URL}/conversations`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  sendMessage: (conversationId, message) =>
+    fetch(`${API_URL}/conversations/${conversationId}`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    }).then(handleResponse),
+
+  unreadCount: () =>
+    fetch(`${API_URL}/conversations/unread-count`, { headers: getAuthHeader() }).then(handleResponse),
+
+  markRead: (messageId) =>
+    fetch(`${API_URL}/conversations/messages/${messageId}/read`, {
+      method: 'PATCH',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+};
+
 // Default export for convenience
 const api = {
   get: (url) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { headers: getAuthHeader() }).then(handleResponse),

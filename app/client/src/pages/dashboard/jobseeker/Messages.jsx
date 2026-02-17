@@ -1,92 +1,90 @@
-import { useState, useEffect } from 'react';
-import { messages } from '../../../api';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { conversations } from '../../../api';
+import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../components/Toast';
 
 export default function Messages() {
-  const [messageList, setMessageList] = useState([]);
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const { showToast } = useToast();
+  const [convList, setConvList] = useState([]);
+  const [selectedConv, setSelectedConv] = useState(null);
+  const [msgs, setMsgs] = useState([]);
+  const [newMsg, setNewMsg] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
+  const pollRef = useRef(null);
 
-  const [replyText, setReplyText] = useState('');
-
-  useEffect(() => {
-    loadMessages();
-  }, []);
-
-  const loadMessages = async () => {
+  const loadConversations = useCallback(async () => {
     try {
-      const data = await messages.getAll();
-      setMessageList(data || []);
-    } catch (error) {
-      console.error('Failed to load messages:', error);
-      // Placeholder data
-      setMessageList([
-        {
-          id: 1,
-          from_name: 'Tech Corp',
-          subject: 'Application Update - Senior Developer Position',
-          message: 'Thank you for applying. We would like to schedule an interview...',
-          read: false,
-          created_at: new Date().toISOString(),
-          from_type: 'employer',
-        },
-        {
-          id: 2,
-          from_name: 'Admin Team',
-          subject: 'Welcome to WantokJobs!',
-          message: 'Thank you for registering. Here are some tips to get started...',
-          read: true,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          from_type: 'admin',
-        },
-        {
-          id: 3,
-          from_name: 'StartUp Inc',
-          subject: 'Interview Invitation',
-          message: 'We are impressed with your profile and would like to invite you for an interview...',
-          read: true,
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          from_type: 'employer',
-        },
-      ]);
+      const data = await conversations.list();
+      setConvList(data?.data || []);
+    } catch (e) {
+      console.error('Failed to load conversations:', e);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleMessageClick = async (message) => {
-    setSelectedMessage(message);
-    setReplyText('');
-    
-    if (!message.read) {
-      try {
-        await messages.markRead(message.id);
-        setMessageList(messageList.map(m => 
-          m.id === message.id ? { ...m, read: true } : m
-        ));
-      } catch (error) {
-        console.error('Failed to mark as read:', error);
-      }
-    }
-  };
-
-  const handleReply = async (e) => {
-    e.preventDefault();
+  const loadMessages = useCallback(async (convId) => {
     try {
-      await messages.send({
-        recipient_id: selectedMessage.from_id,
-        subject: `Re: ${selectedMessage.subject}`,
-        message: replyText,
-      });
-      showToast('Reply sent successfully', 'success');
-      setReplyText('');
-    } catch (error) {
-      showToast('Failed to send reply', 'error');
+      const data = await conversations.get(convId);
+      setMsgs(data?.messages || []);
+      setConvList(prev => prev.map(c => c.id === convId ? { ...c, unread_count: 0 } : c));
+    } catch (e) {
+      console.error('Failed to load messages:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Poll every 30s + on focus
+  useEffect(() => {
+    const poll = () => {
+      loadConversations();
+      if (selectedConv) loadMessages(selectedConv.id);
+    };
+    pollRef.current = setInterval(poll, 30000);
+    const onFocus = () => poll();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(pollRef.current);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [selectedConv, loadConversations, loadMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [msgs]);
+
+  const handleSelectConv = async (conv) => {
+    setSelectedConv(conv);
+    await loadMessages(conv.id);
+  };
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!newMsg.trim() || !selectedConv) return;
+    setSending(true);
+    try {
+      const data = await conversations.sendMessage(selectedConv.id, newMsg.trim());
+      setMsgs(prev => [...prev, data.message]);
+      setNewMsg('');
+      setConvList(prev => prev.map(c =>
+        c.id === selectedConv.id
+          ? { ...c, last_message: newMsg.trim(), last_message_at: new Date().toISOString() }
+          : c
+      ));
+    } catch (e) {
+      showToast('Failed to send message', 'error');
+    } finally {
+      setSending(false);
     }
   };
 
-  const unreadCount = messageList.filter(m => !m.read).length;
+  const totalUnread = convList.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
   if (loading) {
     return (
@@ -98,130 +96,106 @@ export default function Messages() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-          {unreadCount > 0 && (
-            <p className="text-sm text-gray-600 mt-1">
-              {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
-            </p>
-          )}
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+        {totalUnread > 0 && (
+          <p className="text-sm text-gray-600 mt-1">{totalUnread} unread message{totalUnread !== 1 ? 's' : ''}</p>
+        )}
       </div>
 
-      {/* Messages Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Message List */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: '500px' }}>
+        {/* Conversation List */}
         <div className="lg:col-span-1 bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="divide-y divide-gray-200">
-            {messageList.length === 0 ? (
-              <p className="p-6 text-center text-gray-500">No messages</p>
+          <div className="p-4 border-b bg-gray-50">
+            <h2 className="font-semibold text-gray-700">Conversations</h2>
+          </div>
+          <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+            {convList.length === 0 ? (
+              <p className="p-6 text-center text-gray-500">No messages yet. Employers will contact you here when interested in your applications.</p>
             ) : (
-              messageList.map(message => (
+              convList.map(conv => (
                 <div
-                  key={message.id}
-                  onClick={() => handleMessageClick(message)}
+                  key={conv.id}
+                  onClick={() => handleSelectConv(conv)}
                   className={`p-4 cursor-pointer transition-colors ${
-                    !message.read ? 'bg-blue-50' : 'hover:bg-gray-50'
-                  } ${selectedMessage?.id === message.id ? 'bg-gray-100' : ''}`}
+                    conv.unread_count > 0 ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  } ${selectedConv?.id === conv.id ? 'bg-gray-100 border-l-4 border-primary-600' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <p className={`font-semibold text-sm ${
-                      !message.read ? 'text-gray-900' : 'text-gray-700'
-                    }`}>
-                      {message.from_name}
-                    </p>
-                    {!message.read && (
-                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                    <p className="font-semibold text-sm text-gray-900">{conv.employer_name}</p>
+                    {conv.unread_count > 0 && (
+                      <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">{conv.unread_count}</span>
                     )}
                   </div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">
-                    {message.subject}
+                  {conv.job_title && (
+                    <p className="text-xs text-primary-600 mb-1">Re: {conv.job_title}</p>
+                  )}
+                  <p className="text-xs text-gray-500 truncate">{conv.last_message || 'No messages yet'}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {conv.last_message_at ? new Date(conv.last_message_at).toLocaleDateString() : ''}
                   </p>
-                  <p className="text-xs text-gray-500 truncate mb-1">
-                    {message.message}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      message.from_type === 'admin' 
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {message.from_type === 'admin' ? 'Admin' : 'Employer'}
-                    </span>
-                    <p className="text-xs text-gray-400">
-                      {new Date(message.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Message Detail */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
-          {!selectedMessage ? (
-            <div className="text-center py-12 text-gray-500">
-              Select a message to view
+        {/* Message Thread */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm flex flex-col">
+          {!selectedConv ? (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              Select a conversation to view messages
             </div>
           ) : (
-            <div>
-              <div className="border-b pb-4 mb-4">
-                <h2 className="text-xl font-bold text-gray-900 mb-2">
-                  {selectedMessage.subject}
-                </h2>
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="font-medium">{selectedMessage.from_name}</span>
-                  <span className="mx-2">•</span>
-                  <span>{new Date(selectedMessage.created_at).toLocaleString()}</span>
-                  <span className="mx-2">•</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    selectedMessage.from_type === 'admin' 
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {selectedMessage.from_type === 'admin' ? 'Admin' : 'Employer'}
-                  </span>
-                </div>
+            <>
+              <div className="p-4 border-b bg-gray-50">
+                <h2 className="font-semibold text-gray-900">{selectedConv.employer_name}</h2>
+                {selectedConv.job_title && (
+                  <p className="text-sm text-primary-600">Re: {selectedConv.job_title}</p>
+                )}
               </div>
 
-              <div className="prose max-w-none mb-6">
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {selectedMessage.message}
-                </p>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[450px]">
+                {msgs.length === 0 ? (
+                  <p className="text-center text-gray-400 py-8">No messages yet</p>
+                ) : (
+                  msgs.map(msg => {
+                    const isMe = msg.sender_id === user?.id;
+                    return (
+                      <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                          isMe ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-900'
+                        }`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-xs mt-1 ${isMe ? 'text-primary-200' : 'text-gray-400'}`}>
+                            {new Date(msg.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
               </div>
 
-              {selectedMessage.from_type !== 'admin' && (
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Reply</h3>
-                  <form onSubmit={handleReply}>
-                    <textarea
-                      value={replyText}
-                      onChange={e => setReplyText(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-                      rows="6"
-                      placeholder="Type your reply here..."
-                      required
-                    />
-                    <button
-                      type="submit"
-                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                    >
-                      Send Reply
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {selectedMessage.from_type === 'admin' && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <p className="text-purple-800 text-sm">
-                    ℹ️ This is a system message from the admin team. You cannot reply directly.
-                  </p>
-                </div>
-              )}
-            </div>
+              <form onSubmit={handleSend} className="p-4 border-t flex gap-2">
+                <input
+                  type="text"
+                  value={newMsg}
+                  onChange={e => setNewMsg(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  disabled={sending}
+                />
+                <button
+                  type="submit"
+                  disabled={sending || !newMsg.trim()}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {sending ? 'Sending...' : 'Send'}
+                </button>
+              </form>
+            </>
           )}
         </div>
       </div>

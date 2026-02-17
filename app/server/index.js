@@ -319,6 +319,7 @@ app.use('/api/screening', require('./routes/screening'));
 app.use('/api/job-alerts', require('./routes/job-alerts'));
 app.use('/api/saved-resumes', require('./routes/saved-resumes'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/companies', require('./routes/companies'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/activity', require('./routes/activity-feed'));
