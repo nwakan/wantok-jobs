@@ -23,18 +23,22 @@ if git diff HEAD~1 --name-only | grep -q "^app/client/"; then
   echo "Client build done"
 fi
 
+# Fix ownership
+chown -R wantokjobs:wantokjobs "$REPO_DIR"
+
+# Stop service before migrations (avoid SQLITE_CORRUPT)
+echo "Stopping service for migrations..."
+sudo systemctl stop wantokjobs
+
 # Run migrations
 echo "Running migrations..."
 cd "$APP_DIR"
 node server/migrations/runner.js || echo "Migrations: no new migrations"
 cd "$REPO_DIR"
 
-# Fix ownership
-chown -R wantokjobs:wantokjobs "$REPO_DIR"
-
-# Restart service
-echo "Restarting service..."
-systemctl restart wantokjobs
+# Start service
+echo "Starting service..."
+sudo systemctl start wantokjobs
 sleep 2
 
 # Health check
