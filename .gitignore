@@ -6,3 +6,5 @@ legacy-dump.sql
 *.db
 candidates.json
 jobs.json
+app/server/data/wantokjobs.db-shm
+app/server/data/wantokjobs.db-wal

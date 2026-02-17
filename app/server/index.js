@@ -262,6 +262,7 @@ app.use('/api/saved-resumes', require('./routes/saved-resumes'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/companies', require('./routes/companies'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/activity', require('./routes/activity-feed'));
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/blog', require('./routes/blog'));
 app.use('/api/newsletter', require('./routes/newsletter'));

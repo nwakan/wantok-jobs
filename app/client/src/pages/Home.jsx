@@ -11,6 +11,8 @@ import PageHead from '../components/PageHead';
 import JobCard from '../components/JobCard';
 import { JobCardSkeleton } from '../components/SkeletonLoader';
 import { jobs as jobsAPI } from '../api';
+import ActivityToast from '../components/ActivityToast';
+import ActivityFeed from '../components/ActivityFeed';
 
 // Icon map for categories
 const categoryIcons = {
@@ -124,6 +126,7 @@ export default function Home() {
 
   return (
     <>
+      <ActivityToast />
       <PageHead
         title="Find Jobs in Papua New Guinea"
         description={`Leading job platform for Papua New Guinea and the Pacific. ${stats.activeJobs}+ active jobs from ${stats.totalEmployers}+ employers. Connect with top employers, search jobs, and advance your career.`}
@@ -337,6 +340,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Live Activity Feed */}
+      <ActivityFeed />
 
       {/* How It Works */}
       <div className="bg-gradient-to-br from-primary-50 to-teal-50 py-16">
