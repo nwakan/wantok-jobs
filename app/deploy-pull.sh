@@ -31,8 +31,9 @@ echo "Stopping service..."
 systemctl stop wantokjobs
 sleep 1
 
-# Clean WAL/SHM files
+# Clean WAL/SHM files and kill any stale DB processes
 rm -f "$APP_DIR/server/data/wantokjobs.db-wal" "$APP_DIR/server/data/wantokjobs.db-shm"
+fuser -k "$APP_DIR/server/data/wantokjobs.db" 2>/dev/null || true
 
 # Run migrations
 echo "Running migrations..."
@@ -42,6 +43,7 @@ cd "$REPO_DIR"
 
 # Start service
 echo "Starting service..."
+systemctl reset-failed wantokjobs 2>/dev/null || true
 systemctl start wantokjobs
 sleep 2
 

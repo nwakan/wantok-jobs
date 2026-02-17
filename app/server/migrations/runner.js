@@ -124,3 +124,7 @@ if (arg === '--status') {
 } else {
   runPending();
 }
+
+// Explicitly close DB and exit (prevents hanging in deploy scripts)
+try { db.close(); } catch {}
+process.exit(0);
