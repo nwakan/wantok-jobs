@@ -56,6 +56,8 @@ const SalaryCalculator = lazy(() => import('./pages/SalaryCalculator'));
 const CompareJobs = lazy(() => import('./pages/CompareJobs'));
 const SuccessStories = lazy(() => import('./pages/SuccessStories'));
 const IndustryLanding = lazy(() => import('./pages/IndustryLanding'));
+const Transparency = lazy(() => import('./pages/Transparency'));
+const Features = lazy(() => import('./pages/Features'));
 
 // === Shared dashboard ===
 const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePassword'));
@@ -134,6 +136,7 @@ function App() {
 
               {/* Public routes — lazy */}
               <Route path="about" element={<Lazy component={About} />} />
+              <Route path="transparency" element={<Lazy component={Transparency} />} />
               <Route path="contact" element={<Lazy component={Contact} />} />
               <Route path="privacy" element={<Lazy component={Privacy} />} />
               <Route path="terms" element={<Lazy component={Terms} />} />
@@ -157,6 +160,7 @@ function App() {
               <Route path="references/respond/:token" element={<Lazy component={ReferenceResponse} />} />
               <Route path="salary-calculator" element={<Lazy component={SalaryCalculator} />} />
               <Route path="success-stories" element={<Lazy component={SuccessStories} />} />
+              <Route path="features" element={<Lazy component={Features} />} />
 
               {/* Jobseeker dashboard */}
               <Route path="dashboard/jobseeker" element={<ProtectedRoute role="jobseeker" />}>

@@ -371,6 +371,19 @@ class Jean {
         };
       }
 
+      case 'feature_request':
+        if (!user) {
+          return { 
+            message: "You need to be logged in to submit feature requests. Sign up or log in first!\n\nOnce you're in, you can tell me your ideas and I'll submit them for you. Or browse requests others have made at [/features](/features).",
+            quickReplies: ['Login', 'Register', 'View Feature Requests'],
+            intent 
+          };
+        }
+        return this.startFlow(session, 'feature-request', user);
+
+      case 'view_features':
+        return this.handleViewFeatureRequests();
+
       case 'contact_support':
         return this.startFlow(session, 'contact-support', user);
 
@@ -925,6 +938,38 @@ class Jean {
         quickReplies: ['Approve All', 'Review One by One'],
       };
     }
+  }
+
+  handleViewFeatureRequests() {
+    const features = actions.getTopFeatureRequests(db, 5);
+    const stats = actions.getFeatureStats(db);
+    
+    if (features.length === 0) {
+      return {
+        message: personality.humanize("No feature requests yet! Be the first to suggest an improvement. 💡\n\nWhat would you like to see added to WantokJobs?"),
+        quickReplies: ['Submit a Request', 'View All Features'],
+        intent: 'view_features',
+      };
+    }
+    
+    const list = features.map((f, i) => {
+      const statusEmoji = {
+        submitted: '📝',
+        under_review: '👀',
+        planned: '📋',
+        in_progress: '⚙️',
+        completed: '✅',
+        declined: '❌'
+      }[f.status] || '📝';
+      
+      return `${i + 1}. ${statusEmoji} **${f.title}**\n   ${f.vote_count} votes • ${f.comment_count} comments\n   By ${f.submitter_name}`;
+    }).join('\n\n');
+    
+    return {
+      message: personality.humanize(`🌟 **Top Feature Requests**\n\n${stats.total} total • ${stats.planned} planned • ${stats.completed} completed\n\n${list}\n\n[View all requests](/features) or tell me your idea!`),
+      quickReplies: ['Submit a Request', 'View All Features', 'Search Jobs'],
+      intent: 'view_features',
+    };
   }
 
   // ─── Flow helpers ──────────────────────────────────────

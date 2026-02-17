@@ -4,7 +4,7 @@ import {
   Search, MapPin, Briefcase, TrendingUp, Users, Building2, CheckCircle, Zap,
   Bell, Award, Star, ChevronLeft, ChevronRight, ArrowRight, Clock, Shield, Globe,
   Cpu, Heart, GraduationCap, Code, DollarSign, Hammer, ShoppingBag, Coffee,
-  Droplet, Pickaxe, Scale, Landmark, Megaphone, Cog, Leaf, Truck, Wrench
+  Droplet, Pickaxe, Scale, Landmark, Megaphone, Cog, Leaf, Truck, Wrench, Eye, FileCheck, UserCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageHead from '../components/PageHead';
@@ -242,9 +242,9 @@ export default function Home() {
     <>
       <ActivityToast />
       <PageHead
-        title="WantokJobs — Papua New Guinea's #1 Job Board | Find Jobs in PNG"
-        description={`Leading job platform for Papua New Guinea and the Pacific. ${stats.activeJobs}+ active jobs from ${stats.totalEmployers}+ employers. Connect with top employers, search jobs, and advance your career.`}
-        keywords="jobs PNG, Papua New Guinea jobs, Port Moresby jobs, Lae jobs, careers PNG, employment PNG"
+        title="WantokJobs — PNG's First Transparent Hiring Platform | Fair Recruitment"
+        description={`PNG's leading transparent job platform. 463 employers, 112 transparent employers, 65 government bodies. Fair hiring, open processes. No other PNG platform has this. ${stats.activeJobs}+ jobs.`}
+        keywords="jobs PNG, transparent hiring PNG, fair recruitment Papua New Guinea, government jobs PNG, Port Moresby jobs, Lae jobs, careers PNG, employment PNG"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebSite",
@@ -276,14 +276,14 @@ export default function Home() {
             className="text-center mb-12"
           >
             <h1 className="text-3xl md:text-6xl font-bold mb-4 md:mb-6">
-              {t('hero.title1')}<br />
-              <span className="text-secondary-400">{t('hero.title2')}</span>
+              PNG's First<br />
+              <span className="text-secondary-400">Transparent Hiring Platform</span>
             </h1>
             <p className="text-lg md:text-2xl text-primary-100 mb-2">
-              {t('hero.subtitle', { jobseekers: stats.totalJobseekers.toLocaleString(), employers: stats.totalEmployers.toLocaleString() })}
+              {stats.totalEmployers.toLocaleString()}+ employers • {stats.totalJobseekers.toLocaleString()}+ job seekers • 112 transparent employers
             </p>
             <p className="text-lg text-primary-200">
-              {t('hero.activeJobs', { count: stats.activeJobs.toLocaleString() })}
+              Fair recruitment. Open processes. No more hidden wantok deals.
             </p>
           </motion.div>
 
@@ -375,12 +375,13 @@ export default function Home() {
       {/* Stats Bar */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
             {[
+              { value: 463, label: 'Employers', icon: Building2 },
+              { value: 65, label: 'Government Bodies', icon: Landmark },
+              { value: 112, label: 'Transparent Employers', icon: Shield },
               { value: stats.activeJobs, label: 'Active Jobs', icon: Briefcase },
-              { value: stats.totalEmployers, label: 'Employers', icon: Building2 },
               { value: stats.totalJobseekers, label: 'Job Seekers', icon: Users },
-              { value: categories.length || 20, label: 'Industries', icon: Globe },
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
@@ -395,6 +396,114 @@ export default function Home() {
                 <div className="text-sm md:text-base text-gray-600 dark:text-gray-400">{stat.label}</div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Transparency Framework Section */}
+      <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-800 py-16 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+              🏆 First in the Pacific
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              The Transparency Framework
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+              Fair hiring for PNG. Government departments, SOEs, NGOs, and statutory authorities must now disclose hiring panels, 
+              selection criteria, and outcomes. <strong>No other PNG job platform has this.</strong>
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            {[
+              {
+                icon: Eye,
+                title: 'For Job Seekers',
+                color: 'bg-blue-100 text-blue-600',
+                points: [
+                  'See exactly how you\'re evaluated',
+                  'Know who\'s on the hiring panel',
+                  'Understand selection criteria upfront',
+                  'Fair chance — merit-based hiring'
+                ]
+              },
+              {
+                icon: Building2,
+                title: 'For Employers',
+                color: 'bg-purple-100 text-purple-600',
+                points: [
+                  'Build trust and credibility',
+                  'Meet compliance requirements',
+                  'Stand out from competitors',
+                  'Reduce recruitment disputes'
+                ]
+              },
+              {
+                icon: Shield,
+                title: 'For PNG',
+                color: 'bg-green-100 text-green-600',
+                points: [
+                  'Combat wantok system abuse',
+                  'Public sector accountability',
+                  'Transparent governance',
+                  'Level playing field for all'
+                ]
+              }
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.15 }}
+                className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm"
+              >
+                <div className={`w-16 h-16 ${item.color} rounded-full flex items-center justify-center mx-auto mb-6`}>
+                  <item.icon className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 text-center">{item.title}</h3>
+                <ul className="space-y-3">
+                  {item.points.map((point, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700 dark:text-gray-300">{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Transparency Score Badges */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm mb-8">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
+              Transparency Score System
+            </h3>
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                { badge: '🟢', range: '80-100', label: 'Excellent', desc: 'Full disclosure, all criteria public, panel declared' },
+                { badge: '🟡', range: '50-79', label: 'Improving', desc: 'Partial transparency, some criteria disclosed' },
+                { badge: '🔴', range: '0-49', label: 'Needs Work', desc: 'Limited disclosure, improving compliance' }
+              ].map((score, idx) => (
+                <div key={idx} className="text-center p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="text-5xl mb-3">{score.badge}</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">{score.label}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-semibold">{score.range} Score</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{score.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              to="/transparency"
+              className="inline-flex items-center gap-2 bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition"
+            >
+              Learn More About Transparency Framework
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </div>
@@ -644,10 +753,14 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { icon: Zap, title: 'AI-Powered Matching', desc: 'Smart algorithms match you with the most relevant opportunities based on your skills and experience' },
-              { icon: Clock, title: 'Real-Time Alerts', desc: 'Get notified instantly when jobs matching your profile are posted — via email, SMS, or WhatsApp' },
-              { icon: Shield, title: 'Free for Job Seekers', desc: 'Search, apply, build your CV, and track applications — all completely free, forever' },
-              { icon: Globe, title: 'Pacific Islands Coverage', desc: 'Jobs across Papua New Guinea, Fiji, Solomon Islands, Vanuatu, Samoa, Tonga, and remote opportunities' },
+              { icon: Shield, title: 'Transparency Framework', desc: 'Only PNG platform with mandatory hiring transparency for public sector. Fair, merit-based recruitment.' },
+              { icon: UserCheck, title: 'Employer Scout', desc: 'Automated employer profile building from multiple sources — 65 public sector profiles and counting' },
+              { icon: Zap, title: 'Jean AI Assistant', desc: 'Chat widget on every page. Get instant help with job searches, applications, and career advice' },
+              { icon: Bell, title: 'WhatsApp Job Alerts', desc: 'Get notified instantly when jobs matching your profile are posted — via email, SMS, or WhatsApp' },
+              { icon: Globe, title: 'Province-Based Search', desc: 'Find jobs by province and region across PNG and the Pacific Islands' },
+              { icon: DollarSign, title: 'Credit-Based Billing', desc: 'No subscriptions! Buy credits when you need them — they never expire. Fair pricing for employers.' },
+              { icon: Users, title: '65 Government Profiles', desc: 'All PNG government departments, SOEs, statutory authorities, and provincial governments' },
+              { icon: CheckCircle, title: 'Free for Job Seekers', desc: 'Search, apply, build your CV, track applications, and use Tok Pisin — all completely free' },
             ].map((item, idx) => (
               <motion.div
                 key={idx}

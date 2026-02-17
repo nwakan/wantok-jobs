@@ -73,6 +73,9 @@ export default function Layout() {
                 <Link to="/companies" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
                   {t('nav.companies')}
                 </Link>
+                <Link to="/transparency" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
+                  <span className="mr-1">🛡️</span> Transparency
+                </Link>
                 <Link to="/training" className="inline-flex items-center px-1 pt-1 text-gray-900 hover:text-primary-600">
                   {t('nav.training')}
                 </Link>
@@ -168,6 +171,13 @@ export default function Layout() {
                 🏢 {t('nav.companies')}
               </Link>
               <Link 
+                to="/transparency" 
+                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                🛡️ Transparency
+              </Link>
+              <Link 
                 to="/training" 
                 className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
@@ -259,6 +269,7 @@ export default function Layout() {
               <ul className="space-y-2">
                 <li><Link to="/jobs" className="text-gray-400 hover:text-white">{t('footer.browseJobs')}</Link></li>
                 <li><Link to="/companies" className="text-gray-400 hover:text-white">{t('footer.companies')}</Link></li>
+                <li><Link to="/transparency" className="text-gray-400 hover:text-white">🛡️ Transparency</Link></li>
                 <li><Link to="/training" className="text-gray-400 hover:text-white">{t('footer.training')}</Link></li>
                 <li><Link to="/about" className="text-gray-400 hover:text-white">{t('footer.aboutUs')}</Link></li>
                 <li><Link to="/success-stories" className="text-gray-400 hover:text-white">Success Stories</Link></li>

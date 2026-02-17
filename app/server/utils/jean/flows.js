@@ -535,6 +535,49 @@ const FLOW_DEFS = {
       };
     },
   },
+
+  // ─── Feature Request ───────────────────────────────────
+  'feature-request': {
+    steps: [
+      { 
+        key: 'title', 
+        ask: "What's the title of your feature request? Give it a short, clear name.", 
+        field: 'title',
+        validate: (v) => v.length < 5 ? 'Title must be at least 5 characters' : (v.length > 200 ? 'Title is too long (max 200 characters)' : null)
+      },
+      { 
+        key: 'description', 
+        ask: "Now describe your idea in detail. What problem does it solve? How would it help you or other users?", 
+        field: 'description',
+        validate: (v) => v.length < 20 ? 'Please provide more detail (at least 20 characters)' : (v.length > 2000 ? 'Description is too long (max 2000 characters)' : null)
+      },
+      { 
+        key: 'category', 
+        ask: "What category does this fit into?", 
+        field: 'category',
+        quickReplies: ['General', 'Jobs', 'Employers', 'Jobseekers', 'Transparency', 'Mobile', 'Other'],
+        transform: (v) => v.toLowerCase()
+      },
+    ],
+    onStart: async (ctx) => {
+      return { 
+        message: personality.humanize("Great! Let's submit your feature request. Your voice matters — mi laik harim tingting bilong yu! 💡")
+      };
+    },
+    onComplete: async (ctx, collected) => {
+      const result = actions.createFeatureRequest(ctx.db, ctx.userId, collected);
+      if (result.error) {
+        return {
+          message: `Oops, something went wrong: ${result.error}. Sori tru! Please try again.`,
+          quickReplies: ['Try Again', 'View Features', 'Search Jobs'],
+        };
+      }
+      return {
+        message: personality.humanize(`✅ Your feature request has been submitted! Others can vote on it at [/features](/features).\n\nTenkyu tru for helping us improve WantokJobs! 🙌`),
+        quickReplies: ['View All Requests', 'Submit Another', 'Search Jobs'],
+      };
+    },
+  },
 };
 
 // ─── Flow Engine ─────────────────────────────────────────

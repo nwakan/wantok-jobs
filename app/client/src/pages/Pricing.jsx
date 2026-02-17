@@ -17,6 +17,7 @@ const employerPackages = [
       { text: '1 active job posting', included: true },
       { text: 'Basic job listing', included: true },
       { text: 'Email notifications', included: true },
+      { text: 'Transparency tools (if eligible)', included: true },
       { text: 'AI matching credits', included: false },
       { text: 'Candidate search credits', included: false },
       { text: 'Featured listings', included: false },
@@ -36,7 +37,9 @@ const employerPackages = [
       { text: '3 AI matching credits', included: true },
       { text: '10 candidate searches', included: true },
       { text: 'Enhanced job listings', included: true },
+      { text: 'Transparency tools (if eligible)', included: true },
       { text: 'Email notifications', included: true },
+      { text: '"Transparent Employer" badge (opt-in)', included: true },
       { text: 'Featured listings', included: false },
     ],
     cta: 'Buy Starter Pack',
@@ -47,13 +50,15 @@ const employerPackages = [
     icon: Building2,
     price: '1,800',
     period: 'one-time',
-    description: 'Best value for active recruiters',
+    description: 'Best value for active recruiters — with transparency tools',
     credits: ['20 job posting credits', '15 AI matching credits', '50 candidate search credits'],
     features: [
       { text: '20 job posting credits', included: true },
       { text: '15 AI matching credits', included: true },
       { text: '50 candidate searches', included: true },
       { text: 'Premium job listings', included: true },
+      { text: 'Full transparency tools', included: true },
+      { text: '"Transparent Employer" badge', included: true },
       { text: 'AI-powered screening', included: true },
       { text: 'Featured job listings', included: true },
       { text: 'Advanced analytics', included: true },
@@ -67,13 +72,15 @@ const employerPackages = [
     icon: Crown,
     price: '7,500',
     period: 'one-time',
-    description: 'For large organizations — custom pricing available for 200+ job posts',
+    description: 'For large organizations — includes full transparency compliance suite',
     credits: ['100 job posting credits', 'Unlimited AI matching', 'Unlimited candidate search'],
     features: [
       { text: '100 job posting credits', included: true },
       { text: 'Unlimited AI matching', included: true },
       { text: 'Unlimited candidate search', included: true },
       { text: 'Premium listings with priority', included: true },
+      { text: 'Full transparency compliance tools', included: true },
+      { text: 'Auditor access & reporting', included: true },
       { text: 'Enterprise AI screening', included: true },
       { text: 'Unlimited featured listings', included: true },
       { text: 'Custom analytics & reporting', included: true },
@@ -461,10 +468,44 @@ export default function Pricing() {
           </div>
         </div>
 
+        {/* Transparency Notice for Public Sector */}
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 py-12 border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-white rounded-xl shadow-sm p-8 border-l-4 border-green-500">
+              <div className="flex items-start gap-4">
+                <Shield className="w-12 h-12 text-green-600 flex-shrink-0" />
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    Government & Public Sector Employers
+                  </h3>
+                  <p className="text-gray-700 mb-4">
+                    <strong>Transparency tools are included FREE</strong> for all government departments, SOEs, NGOs, 
+                    statutory authorities, and publicly listed companies. All plans include full transparency compliance features.
+                  </p>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      Hiring panel declaration & conflict of interest management
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      Selection criteria disclosure & transparency scoring
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      Public hiring outcome statistics & auditor access
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Social Proof */}
         <div className="bg-white py-12 border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-gray-500 mb-8">Trusted by PNG's leading employers</p>
+            <p className="text-gray-500 mb-8">Trusted by PNG's leading employers — including 65 government bodies</p>
             <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
               <div>
                 <div className="text-4xl font-bold text-primary-600 mb-2">{stats ? formatCount(stats.totalEmployers) : '...'}</div>

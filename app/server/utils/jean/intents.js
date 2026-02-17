@@ -261,6 +261,27 @@ const INTENTS = {
     requiresAuth: true,
   },
 
+  // ─── Feature Requests ──────────────────────────────────
+  feature_request: {
+    patterns: [
+      /\b(feature|suggestion|idea|improvement|request|wish|would\s*be\s*nice)\b/i,
+      /\b(i\s*have\s*a|can\s*you\s*add|please\s*add|you\s*should)\b.*\b(suggestion|idea|feature|improvement)\b/i,
+      /\b(can\s*you|could\s*you|please)\b.*\b(add|implement|build|create|make)\b/i,
+      /\bi\s*wish\s*(the\s*site|wantokjobs|this)\b.*\b(had|could|would)\b/i,
+    ],
+    priority: 7,
+    requiresAuth: false, // Allow viewing but creating requires auth
+  },
+  view_features: {
+    patterns: [
+      /\b(what|show|list|view|see)\b.*\b(feature|suggestion|request|idea)s?\b/i,
+      /\bfeatures?\b.*\b(request|suggest|people|user|want)\b/i,
+      /\bwhat\s*(are\s*)?people\s*(requesting|asking|suggesting)\b/i,
+    ],
+    priority: 6,
+    requiresAuth: false,
+  },
+
   // ─── Contact / Help ────────────────────────────────────
   celebration: {
     patterns: [

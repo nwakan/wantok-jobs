@@ -479,6 +479,50 @@ const actions = {
     const users = db.prepare("SELECT COUNT(*) as c FROM users WHERE account_status != 'spam'").get().c;
     return { active_jobs: jobs, employers, users };
   },
+
+  // ─── Feature Requests ──────────────────────────────────
+  createFeatureRequest(db, userId, data) {
+    const { stripHtml } = require('../../utils/sanitizeHtml');
+    const cleanTitle = stripHtml(data.title).trim();
+    const cleanDescription = stripHtml(data.description).trim();
+    
+    if (cleanTitle.length < 5) return { error: 'Title must be at least 5 characters' };
+    if (cleanDescription.length < 20) return { error: 'Description must be at least 20 characters' };
+    
+    const result = db.prepare(`
+      INSERT INTO feature_requests (user_id, title, description, category)
+      VALUES (?, ?, ?, ?)
+    `).run(userId, cleanTitle, cleanDescription, data.category || 'general');
+    
+    return { success: true, featureId: result.lastInsertRowid };
+  },
+
+  getTopFeatureRequests(db, limit = 10) {
+    const features = db.prepare(`
+      SELECT 
+        fr.id, fr.title, fr.description, fr.category, fr.status,
+        fr.vote_count, fr.comment_count, fr.created_at,
+        u.name as submitter_name
+      FROM feature_requests fr
+      LEFT JOIN users u ON fr.user_id = u.id
+      ORDER BY fr.vote_count DESC, fr.created_at DESC
+      LIMIT ?
+    `).all(limit);
+    
+    // Extract first names only
+    return features.map(f => ({
+      ...f,
+      submitter_name: f.submitter_name ? f.submitter_name.split(' ')[0] : 'Anonymous'
+    }));
+  },
+
+  getFeatureStats(db) {
+    const total = db.prepare('SELECT COUNT(*) as c FROM feature_requests').get().c;
+    const planned = db.prepare("SELECT COUNT(*) as c FROM feature_requests WHERE status = 'planned'").get().c;
+    const inProgress = db.prepare("SELECT COUNT(*) as c FROM feature_requests WHERE status = 'in_progress'").get().c;
+    const completed = db.prepare("SELECT COUNT(*) as c FROM feature_requests WHERE status = 'completed'").get().c;
+    return { total, planned, inProgress, completed };
+  },
 };
 
 module.exports = actions;
