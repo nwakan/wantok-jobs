@@ -38,6 +38,7 @@ const Privacy = lazy(() => import('./pages/Privacy'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const FAQ = lazy(() => import('./pages/FAQ'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
@@ -136,6 +137,7 @@ function App() {
               <Route path="terms" element={<Lazy component={Terms} />} />
               <Route path="pricing" element={<Lazy component={Pricing} />} />
               <Route path="faq" element={<Lazy component={FAQ} />} />
+              <Route path="help" element={<Lazy component={HelpCenter} />} />
               <Route path="categories" element={<Lazy component={CategoriesPage} />} />
               <Route path="category/:slug" element={<Lazy component={CategoryLanding} />} />
               <Route path="industries/:slug" element={<Lazy component={IndustryLanding} />} />

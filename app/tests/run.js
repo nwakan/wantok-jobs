@@ -25,6 +25,16 @@ const testSuites = [
   { name: 'Reviews', fn: require('./reviews.test.js') },
   { name: 'Performance', fn: require('./performance.test.js') },
   { name: 'EdgeCases', fn: require('./edge-cases.test.js') },
+  { name: 'QuickApply', fn: require('./quick-apply.test.js') },
+  { name: 'Wallet', fn: require('./wallet.test.js') },
+  { name: 'Referrals', fn: require('./referrals.test.js') },
+  { name: 'SavedSearches', fn: require('./saved-searches.test.js') },
+  { name: 'NotificationPreferences', fn: require('./notification-preferences.test.js') },
+  { name: 'Export', fn: require('./export.test.js') },
+  { name: 'AdminBulk', fn: require('./admin-bulk.test.js') },
+  { name: 'Interviews', fn: require('./interviews.test.js') },
+  { name: 'Messaging', fn: require('./messaging.test.js') },
+  { name: 'Badges', fn: require('./badges.test.js') },
 ];
 
 async function main() {

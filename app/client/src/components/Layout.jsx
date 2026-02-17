@@ -180,6 +180,13 @@ export default function Layout() {
               >
                 ℹ️ {t('nav.about')}
               </Link>
+              <Link 
+                to="/help" 
+                className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 active:bg-gray-100 min-h-[44px] flex items-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                ❓ Help Center
+              </Link>
               {user ? (
                 <>
                   <div className="border-t border-gray-100 my-2"></div>
@@ -254,6 +261,7 @@ export default function Layout() {
                 <li><Link to="/training" className="text-gray-400 hover:text-white">{t('footer.training')}</Link></li>
                 <li><Link to="/about" className="text-gray-400 hover:text-white">{t('footer.aboutUs')}</Link></li>
                 <li><Link to="/success-stories" className="text-gray-400 hover:text-white">Success Stories</Link></li>
+                <li><Link to="/help" className="text-gray-400 hover:text-white">Help Center</Link></li>
               </ul>
             </div>
             <div>
