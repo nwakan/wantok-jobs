@@ -14,6 +14,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'Recommendations', path: '/dashboard/jobseeker/recommendations', icon: '✨' },
     { name: 'Wallet', path: '/dashboard/jobseeker/wallet', icon: '💰' },
     { name: 'Messages', path: '/dashboard/jobseeker/messages', icon: '💬' },
+    { name: 'Resume Builder', path: '/dashboard/jobseeker/resume-builder', icon: '📄' },
     { name: 'My Profile', path: '/dashboard/jobseeker/profile', icon: '👤' },
     { name: 'Settings', path: '/dashboard/jobseeker/settings', icon: '⚙️' },
     { name: 'Change Password', path: '/dashboard/jobseeker/change-password', icon: '🔒' },

@@ -69,6 +69,7 @@ const Recommendations = lazy(() => import('./pages/dashboard/jobseeker/Recommend
 const JobseekerSettings = lazy(() => import('./pages/dashboard/jobseeker/Settings'));
 const FollowedCompanies = lazy(() => import('./pages/dashboard/jobseeker/FollowedCompanies'));
 const JobseekerWallet = lazy(() => import('./pages/dashboard/jobseeker/Wallet'));
+const ResumeBuilder = lazy(() => import('./pages/dashboard/jobseeker/ResumeBuilder'));
 
 // === Employer dashboard ===
 const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'));
@@ -158,6 +159,7 @@ function App() {
                 <Route path="settings" element={<Lazy component={JobseekerSettings} />} />
                 <Route path="followed-companies" element={<Lazy component={FollowedCompanies} />} />
                 <Route path="wallet" element={<Lazy component={JobseekerWallet} />} />
+                <Route path="resume-builder" element={<Lazy component={ResumeBuilder} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 
