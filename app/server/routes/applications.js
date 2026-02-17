@@ -2,6 +2,9 @@ const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const db = require('../database');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { events: notifEvents } = require('../lib/notifications');
@@ -9,6 +12,29 @@ const { sendApplicationStatusEmail, sendNewApplicationEmail, sendApplicationConf
 const { stripHtml, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
+
+// ─── Quick Apply: Resume upload config ──────────────────────────────
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const RESUME_DIR = path.join(dataDir, 'uploads', 'resumes');
+if (!fs.existsSync(RESUME_DIR)) fs.mkdirSync(RESUME_DIR, { recursive: true });
+
+const resumeStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, RESUME_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const name = `quick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    cb(null, name);
+  },
+});
+const resumeFilter = (req, file, cb) => {
+  const allowed = /\.(pdf|doc|docx)$/i;
+  if (allowed.test(path.extname(file.originalname))) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only PDF and Word documents are allowed'), false);
+  }
+};
+const resumeUpload = multer({ storage: resumeStorage, fileFilter: resumeFilter, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Strip employer-only fields from application data before sending to jobseekers
 function sanitizeApplicationForJobseeker(app) {
@@ -283,6 +309,117 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
   }
 });
 
+// ─── Quick Apply (no account needed) ────────────────────────────────
+router.post('/quick-apply', resumeUpload.single('resume'), (req, res) => {
+  try {
+    const { job_id, name, email, phone, cover_letter } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !phone || !job_id) {
+      return res.status(400).json({ error: 'Name, email, phone, and job_id are required' });
+    }
+
+    // Basic email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    // Sanitize inputs
+    const safeName = stripHtml(name);
+    const safeEmail = stripHtml(email).toLowerCase().trim();
+    const safePhone = stripHtml(phone);
+    const safeCoverLetter = cover_letter ? stripHtml(cover_letter) : null;
+
+    if (safeCoverLetter && !isValidLength(safeCoverLetter, 500)) {
+      return res.status(400).json({ error: 'Cover letter must be 500 characters or less' });
+    }
+
+    // Check if job exists and is active
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ? AND status = ?').get(job_id, 'active');
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found or not active' });
+    }
+
+    // Check if this email already applied to this job (prevent duplicates)
+    const existing = db.prepare(
+      'SELECT id FROM applications WHERE job_id = ? AND guest_email = ?'
+    ).get(job_id, safeEmail);
+    if (existing) {
+      return res.status(400).json({ error: 'You have already applied to this job with this email' });
+    }
+
+    // Also check if a registered user with this email already applied
+    const registeredUser = db.prepare('SELECT id FROM users WHERE email = ?').get(safeEmail);
+    if (registeredUser) {
+      const registeredApp = db.prepare(
+        'SELECT id FROM applications WHERE job_id = ? AND jobseeker_id = ?'
+      ).get(job_id, registeredUser.id);
+      if (registeredApp) {
+        return res.status(400).json({ error: 'An account with this email has already applied to this job. Please login to view your application.' });
+      }
+    }
+
+    // Handle resume file
+    let resumePath = null;
+    if (req.file) {
+      resumePath = `/uploads/resumes/${req.file.filename}`;
+    }
+
+    // Insert application
+    let result;
+    try {
+      result = db.prepare(`
+        INSERT INTO applications (job_id, applicant_type, guest_name, guest_email, guest_phone, cover_letter, resume_path, status)
+        VALUES (?, 'quick', ?, ?, ?, ?, ?, 'applied')
+      `).run(job_id, safeName, safeEmail, safePhone, safeCoverLetter, resumePath);
+    } catch (err) {
+      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || (err.message && err.message.includes('UNIQUE constraint failed'))) {
+        return res.status(400).json({ error: 'Already applied to this job' });
+      }
+      throw err;
+    }
+
+    const applicationId = result.lastInsertRowid;
+
+    // Send confirmation email to applicant
+    const companyProfile = db.prepare('SELECT company_name FROM profiles_employer WHERE user_id = ?').get(job.employer_id);
+    const employer = db.prepare('SELECT email, name FROM users WHERE id = ?').get(job.employer_id);
+    sendApplicationConfirmationEmail(
+      { email: safeEmail, name: safeName },
+      job,
+      companyProfile?.company_name || employer?.name || 'the employer'
+    ).catch(() => {});
+
+    // Send notification to employer
+    const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(job.id)?.n;
+    if (employer) {
+      sendNewApplicationEmail(employer, job.title, safeName, appCount).catch(() => {});
+    }
+
+    // Notify via in-app notifications
+    const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(applicationId);
+    notifEvents.onNewApplication(application, job, { name: safeName });
+
+    // Log application event
+    try {
+      db.prepare(
+        `INSERT INTO application_events (application_id, to_status, notes) VALUES (?, 'applied', 'Quick apply (no account)')`
+      ).run(applicationId);
+    } catch (e) {
+      // application_events may have required changed_by — ignore
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Application submitted successfully',
+      applicationId
+    });
+  } catch (error) {
+    logger.error('Quick apply error', { error: error.message });
+    res.status(500).json({ error: 'Failed to submit application' });
+  }
+});
+
 // Get my applications (jobseeker)
 router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
   try {
@@ -346,12 +483,12 @@ router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Enhanced query with full profile data
+    // Enhanced query with full profile data (supports both registered and quick-apply)
     let query = `
       SELECT a.*,
-             u.name as applicant_name,
-             u.email as applicant_email,
-             u.phone as applicant_phone,
+             COALESCE(u.name, a.guest_name) as applicant_name,
+             COALESCE(u.email, a.guest_email) as applicant_email,
+             COALESCE(u.phone, a.guest_phone) as applicant_phone,
              pj.phone as profile_phone,
              pj.location as applicant_location,
              pj.bio,
@@ -365,7 +502,7 @@ router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (
              pj.desired_salary_max,
              pj.availability
       FROM applications a
-      JOIN users u ON a.jobseeker_id = u.id
+      LEFT JOIN users u ON a.jobseeker_id = u.id
       LEFT JOIN profiles_jobseeker pj ON u.id = pj.user_id
       WHERE a.job_id = ?
     `;

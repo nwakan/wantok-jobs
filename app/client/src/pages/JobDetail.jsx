@@ -37,6 +37,12 @@ export default function JobDetail() {
   const [reportDetails, setReportDetails] = useState('');
   const [activeJobsTab, setActiveJobsTab] = useState('similar');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showQuickApply, setShowQuickApply] = useState(false);
+  const [quickApplyData, setQuickApplyData] = useState({ name: '', email: '', phone: '', cover_letter: '' });
+  const [quickApplyResume, setQuickApplyResume] = useState(null);
+  const [quickApplyTerms, setQuickApplyTerms] = useState(false);
+  const [quickApplySubmitting, setQuickApplySubmitting] = useState(false);
+  const [quickApplySuccess, setQuickApplySuccess] = useState(false);
 
   useEffect(() => {
     loadJob();
@@ -508,6 +514,43 @@ export default function JobDetail() {
     }
   };
 
+  const handleQuickApply = async (e) => {
+    e.preventDefault();
+    if (!quickApplyTerms) {
+      showToast('Please agree to the terms to continue', 'error');
+      return;
+    }
+    if (!quickApplyData.name || !quickApplyData.email || !quickApplyData.phone) {
+      showToast('Please fill in all required fields', 'error');
+      return;
+    }
+
+    setQuickApplySubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('job_id', id);
+      formData.append('name', quickApplyData.name);
+      formData.append('email', quickApplyData.email);
+      formData.append('phone', quickApplyData.phone);
+      if (quickApplyData.cover_letter) formData.append('cover_letter', quickApplyData.cover_letter);
+      if (quickApplyResume) formData.append('resume', quickApplyResume);
+
+      const response = await fetch('/api/applications/quick-apply', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to submit application');
+
+      setQuickApplySuccess(true);
+      showToast('Application submitted successfully!', 'success');
+    } catch (error) {
+      showToast(error.message || 'Failed to submit application', 'error');
+    } finally {
+      setQuickApplySubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen">
@@ -682,15 +725,172 @@ export default function JobDetail() {
                   </button>
                 )}
                 {!user && (
-                  <Link
-                    to="/login"
-                    className="block w-full text-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    Login to Apply
-                  </Link>
+                  <div className="space-y-2">
+                    <Link
+                      to="/login"
+                      className="block w-full text-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                      Login to Apply
+                    </Link>
+                    <button
+                      onClick={() => setShowQuickApply(!showQuickApply)}
+                      className="w-full text-center px-6 py-3 bg-white border-2 border-primary-600 text-primary-600 font-semibold rounded-lg hover:bg-primary-50 transition-colors"
+                    >
+                      ⚡ Quick Apply (no account needed)
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
+
+            {/* Quick Apply Form (for unauthenticated users) */}
+            {!user && showQuickApply && !quickApplySuccess && (
+              <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-primary-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    ⚡ Quick Apply
+                  </h2>
+                  <button onClick={() => setShowQuickApply(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-gray-600 text-sm mb-6">Apply without creating an account. Fill in your details below.</p>
+
+                <form onSubmit={handleQuickApply} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      value={quickApplyData.name}
+                      onChange={(e) => setQuickApplyData({...quickApplyData, name: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base"
+                      placeholder="Your full name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        value={quickApplyData.email}
+                        onChange={(e) => setQuickApplyData({...quickApplyData, email: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base"
+                        placeholder="your@email.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={quickApplyData.phone}
+                        onChange={(e) => setQuickApplyData({...quickApplyData, phone: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base"
+                        placeholder="+675 ..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CV/Resume (optional)</label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setQuickApplyResume(e.target.files[0] || null)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">PDF, DOC, or DOCX (max 10MB)</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cover Letter (optional)</label>
+                    <textarea
+                      value={quickApplyData.cover_letter}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 500) setQuickApplyData({...quickApplyData, cover_letter: e.target.value});
+                      }}
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base"
+                      placeholder="Tell the employer why you're a great fit..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1 text-right">{quickApplyData.cover_letter.length}/500</p>
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={quickApplyTerms}
+                      onChange={(e) => setQuickApplyTerms(e.target.checked)}
+                      className="mt-1 w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      I agree to the <Link to="/terms" className="text-primary-600 underline">Terms of Service</Link> and consent to my information being shared with the employer.
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={quickApplySubmitting || !quickApplyTerms}
+                    className="w-full px-6 py-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base min-h-[48px] flex items-center justify-center gap-2"
+                  >
+                    {quickApplySubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" />
+                        Submit Application
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Quick Apply Success */}
+            {!user && quickApplySuccess && (
+              <div className="bg-white rounded-xl shadow-sm p-8 border-2 border-green-200 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-10 h-10 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h2>
+                <p className="text-gray-600 mb-2">
+                  Your application for <span className="font-semibold">{job.title}</span> has been sent to {job.company_name}.
+                </p>
+                <p className="text-gray-600 mb-6">
+                  A confirmation email has been sent to <span className="font-semibold">{quickApplyData.email}</span>.
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-900 font-medium">
+                    💡 Create an account to track your application status and get notified of updates.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    to="/register"
+                    className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Create Account to Track Application
+                  </Link>
+                  <Link
+                    to="/jobs"
+                    className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Browse More Jobs
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Skills Match (LinkedIn-style) */}
             {matchedSkills.length > 0 && (
@@ -919,12 +1119,20 @@ export default function JobDetail() {
                   </button>
                 )}
                 {!user && (
-                  <Link
-                    to="/login"
-                    className="block w-full text-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
-                  >
-                    Login to Apply
-                  </Link>
+                  <>
+                    <Link
+                      to="/login"
+                      className="block w-full text-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
+                    >
+                      Login to Apply
+                    </Link>
+                    <button
+                      onClick={() => setShowQuickApply(!showQuickApply)}
+                      className="w-full text-center px-6 py-3 bg-white border-2 border-primary-600 text-primary-600 font-semibold rounded-lg hover:bg-primary-50 transition-colors"
+                    >
+                      ⚡ Quick Apply (no account needed)
+                    </button>
+                  </>
                 )}
                 
                 {user && (
@@ -1776,15 +1984,22 @@ export default function JobDetail() {
           </button>
         </div>
       )}
-      {job && !user && !applicationSuccess && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30 shadow-lg safe-area-bottom">
-          <Link
-            to="/login"
-            className="w-full bg-primary-600 text-white py-4 rounded-lg font-semibold shadow-md active:bg-primary-700 min-h-[48px] flex items-center justify-center gap-2"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            Login to Apply
-          </Link>
+      {job && !user && !applicationSuccess && !quickApplySuccess && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-30 shadow-lg safe-area-bottom">
+          <div className="flex gap-2">
+            <Link
+              to="/login"
+              className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-semibold shadow-md active:bg-primary-700 min-h-[48px] flex items-center justify-center gap-1 text-sm"
+            >
+              Login to Apply
+            </Link>
+            <button
+              onClick={() => { setShowQuickApply(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="flex-1 bg-white border-2 border-primary-600 text-primary-600 py-3 rounded-lg font-semibold shadow-md active:bg-primary-50 min-h-[48px] flex items-center justify-center gap-1 text-sm"
+            >
+              ⚡ Quick Apply
+            </button>
+          </div>
         </div>
       )}
     </div>
