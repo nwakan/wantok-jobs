@@ -6,7 +6,7 @@ const db = require('../database');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 const { events: notifEvents } = require('../lib/notifications');
-const { sendWelcomeEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../lib/email');
+const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../lib/email');
 
 const router = express.Router();
 
@@ -67,10 +67,98 @@ function validatePasswordStrength(password) {
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
 
+/**
+ * GET /api/auth/captcha
+ * Generate a simple math-based CAPTCHA
+ */
+router.get('/captcha', (req, res) => {
+  try {
+    // Generate random math problem
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const operators = ['+', '-'];
+    const operator = operators[Math.floor(Math.random() * operators.length)];
+    
+    let answer;
+    let question;
+    
+    if (operator === '+') {
+      answer = num1 + num2;
+      question = `What is ${num1} + ${num2}?`;
+    } else {
+      // Ensure subtraction doesn't result in negative
+      const larger = Math.max(num1, num2);
+      const smaller = Math.min(num1, num2);
+      answer = larger - smaller;
+      question = `What is ${larger} - ${smaller}?`;
+    }
+    
+    // Generate unique ID
+    const captchaId = crypto.randomBytes(16).toString('hex');
+    
+    // Store in database with 5-minute expiry
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    
+    db.prepare(`
+      INSERT INTO captchas (id, question, answer, expires_at) 
+      VALUES (?, ?, ?, ?)
+    `).run(captchaId, question, answer.toString(), expiresAt);
+    
+    // Clean up expired captchas (older than 10 minutes)
+    const cleanupTime = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    db.prepare('DELETE FROM captchas WHERE expires_at < ?').run(cleanupTime);
+    
+    res.json({
+      id: captchaId,
+      question
+    });
+  } catch (error) {
+    console.error('CAPTCHA generation error:', error);
+    res.status(500).json({ error: 'Failed to generate CAPTCHA' });
+  }
+});
+
+/**
+ * Helper function to validate CAPTCHA
+ */
+function validateCaptcha(captchaId, captchaAnswer) {
+  if (!captchaId || !captchaAnswer) {
+    return { valid: false, error: 'CAPTCHA is required' };
+  }
+  
+  const captcha = db.prepare('SELECT * FROM captchas WHERE id = ?').get(captchaId);
+  
+  if (!captcha) {
+    return { valid: false, error: 'Invalid or expired CAPTCHA. Please refresh.' };
+  }
+  
+  // Check expiry
+  if (new Date(captcha.expires_at) < new Date()) {
+    db.prepare('DELETE FROM captchas WHERE id = ?').run(captchaId);
+    return { valid: false, error: 'CAPTCHA expired. Please refresh.' };
+  }
+  
+  // Check answer (case-insensitive, trimmed)
+  if (captcha.answer.trim().toLowerCase() !== captchaAnswer.toString().trim().toLowerCase()) {
+    return { valid: false, error: 'Incorrect answer. Please try again.' };
+  }
+  
+  // Delete used CAPTCHA
+  db.prepare('DELETE FROM captchas WHERE id = ?').run(captchaId);
+  
+  return { valid: true };
+}
+
 // Register
 router.post('/register', validate(schemas.register), async (req, res) => {
   try {
-    const { email, password, role, name } = req.body;
+    const { email, password, role, name, captcha_id, captcha_answer } = req.body;
+
+    // Validate CAPTCHA first
+    const captchaValidation = validateCaptcha(captcha_id, captcha_answer);
+    if (!captchaValidation.valid) {
+      return res.status(400).json({ error: captchaValidation.error });
+    }
 
     // Validation
     if (!email || !password || !role || !name) {
@@ -104,10 +192,13 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    // Create user (with verification token, email_verified = 0)
     const result = db.prepare(
-      'INSERT INTO users (email, password_hash, role, name) VALUES (?, ?, ?, ?)'
-    ).run(email, password_hash, role, name);
+      'INSERT INTO users (email, password_hash, role, name, verification_token, email_verified) VALUES (?, ?, ?, ?, ?, 0)'
+    ).run(email, password_hash, role, name, verificationToken);
 
     const userId = result.lastInsertRowid;
 
@@ -124,15 +215,16 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     // Welcome notification + admin alert
     notifEvents.onUserRegistered({ id: userId, email, role, name });
 
-    // Send welcome email (async, don't block response)
-    sendWelcomeEmail({ email, name, role }).catch(e => console.error('Welcome email error:', e.message));
+    // Send verification email (async, don't block response)
+    sendVerificationEmail({ email, name, role }, verificationToken).catch(e => console.error('Verification email error:', e.message));
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(userId, 'register', 'user', userId, JSON.stringify({ role })); } catch(e) {}
 
     res.status(201).json({
       token,
-      user: { id: userId, email, role, name }
+      user: { id: userId, email, role, name, email_verified: false },
+      message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -272,6 +364,75 @@ function verifyLegacyPassword(password, legacyHash) {
   }
 }
 
+// Verify email with token
+router.get('/verify-email', (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).json({ error: 'Verification token required' });
+    }
+
+    // Find user with this verification token
+    const user = db.prepare('SELECT id, email, name, email_verified FROM users WHERE verification_token = ?').get(token);
+    
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    if (user.email_verified) {
+      return res.json({ message: 'Email already verified', alreadyVerified: true });
+    }
+
+    // Mark email as verified and clear token
+    db.prepare("UPDATE users SET email_verified = 1, verification_token = NULL, updated_at = datetime('now') WHERE id = ?").run(user.id);
+
+    // Send welcome email now (after verification)
+    sendWelcomeEmail({ email: user.email, name: user.name, role: user.role }).catch(e => console.error('Welcome email error:', e.message));
+
+    console.log(`✅ Email verified for user: ${user.email}`);
+
+    res.json({ 
+      message: 'Email verified successfully! You can now log in.', 
+      success: true 
+    });
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ error: 'Failed to verify email' });
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', authenticateToken, (req, res) => {
+  try {
+    const user = db.prepare('SELECT id, email, name, role, email_verified, verification_token FROM users WHERE id = ?').get(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.email_verified) {
+      return res.json({ message: 'Email already verified' });
+    }
+
+    // Generate new verification token if needed
+    let verificationToken = user.verification_token;
+    if (!verificationToken) {
+      verificationToken = crypto.randomBytes(32).toString('hex');
+      db.prepare('UPDATE users SET verification_token = ? WHERE id = ?').run(verificationToken, user.id);
+    }
+
+    // Resend verification email
+    sendVerificationEmail({ email: user.email, name: user.name, role: user.role }, verificationToken)
+      .catch(e => console.error('Resend verification email error:', e.message));
+
+    res.json({ message: 'Verification email sent! Please check your inbox.' });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
 // Forgot password - generate reset token
 router.post('/forgot-password', validate(schemas.forgotPassword), (req, res) => {
   try {
@@ -395,7 +556,7 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
 // Get current user
 router.get('/me', authenticateToken, (req, res) => {
   try {
-    const user = db.prepare('SELECT id, email, role, name, created_at FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, email, role, name, email_verified, created_at FROM users WHERE id = ?').get(req.user.id);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -412,5 +573,8 @@ router.get('/me', authenticateToken, (req, res) => {
 router.post('/logout', (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
+
+// Mount OAuth routes
+router.use('/oauth', require('./oauth'));
 
 module.exports = router;

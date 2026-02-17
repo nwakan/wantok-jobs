@@ -5,15 +5,22 @@ import { Bell, ExternalLink, Briefcase, FileText, Users, CheckCircle2, X } from 
 
 export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadNotifications();
-    const interval = setInterval(loadNotifications, 60000); // Refresh every minute
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 30000); // Refresh count every 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadNotifications();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -25,10 +32,19 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const loadUnreadCount = async () => {
+    try {
+      const response = await notificationsAPI.getUnreadCount();
+      setUnreadCount(response.count || 0);
+    } catch (error) {
+      console.error('Failed to load unread count:', error);
+    }
+  };
+
   const loadNotifications = async () => {
     try {
-      const data = await notificationsAPI.getAll();
-      setNotifications(data);
+      const response = await notificationsAPI.getAll();
+      setNotifications(response.data || response || []);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     }
@@ -69,12 +85,12 @@ export default function NotificationDropdown() {
   };
 
   const groupedNotifications = groupNotifications(notifications);
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleMarkRead = async (id, notifData) => {
     try {
       await notificationsAPI.markRead(id);
       loadNotifications();
+      loadUnreadCount();
       
       // Navigate to relevant page if action link exists
       if (notifData) {
@@ -89,6 +105,7 @@ export default function NotificationDropdown() {
     try {
       await notificationsAPI.markAllRead();
       loadNotifications();
+      loadUnreadCount();
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }

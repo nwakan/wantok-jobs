@@ -1,75 +1,26 @@
 import { useState, useEffect } from 'react';
-import { analytics, jobs, applications as applicationsAPI } from '../../../api';
+import { useAuth } from '../../../context/AuthContext';
+import api from '../../../api';
+import PageHead from '../../../components/PageHead';
 import StatsCard from '../../../components/StatsCard';
 
-export default function Analytics() {
+export default function AnalyticsNew() {
+  const { user } = useAuth();
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [jobStats, setJobStats] = useState([]);
-  const [demographics, setDemographics] = useState({
-    locations: [],
-    experienceLevels: [],
-  });
-  const [timeToFill, setTimeToFill] = useState([]);
+  const [period, setPeriod] = useState('30');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    fetchAnalytics();
+  }, [period]);
 
-  const loadData = async () => {
+  const fetchAnalytics = async () => {
     try {
-      const jobsData = await jobs.getMy();
-      
-      // Calculate stats for each job
-      const jobsWithStats = await Promise.all(
-        jobsData.map(async (job) => {
-          try {
-            const apps = await applicationsAPI.getForJob(job.id);
-            return {
-              ...job,
-              views: job.views_count || Math.floor(Math.random() * 500) + 50,
-              applications: apps.length,
-              conversionRate: job.views_count > 0 ? ((apps.length / job.views_count) * 100).toFixed(2) : 0,
-            };
-          } catch (err) {
-            return {
-              ...job,
-              views: job.views_count || 0,
-              applications: 0,
-              conversionRate: 0,
-            };
-          }
-        })
-      );
-
-      setJobStats(jobsWithStats.sort((a, b) => b.applications - a.applications));
-
-      // Mock demographics data
-      setDemographics({
-        locations: [
-          { name: 'Port Moresby', count: 45, percentage: 35 },
-          { name: 'Lae', count: 32, percentage: 25 },
-          { name: 'Mt. Hagen', count: 18, percentage: 14 },
-          { name: 'Madang', count: 15, percentage: 12 },
-          { name: 'Other', count: 18, percentage: 14 },
-        ],
-        experienceLevels: [
-          { name: 'Entry (0-2 years)', count: 38, percentage: 30 },
-          { name: 'Mid (3-5 years)', count: 52, percentage: 40 },
-          { name: 'Senior (5+ years)', count: 38, percentage: 30 },
-        ],
-      });
-
-      // Mock time-to-fill data
-      setTimeToFill([
-        { position: 'Software Engineer', days: 45 },
-        { position: 'Marketing Manager', days: 32 },
-        { position: 'Sales Representative', days: 28 },
-        { position: 'Accountant', days: 38 },
-        { position: 'HR Officer', days: 25 },
-      ]);
-
+      setLoading(true);
+      const res = await api.get(`/employer/analytics?period=${period}`);
+      setAnalytics(res.data);
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      console.error('Failed to fetch analytics:', error);
     } finally {
       setLoading(false);
     }
@@ -77,251 +28,213 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
 
-  const totalViews = jobStats.reduce((sum, job) => sum + job.views, 0);
-  const totalApplications = jobStats.reduce((sum, job) => sum + job.applications, 0);
-  const avgConversionRate = jobStats.length > 0
-    ? (totalApplications / totalViews * 100).toFixed(2)
-    : 0;
-  const activeJobs = jobStats.filter(j => j.status === 'active').length;
+  if (!analytics) {
+    return <div className="text-center py-12">Failed to load analytics</div>;
+  }
+
+  const { overview, jobMetrics, topPerformingJobs, applicationsByStatus } = analytics;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics Dashboard</h1>
+    <div className="space-y-6">
+      <PageHead
+        title="Analytics"
+        description="Track your job posting performance"
+      />
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <StatsCard title="Total Views" value={totalViews} icon="👁️" color="blue" />
-        <StatsCard title="Total Applications" value={totalApplications} icon="📝" color="green" />
-        <StatsCard title="Conversion Rate" value={`${avgConversionRate}%`} icon="📊" color="purple" />
-        <StatsCard title="Active Jobs" value={activeJobs} icon="💼" color="orange" />
+      {/* Period Selector */}
+      <div className="flex justify-end">
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Job Performance */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Job Performance</h2>
-          {jobStats.length === 0 ? (
-            <p className="text-gray-600 text-center py-6">No job data available</p>
-          ) : (
-            <div className="space-y-4">
-              {jobStats.slice(0, 5).map(job => (
-                <div key={job.id}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900 truncate max-w-[60%]">{job.title}</span>
-                    <span className="text-xs text-gray-500">
-                      {job.views} views • {job.applications} apps
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Views */}
-                    <div>
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Views</span>
-                        <span>{job.views}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                          className="bg-blue-500 h-3 rounded-full transition-all"
-                          style={{ width: `${Math.min((job.views / 500) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    {/* Applications */}
-                    <div>
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Apps</span>
-                        <span>{job.applications}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                          className="bg-green-500 h-3 rounded-full transition-all"
-                          style={{ width: `${Math.min((job.applications / 50) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-1 text-xs text-right">
-                    <span className={`font-semibold ${
-                      job.conversionRate >= 5 ? 'text-green-600' :
-                      job.conversionRate >= 2 ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
-                      {job.conversionRate}% conversion
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Total Views"
+          value={overview.totalViews || 0}
+          subtitle={`${overview.recentViews || 0} in last ${period} days`}
+          icon="📊"
+        />
+        <StatsCard
+          title="Total Applications"
+          value={overview.totalApplications || 0}
+          subtitle={`${overview.recentApplications || 0} in last ${period} days`}
+          icon="📝"
+        />
+        <StatsCard
+          title="Conversion Rate"
+          value={`${overview.conversionRate || 0}%`}
+          subtitle="Applications / Views"
+          icon="📈"
+        />
+        <StatsCard
+          title="Active Jobs"
+          value={overview.totalJobs || 0}
+          subtitle="Currently posted"
+          icon="💼"
+        />
+      </div>
 
-        {/* Applicant Location Distribution */}
+      {/* Top Performing Jobs */}
+      {topPerformingJobs && topPerformingJobs.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Applicant Locations</h2>
-          <div className="space-y-4">
-            {demographics.locations.map((location, idx) => (
-              <div key={idx}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-900">{location.name}</span>
-                  <span className="text-sm text-gray-600">{location.count} ({location.percentage}%)</span>
+          <h2 className="text-xl font-semibold mb-4">Top Performing Jobs</h2>
+          <div className="space-y-3">
+            {topPerformingJobs.map((job) => (
+              <div
+                key={job.id}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+              >
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">{job.title}</h3>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className="bg-primary-600 h-4 rounded-full flex items-center justify-end pr-2 transition-all"
-                    style={{ width: `${location.percentage}%` }}
-                  >
-                    {location.percentage >= 15 && (
-                      <span className="text-white text-xs font-semibold">{location.percentage}%</span>
-                    )}
-                  </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <span className="text-gray-600">
+                    👁️ {job.views_count} views
+                  </span>
+                  <span className="text-gray-600">
+                    📝 {job.applications} applications
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Experience Levels */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Applicant Experience Levels</h2>
-          <div className="space-y-4">
-            {demographics.experienceLevels.map((level, idx) => {
-              const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500'];
-              return (
-                <div key={idx}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900">{level.name}</span>
-                    <span className="text-sm text-gray-600">{level.count} applicants</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-6">
-                    <div
-                      className={`${colors[idx]} h-6 rounded-full flex items-center justify-center transition-all`}
-                      style={{ width: `${level.percentage}%` }}
-                    >
-                      <span className="text-white text-sm font-bold">{level.percentage}%</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Pie-like visual */}
-          <div className="mt-6 flex items-center justify-center gap-4">
-            {demographics.experienceLevels.map((level, idx) => {
-              const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500'];
-              return (
-                <div key={idx} className="text-center">
-                  <div className={`w-16 h-16 ${colors[idx]} rounded-full flex items-center justify-center text-white font-bold text-lg mb-2`}>
-                    {level.percentage}%
-                  </div>
-                  <p className="text-xs text-gray-600">{level.name.split(' ')[0]}</p>
-                </div>
-              );
-            })}
-          </div>
+      {/* Per-Job Metrics Table */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold">Job Performance</h2>
         </div>
-
-        {/* Time to Fill */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Time-to-Fill Metrics</h2>
-          <p className="text-sm text-gray-600 mb-4">Average days from posting to hire</p>
-          <div className="space-y-4">
-            {timeToFill.map((item, idx) => (
-              <div key={idx}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-900 truncate max-w-[70%]">{item.position}</span>
-                  <span className="text-sm font-bold text-primary-600">{item.days} days</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className={`h-3 rounded-full transition-all ${
-                      item.days <= 30 ? 'bg-green-500' :
-                      item.days <= 45 ? 'bg-yellow-500' :
-                      'bg-red-500'
-                    }`}
-                    style={{ width: `${Math.min((item.days / 60) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <div className="text-center">
-              <p className="text-sm text-gray-600 mb-1">Average Time-to-Fill</p>
-              <p className="text-3xl font-bold text-primary-600">
-                {Math.round(timeToFill.reduce((sum, item) => sum + item.days, 0) / timeToFill.length)} days
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Best Performing Job Titles */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Best Performing Job Titles</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job Title</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Views</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applications</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Conversion Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Job Title
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Views
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Recent Views
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Applications
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Conversion
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {jobStats.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                    No jobs posted yet
-                  </td>
-                </tr>
-              ) : (
-                jobStats.map(job => (
+              {jobMetrics && jobMetrics.length > 0 ? (
+                jobMetrics.map((job) => (
                   <tr key={job.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {job.title}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {job.views}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {job.applications}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-3 py-1 rounded-full font-semibold ${
-                        job.conversionRate >= 5 ? 'bg-green-100 text-green-800' :
-                        job.conversionRate >= 2 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {job.conversionRate}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        job.status === 'active' ? 'bg-green-100 text-green-800' :
-                        job.status === 'closed' ? 'bg-gray-100 text-gray-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          job.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
                         {job.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {job.total_views || 0}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-600">
+                      {job.recent_views || 0}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {job.total_applications || 0}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-primary-600 h-2 rounded-full"
+                            style={{
+                              width: `${Math.min(job.conversion_rate || 0, 100)}%`,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-gray-900 font-medium">
+                          {job.conversion_rate || 0}%
+                        </span>
+                      </div>
+                    </td>
                   </tr>
                 ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    No jobs found
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Application Status Breakdown */}
+      {applicationsByStatus && applicationsByStatus.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">Application Status</h2>
+          <div className="space-y-3">
+            {applicationsByStatus.map((status) => (
+              <div key={status.status} className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium capitalize text-gray-700">
+                      {status.status.replace('_', ' ')}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      {status.count} applications
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary-600 h-2 rounded-full"
+                      style={{
+                        width: `${
+                          (status.count / overview.totalApplications) * 100
+                        }%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

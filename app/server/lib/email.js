@@ -227,7 +227,38 @@ async function sendWelcomeEmployer(user) {
   });
 }
 
-// ─── 3. Password Reset ──────────────────────────────────────────────
+// ─── 3. Email Verification ──────────────────────────────────────────
+
+async function sendVerificationEmail(user, verificationToken) {
+  const verifyUrl = `${BASE_URL}/verify-email?token=${verificationToken}`;
+  return sendEmail({
+    to: user.email, toName: user.name, tags: ['auth'],
+    subject: 'Verify Your WantokJobs Email Address',
+    html: layout({
+      preheader: 'Please verify your email to complete your registration.',
+      body: `
+        ${greeting(user.name)}
+        <p style="font-size:15px;color:#374151;line-height:1.7;">
+          Welcome to <strong>WantokJobs</strong>! To complete your registration and start ${user.role === 'employer' ? 'posting jobs' : 'applying for jobs'}, 
+          please verify your email address by clicking the button below:
+        </p>
+
+        ${button('Verify My Email', verifyUrl)}
+
+        <p style="font-size:13px;color:#6b7280;margin-top:24px;line-height:1.6;">
+          ⏰ This link is valid for <strong>24 hours</strong>.<br>
+          If you didn't create this account, you can safely ignore this email.
+        </p>
+        ${divider()}
+        <p style="font-size:12px;color:#9ca3af;">
+          Can't click the button? Copy this link: <span style="word-break:break-all;">${verifyUrl}</span>
+        </p>
+      `,
+    }),
+  });
+}
+
+// ─── 4. Password Reset ──────────────────────────────────────────────
 
 async function sendPasswordResetEmail(user, resetToken) {
   const resetUrl = `${BASE_URL}/reset-password?token=${resetToken}`;
@@ -851,6 +882,7 @@ module.exports = {
   sendWelcomeEmail,
   sendWelcomeJobseeker,
   sendWelcomeEmployer,
+  sendVerificationEmail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
   sendApplicationConfirmationEmail,

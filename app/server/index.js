@@ -167,6 +167,8 @@ app.get('/api/stats', (req, res) => {
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/oauth/google', authLimiter);
+app.use('/api/auth/oauth/facebook', authLimiter);
 app.use('/api/auth', require('./routes/auth'));
 
 // Core routes
@@ -194,6 +196,11 @@ app.use('/api', require('./routes/reviews')); // Note: reviews uses /api directl
 app.use('/api/email-templates', require('./routes/email-templates'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/insights', require('./routes/insights'));
+
+// New routes for analytics, stats, and resume features
+app.use('/api/employer/analytics', require('./routes/employer-analytics'));
+app.use('/api/stats/public', require('./routes/public-stats'));
+app.use('/api/jobseeker/resume', require('./routes/resume'));
 
 // New metadata and stats routes
 app.use('/api', require('./routes/metadata')); // Provides /api/locations and /api/industries

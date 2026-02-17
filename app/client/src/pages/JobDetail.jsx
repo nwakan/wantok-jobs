@@ -6,7 +6,7 @@ import { useToast } from '../components/Toast';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
 import JobCard from '../components/JobCard';
 import PageHead from '../components/PageHead';
-import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp, CheckCircle2, ArrowRight, ArrowLeft, FileText, Mail, Phone, MapPin, Upload, AlertCircle, X } from 'lucide-react';
+import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp, CheckCircle2, ArrowRight, ArrowLeft, FileText, Mail, Phone, MapPin, Upload, AlertCircle, X, Share2, Facebook, Linkedin, Copy, CheckCheck } from 'lucide-react';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -33,7 +33,9 @@ export default function JobDetail() {
   const [jobsByCompany, setJobsByCompany] = useState([]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
   const [activeJobsTab, setActiveJobsTab] = useState('similar');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     loadJob();
@@ -128,14 +130,12 @@ export default function JobDetail() {
 
   const loadSimilarJobs = async () => {
     try {
-      const params = {
-        industry: job.industry,
-        location: job.location,
-        limit: 3,
-      };
-      const response = await jobs.getAll(params);
-      // Filter out current job
-      setSimilarJobs(response.data.filter(j => j.id !== job.id).slice(0, 3));
+      // Task 2: Use the new similar jobs endpoint
+      const response = await fetch(`/api/jobs/${id}/similar`);
+      if (response.ok) {
+        const data = await response.json();
+        setSimilarJobs(data.data || []);
+      }
     } catch (error) {
       console.error('Failed to load similar jobs:', error);
     }
@@ -420,20 +420,66 @@ export default function JobDetail() {
     }
   };
 
-  const handleShare = async () => {
+  // Task 1: Enhanced social sharing functions
+  const handleNativeShare = async () => {
+    const shareData = {
+      title: `${job.title} at ${job.company_name}`,
+      text: `Check out this job opportunity: ${job.title} at ${job.company_name}`,
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        showToast('Shared successfully!', 'success');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Share failed:', error);
+        }
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(`Check out this job: ${job.title} at ${job.company_name} - ${window.location.href}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const handleFacebookShare = () => {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
+  };
+
+  const handleLinkedInShare = () => {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
+  };
+
+  const handleEmailShare = () => {
+    const subject = encodeURIComponent(`Job: ${job.title}`);
+    const body = encodeURIComponent(`Check out this job at ${job.company_name}: ${window.location.href}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  const handleCopyLink = async () => {
     const url = window.location.href;
     try {
       await copyToClipboard(url);
+      setLinkCopied(true);
       showToast('Link copied to clipboard!', 'success');
+      setTimeout(() => setLinkCopied(false), 3000);
     } catch (error) {
       showToast('Failed to copy link', 'error');
     }
   };
 
+  // Task 4: Updated report handler with new API
   const handleReport = async (e) => {
     e.preventDefault();
-    if (!reportReason.trim()) {
-      showToast('Please provide a reason', 'error');
+    if (!reportReason) {
+      showToast('Please select a reason', 'error');
       return;
     }
 
@@ -444,6 +490,7 @@ export default function JobDetail() {
         body: JSON.stringify({
           job_id: parseInt(id),
           reason: reportReason,
+          details: reportDetails || null,
         }),
       });
 
@@ -451,6 +498,7 @@ export default function JobDetail() {
         showToast('Report submitted. Thank you for helping keep WantokJobs safe.', 'success');
         setShowReportModal(false);
         setReportReason('');
+        setReportDetails('');
       } else {
         throw new Error('Failed to submit report');
       }
@@ -515,12 +563,24 @@ export default function JobDetail() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
+                      <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                        {job.title}
+                        {/* Task 3: Featured badge */}
+                        {job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date()) && (
+                          <span className="ml-3 inline-flex items-center px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-semibold rounded-full shadow-sm">
+                            ⭐ Featured
+                          </span>
+                        )}
+                      </h1>
                       {job.company_name && job.company_name !== 'WantokJobs Imports' && (
                         <p className="text-lg text-gray-700 font-medium flex items-center gap-2">
                           {job.company_name}
-                          {!job.source?.includes('headhunter') && !job.source?.includes('deep-scrape') && (
-                            <span className="text-green-600 text-sm">✓ Verified</span>
+                          {/* Task 5: Verification badge */}
+                          {(job.employer_verified || job.company_verified) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Verified
+                            </span>
                           )}
                         </p>
                       )}
@@ -860,12 +920,69 @@ export default function JobDetail() {
                   </button>
                 )}
                 
-                <button
-                  onClick={handleShare}
-                  className="w-full px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  🔗 Share Job
-                </button>
+                {/* Task 1: Social Sharing Buttons */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-700">Share this job</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {/* WhatsApp - PRIORITY #1 */}
+                    <button
+                      onClick={handleWhatsAppShare}
+                      className="flex items-center justify-center px-3 py-3 bg-[#25D366] text-white rounded-lg hover:bg-[#20BA5A] transition-colors shadow-sm"
+                      title="Share on WhatsApp"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                    </button>
+
+                    {/* Facebook */}
+                    <button
+                      onClick={handleFacebookShare}
+                      className="flex items-center justify-center px-3 py-3 bg-[#1877F2] text-white rounded-lg hover:bg-[#0C63D4] transition-colors shadow-sm"
+                      title="Share on Facebook"
+                    >
+                      <Facebook className="w-5 h-5" />
+                    </button>
+
+                    {/* LinkedIn */}
+                    <button
+                      onClick={handleLinkedInShare}
+                      className="flex items-center justify-center px-3 py-3 bg-[#0A66C2] text-white rounded-lg hover:bg-[#004182] transition-colors shadow-sm"
+                      title="Share on LinkedIn"
+                    >
+                      <Linkedin className="w-5 h-5" />
+                    </button>
+
+                    {/* Email */}
+                    <button
+                      onClick={handleEmailShare}
+                      className="flex items-center justify-center px-3 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-sm"
+                      title="Share via Email"
+                    >
+                      <Mail className="w-5 h-5" />
+                    </button>
+
+                    {/* Copy Link */}
+                    <button
+                      onClick={handleCopyLink}
+                      className="flex items-center justify-center px-3 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors shadow-sm"
+                      title="Copy Link"
+                    >
+                      {linkCopied ? <CheckCheck className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                    </button>
+                  </div>
+
+                  {/* Native Share (Mobile) */}
+                  {navigator.share && (
+                    <button
+                      onClick={handleNativeShare}
+                      className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      More sharing options
+                    </button>
+                  )}
+                </div>
 
                 <button
                   onClick={() => setShowReportModal(true)}
@@ -1542,55 +1659,80 @@ export default function JobDetail() {
         </div>
       )}
 
-      {/* Report Job Modal */}
+      {/* Task 4: Updated Report Job Modal */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-8 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Flag className="w-6 h-6 text-red-600" />
-              <h2 className="text-2xl font-bold">Report this job</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Flag className="w-6 h-6 text-red-600" />
+                <h2 className="text-2xl font-bold">Report this job</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDetails('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
             <p className="text-gray-600 mb-6">
               Help us keep WantokJobs safe. Tell us why this job should be reviewed.
             </p>
             <form onSubmit={handleReport}>
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Reason for reporting *
                 </label>
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   required
                 >
                   <option value="">Select a reason...</option>
-                  <option value="spam">Spam or misleading</option>
-                  <option value="fake">Fake job posting</option>
+                  <option value="scam">Scam or fraudulent</option>
+                  <option value="misleading">Misleading information</option>
                   <option value="inappropriate">Inappropriate content</option>
-                  <option value="discrimination">Discriminatory</option>
-                  <option value="scam">Potential scam</option>
-                  <option value="expired">Job is already filled/expired</option>
+                  <option value="duplicate">Duplicate posting</option>
                   <option value="other">Other</option>
                 </select>
-                <p className="text-xs text-gray-500">
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional details (optional)
+                </label>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Provide more context about your report..."
+                />
+                <p className="text-xs text-gray-500 mt-2">
                   Reports are confidential and reviewed within 24-48 hours
                 </p>
               </div>
-              <div className="flex justify-end gap-4">
+              
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowReportModal(false);
                     setReportReason('');
+                    setReportDetails('');
                   }}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
                 >
                   Submit Report
                 </button>

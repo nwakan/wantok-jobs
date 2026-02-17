@@ -3,6 +3,7 @@ const { sendJobPostedEmail, sendNewJobAlerts } = require('../lib/email');
 const { canPostJob, consumeEmployerServiceCredit } = require('../lib/billing');
 const { addPaginationHeaders } = require('../utils/pagination');
 const { containsPattern } = require('../utils/sanitize');
+const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -52,19 +53,23 @@ router.get('/suggestions', (req, res) => {
   }
 });
 
-// GET /featured - Top 6 most-viewed active jobs (public)
+// GET /featured - Featured jobs (is_featured=1 with valid featured_until) + top viewed (Task 3)
 router.get('/featured', (req, res) => {
   try {
     const jobs = db.prepare(`
       SELECT j.*, 
              u.name as employer_name,
+             u.is_verified as employer_verified,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              COALESCE(j.logo_url, pe.logo_url) as logo_url
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
       WHERE j.status = 'active'
-      ORDER BY j.views_count DESC, j.created_at DESC
+      ORDER BY 
+        CASE WHEN (j.is_featured = 1 AND (j.featured_until IS NULL OR j.featured_until > datetime('now'))) THEN 0 ELSE 1 END,
+        j.views_count DESC, 
+        j.created_at DESC
       LIMIT 6
     `).all();
 
@@ -92,12 +97,14 @@ router.get('/', (req, res) => {
       company,
       sort = 'date',
       page = 1,
-      limit = 20
+      limit = 20,
+      employer_id
     } = req.query;
 
     let query = `
       SELECT j.*, 
              u.name as employer_name,
+             u.is_verified as employer_verified,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              COALESCE(j.logo_url, pe.logo_url) as logo_url,
              pe.industry as company_industry
@@ -196,18 +203,27 @@ router.get('/', (req, res) => {
       params.push(companyParam, companyParam);
     }
 
+    if (employer_id) {
+      // Filter by employer ID
+      query += ' AND j.employer_id = ?';
+      params.push(parseInt(employer_id));
+    }
+
     // Count total
     const countQuery = query.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(DISTINCT j.id) as total FROM');
     const countResult = params.length > 0 ? db.prepare(countQuery).get(...params) : db.prepare(countQuery).get();
     const total = countResult ? countResult.total : 0;
 
-    // Sorting
+    // Sorting - Task 3: Featured jobs always first (if featured_until > now)
     let orderBy = 'j.created_at DESC';
     if (sort === 'salary') {
       orderBy = 'j.salary_max DESC, j.created_at DESC';
     } else if (sort === 'relevance' && keyword) {
       orderBy = 'j.views_count DESC, j.created_at DESC';
     }
+
+    // Prefix with featured sorting (featured jobs with valid featured_until first)
+    orderBy = `CASE WHEN (j.is_featured = 1 AND (j.featured_until IS NULL OR j.featured_until > datetime('now'))) THEN 0 ELSE 1 END, ${orderBy}`;
 
     query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
     const limitNum = parseInt(limit);
@@ -261,6 +277,7 @@ router.get('/:id', (req, res) => {
       SELECT j.*, 
              u.name as employer_name,
              u.email as employer_email,
+             u.is_verified as employer_verified,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              pe.company_size,
              pe.industry as company_industry,
@@ -304,8 +321,35 @@ router.get('/:id', (req, res) => {
     `).all(req.params.id, job.industry || '', job.location || '');
     job.similar_jobs = similarJobs;
 
-    // Increment view count
-    db.prepare('UPDATE jobs SET views_count = views_count + 1 WHERE id = ?').run(req.params.id);
+    // Track view with IP-based debouncing (once per IP per 24h)
+    const crypto = require('crypto');
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                     req.headers['x-real-ip'] || 
+                     req.socket.remoteAddress || 
+                     'unknown';
+    const ipHash = crypto.createHash('sha256').update(clientIp).digest('hex');
+    
+    try {
+      // Check if this IP viewed this job in the last 24 hours
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const existingView = db.prepare(`
+        SELECT id FROM job_views 
+        WHERE job_id = ? AND ip_hash = ? AND viewed_at > ?
+      `).get(req.params.id, ipHash, yesterday);
+
+      if (!existingView) {
+        // Record new view
+        db.prepare(`
+          INSERT INTO job_views (job_id, ip_hash) VALUES (?, ?)
+        `).run(req.params.id, ipHash);
+        
+        // Increment job view count
+        db.prepare('UPDATE jobs SET views_count = views_count + 1 WHERE id = ?').run(req.params.id);
+      }
+    } catch (viewError) {
+      // Don't fail the request if view tracking fails
+      console.error('View tracking error:', viewError.message);
+    }
 
     res.json(job);
   } catch (error) {
@@ -314,42 +358,53 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// GET /:id/similar - Get similar jobs for a specific job
+// GET /:id/similar - Get similar jobs for a specific job (Task 2: Enhanced with category + better scoring)
 router.get('/:id/similar', (req, res) => {
   try {
-    const job = db.prepare('SELECT industry, location FROM jobs WHERE id = ?').get(req.params.id);
+    const job = db.prepare('SELECT title, industry, location, category_slug, employer_id FROM jobs WHERE id = ?').get(req.params.id);
     
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
+    // Extract title keywords for matching (simple word tokenization)
+    const titleWords = job.title ? job.title.toLowerCase().split(/\s+/).filter(w => w.length > 3) : [];
+
     const similarJobs = db.prepare(`
       SELECT j.id, j.title, j.location, j.job_type, j.salary_min, j.salary_max, 
-             j.salary_currency, j.created_at, j.views_count,
+             j.salary_currency, j.created_at, j.views_count, j.is_featured,
+             u.is_verified as employer_verified,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              COALESCE(j.logo_url, pe.logo_url) as logo_url
       FROM jobs j
+      JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
       WHERE j.status = 'active' 
         AND j.id != ?
-        AND (j.industry = ? OR j.location = ?)
+        AND (j.category_slug = ? OR j.industry = ? OR j.location = ? OR j.employer_id = ?)
       ORDER BY 
         CASE 
-          WHEN j.industry = ? AND j.location = ? THEN 1
-          WHEN j.industry = ? THEN 2
-          WHEN j.location = ? THEN 3
-          ELSE 4
+          WHEN j.category_slug = ? AND j.location = ? THEN 1
+          WHEN j.category_slug = ? THEN 2
+          WHEN j.employer_id = ? THEN 3
+          WHEN j.location = ? THEN 4
+          WHEN j.industry = ? THEN 5
+          ELSE 6
         END,
         j.created_at DESC
-      LIMIT 5
+      LIMIT 6
     `).all(
       req.params.id, 
+      job.category_slug || '', 
       job.industry || '', 
       job.location || '',
-      job.industry || '',
+      job.employer_id || 0,
+      job.category_slug || '',
       job.location || '',
-      job.industry || '',
-      job.location || ''
+      job.category_slug || '',
+      job.employer_id || 0,
+      job.location || '',
+      job.industry || ''
     );
 
     res.json({ data: similarJobs });
@@ -426,16 +481,39 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
       screening_questions,
     } = req.body;
 
-    if (!title || !description) {
+    // Sanitize all text inputs to prevent XSS
+    const safeTitle = stripHtml(title);
+    const safeDescription = stripHtml(description);
+    const safeRequirements = requirements ? stripHtml(requirements) : null;
+    const safeLocation = location ? stripHtml(location) : null;
+    const safeCountry = country ? stripHtml(country) : 'Papua New Guinea';
+    const safeIndustry = industry ? stripHtml(industry) : null;
+    const safeSkills = skills ? stripHtml(skills) : null;
+    const safeApplicationEmail = application_email ? sanitizeEmail(application_email) : null;
+    const safeScreeningQuestions = screening_questions ? stripHtml(screening_questions) : null;
+
+    if (!safeTitle || !safeDescription) {
       return res.status(400).json({ error: 'Title and description required' });
     }
+    
+    // Validate lengths
+    if (!isValidLength(safeTitle, 200, 1)) {
+      return res.status(400).json({ error: 'Title must be between 1 and 200 characters' });
+    }
+    if (!isValidLength(safeDescription, 10000, 10)) {
+      return res.status(400).json({ error: 'Description must be between 10 and 10000 characters' });
+    }
+    
     if (!category_slug) {
       return res.status(400).json({ error: 'Category is required' });
     }
 
-    // Get category_id from slug
+    // Validate category exists
     const category = db.prepare('SELECT id FROM categories WHERE slug = ?').get(category_slug);
-    const category_id = category?.id || null;
+    if (!category) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+    const category_id = category.id;
 
     const result = db.prepare(`
       INSERT INTO jobs (
@@ -447,17 +525,17 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.user.id,
-      title,
-      description,
-      requirements || null,
-      location || null,
-      country || 'Papua New Guinea',
+      safeTitle,
+      safeDescription,
+      safeRequirements,
+      safeLocation,
+      safeCountry,
       job_type || 'full-time',
       experience_level || null,
-      industry || null,
+      safeIndustry,
       category_slug,
       category_id,
-      skills || null,
+      safeSkills,
       remote_work ? 1 : 0,
       salary_min || null,
       salary_max || null,
@@ -465,8 +543,8 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
       application_deadline || null,
       application_method || 'internal',
       application_url || null,
-      application_email || null,
-      screening_questions || null,
+      safeApplicationEmail,
+      safeScreeningQuestions,
       status
     );
 
@@ -647,34 +725,53 @@ router.get('/:id/skills-match', authenticateToken, (req, res) => {
   }
 });
 
-// POST /report - Report a job
+// POST /report - Report a job or employer (Task 4)
 router.post('/report', async (req, res) => {
   try {
-    const { job_id, reason } = req.body;
+    const { job_id, employer_id, reason, details } = req.body;
 
-    if (!job_id || !reason) {
-      return res.status(400).json({ error: 'job_id and reason are required' });
+    if ((!job_id && !employer_id) || !reason) {
+      return res.status(400).json({ error: 'Either job_id or employer_id is required, along with reason' });
     }
 
-    // Check if job exists
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+    const validReasons = ['scam', 'misleading', 'inappropriate', 'duplicate', 'other'];
+    if (!validReasons.includes(reason)) {
+      return res.status(400).json({ error: 'Invalid reason. Must be one of: scam, misleading, inappropriate, duplicate, other' });
     }
 
-    // Log the report in contact_messages table (repurposing for reports)
-    db.prepare(`
-      INSERT INTO contact_messages (name, email, subject, message, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
+    // Check if job exists (if job_id provided)
+    if (job_id) {
+      const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
+      if (!job) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+    }
+
+    // Check if employer exists (if employer_id provided)
+    if (employer_id) {
+      const employer = db.prepare('SELECT * FROM users WHERE id = ? AND role = ?').get(employer_id, 'employer');
+      if (!employer) {
+        return res.status(404).json({ error: 'Employer not found' });
+      }
+    }
+
+    // Insert report into reports table
+    const result = db.prepare(`
+      INSERT INTO reports (reporter_id, job_id, employer_id, reason, details, status, created_at)
+      VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
     `).run(
-      req.user ? req.user.name : 'Anonymous',
-      req.user ? req.user.email : 'anonymous@wantokjobs.com',
-      `Job Report: ${job.title} (ID: ${job_id})`,
-      `Reason: ${reason}\n\nJob Details:\n- Title: ${job.title}\n- Company: ${job.company_name}\n- Posted: ${job.created_at}\n- Employer ID: ${job.employer_id}`
+      req.user ? req.user.id : null,
+      job_id || null,
+      employer_id || null,
+      reason,
+      details || null
     );
 
-    // Optionally notify admin via notifications table
+    // Notify admins
     const adminUsers = db.prepare('SELECT id FROM users WHERE role = ?').all('admin');
+    const reportType = job_id ? 'Job' : 'Employer';
+    const reportTarget = job_id ? `Job ID: ${job_id}` : `Employer ID: ${employer_id}`;
+    
     adminUsers.forEach(admin => {
       try {
         db.prepare(`
@@ -683,18 +780,18 @@ router.post('/report', async (req, res) => {
         `).run(
           admin.id,
           'report',
-          'Job Reported',
-          `Job "${job.title}" has been reported for: ${reason}`,
-          `/admin/jobs/${job_id}`
+          `${reportType} Reported`,
+          `${reportTarget} has been reported for: ${reason}`,
+          `/admin/reports/${result.lastInsertRowid}`
         );
       } catch (e) {
         console.error('Failed to create admin notification:', e);
       }
     });
 
-    res.json({ message: 'Report submitted successfully' });
+    res.json({ message: 'Report submitted successfully', id: result.lastInsertRowid });
   } catch (error) {
-    console.error('Report job error:', error);
+    console.error('Report error:', error);
     res.status(500).json({ error: 'Failed to submit report' });
   }
 });

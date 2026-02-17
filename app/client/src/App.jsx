@@ -39,6 +39,7 @@ const Pricing = lazy(() => import('./pages/Pricing'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const CategoriesPage = lazy(() => import('./pages/Categories'));
 const CategoryLanding = lazy(() => import('./pages/CategoryLanding'));
 const CompaniesPage = lazy(() => import('./pages/Companies'));
@@ -46,6 +47,7 @@ const CompanyProfilePage = lazy(() => import('./pages/CompanyProfile'));
 const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
+const Stats = lazy(() => import('./pages/Stats'));
 
 // === Shared dashboard ===
 const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePassword'));
@@ -117,8 +119,10 @@ function App() {
               <Route path="companies/:id/reviews" element={<Lazy component={CompanyReviews} />} />
               <Route path="blog" element={<Lazy component={Blog} />} />
               <Route path="blog/:slug" element={<Lazy component={BlogPost} />} />
+              <Route path="stats" element={<Lazy component={Stats} />} />
               <Route path="forgot-password" element={<Lazy component={ForgotPassword} />} />
               <Route path="reset-password" element={<Lazy component={ResetPassword} />} />
+              <Route path="verify-email" element={<Lazy component={VerifyEmail} />} />
 
               {/* Jobseeker dashboard */}
               <Route path="dashboard/jobseeker" element={<ProtectedRoute role="jobseeker" />}>

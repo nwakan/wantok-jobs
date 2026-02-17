@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 
 export default function JobCard({ job, compact = false }) {
@@ -6,18 +7,30 @@ export default function JobCard({ job, compact = false }) {
   const isNew = isNewJob(job.created_at);
   const isHot = isHotJob(job.created_at);
   
+  // Task 3: Check if job is featured
+  const isFeatured = job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
+  
   return (
     <Link
       to={`/jobs/${job.id}`}
-      className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border border-gray-100 hover:border-primary-200 relative"
+      className={`block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 border hover:border-primary-200 relative ${
+        isFeatured ? 'border-yellow-300 bg-gradient-to-br from-yellow-50 to-white' : 'border-gray-100'
+      }`}
     >
-      {/* New/Hot Badge */}
-      {isHot && (
+      {/* Featured Badge - Task 3 */}
+      {isFeatured && (
+        <div className="absolute top-3 right-3 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold rounded-full shadow-sm">
+          ⭐ Featured
+        </div>
+      )}
+      
+      {/* New/Hot Badge (only if not featured) */}
+      {!isFeatured && isHot && (
         <div className="absolute top-3 right-3 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
           🔥 HOT
         </div>
       )}
-      {!isHot && isNew && (
+      {!isFeatured && !isHot && isNew && (
         <div className="absolute top-3 right-3 px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full shadow-sm">
           ✨ NEW
         </div>
@@ -42,8 +55,12 @@ export default function JobCard({ job, compact = false }) {
             <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors mb-1 line-clamp-1">
               {job.title}
             </h3>
-            <p className="text-sm text-gray-600 font-medium">
+            <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
               {job.company_name || job.employer_name}
+              {/* Task 5: Verification badge */}
+              {job.employer_verified && (
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" title="Verified employer" />
+              )}
             </p>
           </div>
           

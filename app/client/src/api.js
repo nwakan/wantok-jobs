@@ -165,6 +165,11 @@ export const notifications = {
       headers: getAuthHeader(),
     }).then(handleResponse),
 
+  getUnreadCount: () =>
+    fetch(`${API_URL}/notifications/unread-count`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
   markRead: (id) =>
     fetch(`${API_URL}/notifications/${id}/read`, {
       method: 'PUT',
@@ -172,7 +177,7 @@ export const notifications = {
     }).then(handleResponse),
 
   markAllRead: () =>
-    fetch(`${API_URL}/notifications/read-all`, {
+    fetch(`${API_URL}/notifications/mark-read`, {
       method: 'PUT',
       headers: getAuthHeader(),
     }).then(handleResponse),

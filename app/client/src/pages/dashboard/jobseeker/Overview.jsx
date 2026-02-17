@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { applications, jobs, profile, savedJobs, jobAlerts } from '../../../api';
 import StatsCard from '../../../components/StatsCard';
 import ApplicationStatusBadge from '../../../components/ApplicationStatusBadge';
+import EmailVerificationBanner from '../../../components/EmailVerificationBanner';
+import { useAuth } from '../../../context/AuthContext';
 import { 
   TrendingUp, Eye, Briefcase, BookmarkCheck, Bell, AlertCircle, 
   Clock, Target, Award, ChevronRight, Sparkles, Calendar, 
@@ -11,6 +13,7 @@ import {
 } from 'lucide-react';
 
 export default function JobseekerOverview() {
+  const { user } = useAuth();
   const [myApplications, setMyApplications] = useState([]);
   const [recommendedJobs, setRecommendedJobs] = useState([]);
   const [profileData, setProfileData] = useState(null);
@@ -314,6 +317,9 @@ export default function JobseekerOverview() {
 
   return (
     <div>
+      {/* Email Verification Banner */}
+      <EmailVerificationBanner user={user} />
+
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-primary-500 via-primary-600 to-green-500 rounded-lg shadow-md p-8 mb-6 text-white">
         <div className="flex items-start justify-between">
@@ -741,6 +747,33 @@ export default function JobseekerOverview() {
                   A polite follow-up shows initiative and keeps you top-of-mind
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Download Resume Widget */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-sm p-5 border border-green-200">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-green-600" />
+              Your Resume
+            </h3>
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+              Download your professional resume generated from your profile
+            </p>
+            <div className="space-y-2">
+              <a
+                href="/api/jobseeker/resume/download"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium text-center transition"
+              >
+                Download Resume
+              </a>
+              <Link
+                to="/dashboard/jobseeker/profile"
+                className="block w-full px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 text-sm font-medium text-center transition"
+              >
+                Update Profile
+              </Link>
             </div>
           </div>
 

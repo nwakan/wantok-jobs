@@ -299,4 +299,216 @@ router.delete('/articles/:id', (req, res) => {
 // These are mounted at /api/admin/newsletter
 router.use('/newsletter', require('./newsletter'));
 
+// ─── Task 3: Featured Jobs Admin Routes ──────────────────────────
+
+// PUT /jobs/:id/feature - Toggle featured status
+router.put('/jobs/:id/feature', (req, res) => {
+  try {
+    const { is_featured, featured_until } = req.body;
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const isFeatured = is_featured !== undefined ? (is_featured ? 1 : 0) : (job.is_featured ? 0 : 1);
+    const featuredUntil = featured_until || null;
+
+    db.prepare(`
+      UPDATE jobs SET is_featured = ?, featured_until = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(isFeatured, featuredUntil, req.params.id);
+
+    const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+    
+    res.json({ 
+      message: isFeatured ? 'Job featured successfully' : 'Job unfeatured successfully',
+      job: updated 
+    });
+  } catch (error) {
+    console.error('Feature job error:', error);
+    res.status(500).json({ error: 'Failed to update featured status' });
+  }
+});
+
+// ─── Task 5: Employer Verification Admin Routes ──────────────────
+
+// PUT /employers/:id/verify - Toggle employer verification status
+router.put('/employers/:id/verify', (req, res) => {
+  try {
+    const { is_verified } = req.body;
+    const employer = db.prepare('SELECT * FROM users WHERE id = ? AND role = ?').get(req.params.id, 'employer');
+
+    if (!employer) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+
+    const isVerified = is_verified !== undefined ? (is_verified ? 1 : 0) : (employer.is_verified ? 0 : 1);
+
+    db.prepare(`
+      UPDATE users SET is_verified = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(isVerified, req.params.id);
+
+    const updated = db.prepare('SELECT id, email, name, role, is_verified FROM users WHERE id = ?').get(req.params.id);
+    
+    // Notify employer
+    try {
+      db.prepare(`
+        INSERT INTO notifications (user_id, type, title, message, created_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+      `).run(
+        req.params.id,
+        'verification',
+        isVerified ? 'Account Verified ✓' : 'Verification Removed',
+        isVerified 
+          ? 'Congratulations! Your employer account has been verified. Your jobs will now display a verification badge.'
+          : 'Your verification status has been removed by an administrator.'
+      );
+    } catch (e) {}
+
+    res.json({ 
+      message: isVerified ? 'Employer verified successfully' : 'Employer unverified',
+      employer: updated 
+    });
+  } catch (error) {
+    console.error('Verify employer error:', error);
+    res.status(500).json({ error: 'Failed to update verification status' });
+  }
+});
+
+// GET /employers - List all employers with verification status
+router.get('/employers', (req, res) => {
+  try {
+    const { page = 1, limit = 50, verified } = req.query;
+
+    let query = `
+      SELECT u.id, u.email, u.name, u.is_verified, u.created_at,
+             pe.company_name, pe.industry, pe.total_jobs_posted
+      FROM users u
+      LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+      WHERE u.role = 'employer'
+    `;
+    const params = [];
+
+    if (verified !== undefined) {
+      query += ' AND u.is_verified = ?';
+      params.push(verified === 'true' ? 1 : 0);
+    }
+
+    // Count total
+    const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM');
+    const { total } = db.prepare(countQuery).get(...params);
+
+    // Pagination
+    query += ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
+    const limitNum = parseInt(limit);
+    const offset = (parseInt(page) - 1) * limitNum;
+    params.push(limitNum, offset);
+
+    const employers = db.prepare(query).all(...params);
+
+    res.json({
+      data: employers,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limitNum)
+    });
+  } catch (error) {
+    console.error('Get employers error:', error);
+    res.status(500).json({ error: 'Failed to fetch employers' });
+  }
+});
+
+// ─── Task 4: Report Admin Routes ──────────────────────────────────
+
+// GET /reports - List all reports
+router.get('/reports', (req, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+
+    let query = `
+      SELECT r.*,
+             u.name as reporter_name,
+             u.email as reporter_email,
+             j.title as job_title,
+             e.name as employer_name
+      FROM reports r
+      LEFT JOIN users u ON r.reporter_id = u.id
+      LEFT JOIN jobs j ON r.job_id = j.id
+      LEFT JOIN users e ON r.employer_id = e.id
+    `;
+    const params = [];
+
+    if (status) {
+      query += ' WHERE r.status = ?';
+      params.push(status);
+    }
+
+    // Count total
+    const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM');
+    const { total } = db.prepare(countQuery).get(...params);
+
+    // Pagination
+    query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
+    const limitNum = parseInt(limit);
+    const offset = (parseInt(page) - 1) * limitNum;
+    params.push(limitNum, offset);
+
+    const reports = db.prepare(query).all(...params);
+
+    res.json({
+      data: reports,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limitNum)
+    });
+  } catch (error) {
+    console.error('Get reports error:', error);
+    res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+});
+
+// PUT /reports/:id - Update report status
+router.put('/reports/:id', (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!status || !['pending', 'reviewed', 'dismissed'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be one of: pending, reviewed, dismissed' });
+    }
+
+    const report = db.prepare('SELECT * FROM reports WHERE id = ?').get(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    db.prepare(`
+      UPDATE reports SET status = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(status, req.params.id);
+
+    const updated = db.prepare(`
+      SELECT r.*,
+             u.name as reporter_name,
+             j.title as job_title,
+             e.name as employer_name
+      FROM reports r
+      LEFT JOIN users u ON r.reporter_id = u.id
+      LEFT JOIN jobs j ON r.job_id = j.id
+      LEFT JOIN users e ON r.employer_id = e.id
+      WHERE r.id = ?
+    `).get(req.params.id);
+
+    res.json({ 
+      message: 'Report updated successfully',
+      report: updated 
+    });
+  } catch (error) {
+    console.error('Update report error:', error);
+    res.status(500).json({ error: 'Failed to update report' });
+  }
+});
+
 module.exports = router;

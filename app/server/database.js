@@ -483,6 +483,22 @@ function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Task 4: Report Job/Employer
+    CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reporter_id INTEGER,
+      job_id INTEGER,
+      employer_id INTEGER,
+      reason TEXT NOT NULL CHECK(reason IN ('scam', 'misleading', 'inappropriate', 'duplicate', 'other')),
+      details TEXT,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'reviewed', 'dismissed')),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+      FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     -- Additional indexes for new tables
     CREATE INDEX IF NOT EXISTS idx_orders_employer ON orders(employer_id);
     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
@@ -504,6 +520,9 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_newsletter_history_admin ON newsletter_history(admin_id, sent_at DESC);
     CREATE INDEX IF NOT EXISTS idx_banners_placement ON banners(placement, active);
     CREATE INDEX IF NOT EXISTS idx_company_reviews_approved ON company_reviews(company_id, approved, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_reports_job ON reports(job_id);
+    CREATE INDEX IF NOT EXISTS idx_reports_employer ON reports(employer_id);
+    CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at DESC);
   `);
 
   // Add columns to existing tables (safe ALTER TABLE)
@@ -513,6 +532,10 @@ function initializeDatabase() {
   addColumn('users', 'last_login', 'TEXT');
   addColumn('users', 'avatar_url', 'TEXT');
   addColumn('users', 'phone', 'TEXT');
+  
+  // OAuth support columns
+  addColumn('users', 'oauth_provider', 'TEXT');  // 'google', 'facebook', null (regular)
+  addColumn('users', 'oauth_id', 'TEXT');  // Provider's user ID
 
   addColumn('profiles_jobseeker', 'headline', 'TEXT');
   addColumn('profiles_jobseeker', 'gender', 'TEXT');
@@ -567,6 +590,13 @@ function initializeDatabase() {
   addColumn('jobs', 'price_per_day', 'REAL');
   addColumn('jobs', 'posting_days', 'INTEGER DEFAULT 30');
   addColumn('jobs', 'credits_used', 'INTEGER DEFAULT 1');
+  
+  // Task 3: Featured/Sponsored Jobs
+  addColumn('jobs', 'is_featured', 'INTEGER DEFAULT 0');
+  addColumn('jobs', 'featured_until', 'TEXT');
+  
+  // Task 5: Employer Verification Badge
+  addColumn('users', 'is_verified', 'INTEGER DEFAULT 0');
 
   // Credit transaction indexes
   try {
