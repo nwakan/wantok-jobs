@@ -142,6 +142,9 @@ const applicationLimiter = rateLimit({
   message: { error: 'Too many applications. Please wait a minute.', code: 'RATE_LIMIT' },
 });
 
+// GitHub webhook — must be before express.json() to get raw body for HMAC
+app.use('/api/webhook', require('./routes/webhook'));
+
 app.use(express.json({ limit: '1mb' }));
 
 // Cache static assets aggressively
@@ -269,9 +272,6 @@ app.use('/api/jobseeker/resume', require('./routes/resume'));
 // New metadata and stats routes
 app.use('/api', require('./routes/metadata')); // Provides /api/locations and /api/industries
 app.use('/api/stats', require('./routes/stats')); // Provides /api/stats/dashboard
-
-// GitHub webhook (no auth — uses signature verification)
-app.use('/api/webhook', require('./routes/webhook'));
 
 // Contact with rate limiting
 app.use('/api/contact', contactLimiter, require('./routes/contact'));
