@@ -1,3 +1,5 @@
+const { stripHtml, sanitizeEmail } = require('../utils/sanitizeHtml');
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -21,6 +23,12 @@ router.post('/', authenticateToken, requireRole('employer', 'admin'), async (req
       interviewer_name,
       interviewer_email
     } = req.body;
+
+    // Sanitize text inputs
+    if (location) req.body.location = stripHtml(location);
+    if (notes) req.body.notes = stripHtml(notes);
+    if (interviewer_name) req.body.interviewer_name = stripHtml(interviewer_name);
+    if (interviewer_email) req.body.interviewer_email = sanitizeEmail(interviewer_email) || interviewer_email;
 
     if (!application_id || !scheduled_at) {
       return res.status(400).json({ error: 'Application ID and scheduled time required' });
@@ -83,13 +91,13 @@ router.post('/', authenticateToken, requireRole('employer', 'admin'), async (req
         interview
       );
     } catch (emailErr) {
-      console.error('Failed to send interview email:', emailErr);
+      logger.error('Failed to send interview email', { error: emailErr.message });
       // Continue anyway
     }
 
     res.status(201).json(interview);
   } catch (error) {
-    console.error('Schedule interview error:', error);
+    logger.error('Schedule interview error', { error: error.message });
     res.status(500).json({ error: 'Failed to schedule interview' });
   }
 });
@@ -123,7 +131,7 @@ router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (
 
     res.json(interviews);
   } catch (error) {
-    console.error('Get job interviews error:', error);
+    logger.error('Get job interviews error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch interviews' });
   }
 });
@@ -150,7 +158,7 @@ router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
 
     res.json(interviews);
   } catch (error) {
-    console.error('Get my interviews error:', error);
+    logger.error('Get my interviews error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch interviews' });
   }
 });
@@ -213,7 +221,7 @@ router.put('/:id', authenticateToken, requireRole('employer', 'admin'), (req, re
 
     res.json(updated);
   } catch (error) {
-    console.error('Update interview error:', error);
+    logger.error('Update interview error', { error: error.message });
     res.status(500).json({ error: 'Failed to update interview' });
   }
 });
@@ -268,7 +276,7 @@ router.put('/:id/feedback', authenticateToken, requireRole('employer', 'admin'),
 
     res.json(updated);
   } catch (error) {
-    console.error('Post interview feedback error:', error);
+    logger.error('Post interview feedback error', { error: error.message });
     res.status(500).json({ error: 'Failed to post feedback' });
   }
 });
@@ -296,7 +304,7 @@ router.delete('/:id', authenticateToken, requireRole('employer', 'admin'), (req,
 
     res.json({ message: 'Interview cancelled successfully' });
   } catch (error) {
-    console.error('Cancel interview error:', error);
+    logger.error('Cancel interview error', { error: error.message });
     res.status(500).json({ error: 'Failed to cancel interview' });
   }
 });

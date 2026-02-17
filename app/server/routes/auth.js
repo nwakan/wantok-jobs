@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -114,7 +115,7 @@ router.get('/captcha', (req, res) => {
       question
     });
   } catch (error) {
-    console.error('CAPTCHA generation error:', error);
+    logger.error('CAPTCHA generation error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate CAPTCHA' });
   }
 });
@@ -225,7 +226,7 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     notifEvents.onUserRegistered({ id: userId, email: safeEmail, role, name: safeName });
 
     // Send verification email (async, don't block response)
-    sendVerificationEmail({ email: safeEmail, name: safeName, role }, verificationToken).catch(e => console.error('Verification email error:', e.message));
+    sendVerificationEmail({ email: safeEmail, name: safeName, role }, verificationToken).catch(e => logger.error('Verification email error:', { error: e.message }));
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(userId, 'register', 'user', userId, JSON.stringify({ role })); } catch(e) {}
@@ -236,7 +237,7 @@ router.post('/register', validate(schemas.register), async (req, res) => {
       message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {
-    console.error('Register error:', error);
+    logger.error('Register error', { error: error.message });
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -312,7 +313,7 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       const newHash = await bcrypt.hash(password, 10);
       db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?")
         .run(newHash, user.id);
-      console.log(`✅ Migrated legacy password for user: ${email}`);
+      logger.info('log', { detail: `✅ Migrated legacy password for user: ${email}` });
     }
 
     // Update last login and reset failed attempts on successful login
@@ -324,14 +325,16 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)').run(user.id, 'login', 'user', user.id); } catch(e) {}
 
-    // Generate token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Check if user needs forced password reset
+    const forcePasswordReset = !!(user.force_password_reset);
 
-    res.json({
+    // Generate token (include fpr claim if forced reset needed)
+    const tokenPayload = { id: user.id, email: user.email, role: user.role };
+    if (forcePasswordReset) tokenPayload.fpr = true;
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+
+    const response = {
       token,
       user: {
         id: user.id,
@@ -339,9 +342,13 @@ router.post('/login', validate(schemas.login), async (req, res) => {
         role: user.role,
         name: user.name
       }
-    });
+    };
+
+    if (forcePasswordReset) response.forcePasswordReset = true;
+
+    res.json(response);
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error', { error: error.message });
     res.status(500).json({ error: 'Login failed' });
   }
 });
@@ -357,7 +364,7 @@ function verifyLegacyPassword(password, legacyHash) {
     const parts = legacyHash.split(':');
     
     if (parts.length !== 2) {
-      console.error('Invalid legacy password format');
+      logger.error('Invalid legacy password format');
       return false;
     }
 
@@ -368,7 +375,7 @@ function verifyLegacyPassword(password, legacyHash) {
 
     return computedHash === storedHash;
   } catch (error) {
-    console.error('Legacy password verification error:', error);
+    logger.error('Legacy password verification error', { error: error.message });
     return false;
   }
 }
@@ -397,16 +404,16 @@ router.get('/verify-email', (req, res) => {
     db.prepare("UPDATE users SET email_verified = 1, verification_token = NULL, updated_at = datetime('now') WHERE id = ?").run(user.id);
 
     // Send welcome email now (after verification)
-    sendWelcomeEmail({ email: user.email, name: user.name, role: user.role }).catch(e => console.error('Welcome email error:', e.message));
+    sendWelcomeEmail({ email: user.email, name: user.name, role: user.role }).catch(e => logger.error('Welcome email error:', { error: e.message }));
 
-    console.log(`✅ Email verified for user: ${user.email}`);
+    logger.info('log', { detail: `✅ Email verified for user: ${user.email}` });
 
     res.json({ 
       message: 'Email verified successfully! You can now log in.', 
       success: true 
     });
   } catch (error) {
-    console.error('Verify email error:', error);
+    logger.error('Verify email error', { error: error.message });
     res.status(500).json({ error: 'Failed to verify email' });
   }
 });
@@ -433,11 +440,11 @@ router.post('/resend-verification', authenticateToken, (req, res) => {
 
     // Resend verification email
     sendVerificationEmail({ email: user.email, name: user.name, role: user.role }, verificationToken)
-      .catch(e => console.error('Resend verification email error:', e.message));
+      .catch(e => logger.error('Resend verification email error:', { error: e.message }));
 
     res.json({ message: 'Verification email sent! Please check your inbox.' });
   } catch (error) {
-    console.error('Resend verification error:', error);
+    logger.error('Resend verification error', { error: error.message });
     res.status(500).json({ error: 'Failed to resend verification email' });
   }
 });
@@ -469,12 +476,12 @@ router.post('/forgot-password', validate(schemas.forgotPassword), (req, res) => 
     db.prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?').run(tokenHash, expires, user.id);
 
     // Send reset email
-    sendPasswordResetEmail(user, token).catch(e => console.error('Reset email error:', e.message));
-    console.log(`🔑 Password reset requested for ${email}`);
+    sendPasswordResetEmail(user, token).catch(e => logger.error('Reset email error:', { error: e.message }));
+    logger.info('log', { detail: `🔑 Password reset requested for ${email}` });
 
     res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error', { error: error.message });
     res.status(500).json({ error: 'Failed to process request' });
   }
 });
@@ -505,13 +512,13 @@ router.post('/reset-password', validate(schemas.resetPassword), async (req, res)
     if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
 
     const password_hash = await bcrypt.hash(password, 10);
-    db.prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, updated_at = datetime('now') WHERE id = ?").run(password_hash, user.id);
+    db.prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, password_changed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(password_hash, user.id);
 
     notifEvents.onPasswordChanged(user);
 
     res.json({ message: 'Password reset successfully. You can now log in.' });
   } catch (error) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error', { error: error.message });
     res.status(500).json({ error: 'Failed to reset password' });
   }
 });
@@ -550,14 +557,14 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
     if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?").run(newHash, user.id);
+    db.prepare("UPDATE users SET password_hash = ?, force_password_reset = 0, password_changed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(newHash, user.id);
 
     notifEvents.onPasswordChanged(user);
     sendPasswordChangedEmail(user).catch(() => {});
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error', { error: error.message });
     res.status(500).json({ error: 'Failed to change password' });
   }
 });
@@ -573,7 +580,7 @@ router.get('/me', authenticateToken, (req, res) => {
 
     res.json(user);
   } catch (error) {
-    console.error('Get user error:', error);
+    logger.error('Get user error', { error: error.message });
     res.status(500).json({ error: 'Failed to get user' });
   }
 });

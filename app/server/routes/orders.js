@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const { sendOrderConfirmationEmail, sendEmail } = require('../lib/email');
@@ -87,7 +88,7 @@ router.post('/', authenticateToken, (req, res) => {
       instructions: `Please transfer K${pkg.price.toLocaleString()} to ${BANK_DETAILS.bank} and use "${invoice_number}" as your payment reference. Your credits will be added within 24 hours of payment verification.`,
     });
   } catch (error) {
-    console.error('Error creating order:', error);
+    logger.error('Error creating order', { error: error.message });
     res.status(500).json({ error: 'Failed to create order' });
   }
 });
@@ -106,7 +107,7 @@ router.get('/my', authenticateToken, (req, res) => {
 
     res.json({ orders });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    logger.error('Error fetching orders', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
@@ -132,7 +133,7 @@ router.get('/:id', authenticateToken, (req, res) => {
 
     res.json({ order, bankDetails: order.status === 'pending' ? BANK_DETAILS : undefined });
   } catch (error) {
-    console.error('Error fetching order:', error);
+    logger.error('Error fetching order', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch order' });
   }
 });
@@ -173,7 +174,7 @@ router.get('/admin/all', authenticateToken, requireRole('admin'), (req, res) => 
 
     res.json({ orders, total: total.count, stats });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    logger.error('Error fetching orders', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
@@ -244,7 +245,7 @@ router.put('/admin/:id/approve', authenticateToken, requireRole('admin'), (req, 
 
     res.json({ message: 'Payment approved and credits added', ...result });
   } catch (error) {
-    console.error('Error approving order:', error);
+    logger.error('Error approving order', { error: error.message });
     res.status(500).json({ error: 'Failed to approve order' });
   }
 });
@@ -317,7 +318,7 @@ router.get('/admin/stats', authenticateToken, requireRole('admin'), (req, res) =
 
     res.json(stats);
   } catch (error) {
-    console.error('Revenue stats error:', error);
+    logger.error('Revenue stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

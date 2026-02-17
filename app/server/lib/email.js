@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * WantokJobs Email Service — Brevo Transactional Email
  * 
@@ -100,17 +101,17 @@ async function sendEmail({ to, toName, subject, html, text, replyTo, tags }) {
   // Set EMAIL_MODE=live in .env when ready for production.
   if (EMAIL_MODE !== 'live') {
     if (!BREVO_API_KEY) {
-      console.log(`📧 [TEST/NO KEY] Would send to: ${to} | ${subject}`);
+      logger.info('log', { detail: `📧 [TEST/NO KEY] Would send to: ${to} | ${subject}` });
       return { success: false, reason: 'Test mode + no BREVO_API_KEY' };
     }
-    console.log(`📧 [TEST MODE] Redirecting: ${to} → ${TEST_EMAIL} | ${subject}`);
+    logger.info('log', { detail: `📧 [TEST MODE] Redirecting: ${to} → ${TEST_EMAIL} | ${subject}` });
     to = TEST_EMAIL;
     toName = `[TEST for: ${toName || 'User'}]`;
     subject = `[TEST] ${subject}`;
   }
 
   if (!BREVO_API_KEY) {
-    console.log(`📧 [NO KEY] To: ${to} | ${subject}`);
+    logger.info('log', { detail: `📧 [NO KEY] To: ${to} | ${subject}` });
     return { success: false, reason: 'No BREVO_API_KEY' };
   }
 
@@ -133,14 +134,14 @@ async function sendEmail({ to, toName, subject, html, text, replyTo, tags }) {
 
     const data = await res.json();
     if (res.ok) {
-      console.log(`📧 → ${to}: ${subject}`);
+      logger.info('log', { detail: `📧 → ${to}: ${subject}` });
       return { success: true, messageId: data.messageId };
     } else {
-      console.error(`📧 ✗ ${to}: ${data.message || JSON.stringify(data)}`);
+      logger.error('Email send failed', { to, detail: data.message || JSON.stringify(data) });
       return { success: false, error: data.message };
     }
   } catch (err) {
-    console.error(`📧 ✗ ${to}: ${err.message}`);
+    logger.error('error', { detail: `📧 ✗ ${to}: ${err.message}` });
     return { success: false, error: err.message };
   }
 }
@@ -822,14 +823,14 @@ async function sendNewJobAlerts(job, employerProfile) {
           sent++;
         }
       } catch (e) {
-        console.error(`Failed to send job alert to ${alert.email}:`, e.message);
+        logger.error('error', { detail: `Failed to send job alert to ${alert.email}:`, message: e.message });
       }
     }
 
-    console.log(`📧 Sent ${sent} job alert emails for new job: ${job.title}`);
+    logger.info('log', { detail: `📧 Sent ${sent} job alert emails for new job: ${job.title}` });
     return { sent };
   } catch (error) {
-    console.error('Send new job alerts error:', error);
+    logger.error('Send new job alerts error', { error: error.message });
     return { sent: 0, error: error.message };
   }
 }
@@ -870,7 +871,7 @@ async function sendNotificationEmail({ to, toName, subject, body, actionUrl, act
       tags: ['notification', notificationType || 'general'],
     });
   } catch (error) {
-    console.error('Send notification email error:', error);
+    logger.error('Send notification email error', { error: error.message });
     return { error: error.message };
   }
 }

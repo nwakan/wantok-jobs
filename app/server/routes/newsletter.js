@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -39,7 +40,7 @@ router.post('/', (req, res) => {
     
     res.status(201).json({ message: 'Successfully subscribed to newsletter!' });
   } catch (error) {
-    console.error('Newsletter subscribe error:', error);
+    logger.error('Newsletter subscribe error', { error: error.message });
     res.status(500).json({ error: 'Failed to subscribe' });
   }
 });
@@ -62,7 +63,7 @@ router.post('/unsubscribe', (req, res) => {
 
     res.json({ message: 'Successfully unsubscribed' });
   } catch (error) {
-    console.error('Newsletter unsubscribe error:', error);
+    logger.error('Newsletter unsubscribe error', { error: error.message });
     res.status(500).json({ error: 'Failed to unsubscribe' });
   }
 });
@@ -142,7 +143,7 @@ router.post('/send', authenticateToken, requireRole('admin'), async (req, res) =
     });
 
   } catch (error) {
-    console.error('Newsletter send error:', error);
+    logger.error('Newsletter send error', { error: error.message });
     res.status(500).json({ error: 'Failed to send newsletter', details: error.message });
   }
 });
@@ -169,7 +170,7 @@ router.get('/history', authenticateToken, requireRole('admin'), (req, res) => {
       offset: parseInt(offset)
     });
   } catch (error) {
-    console.error('Newsletter history error:', error);
+    logger.error('Newsletter history error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
@@ -201,7 +202,7 @@ router.get('/stats', authenticateToken, requireRole('admin'), (req, res) => {
 
     res.json(stats);
   } catch (error) {
-    console.error('Newsletter stats error:', error);
+    logger.error('Newsletter stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

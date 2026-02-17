@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -119,7 +120,7 @@ router.get('/', authenticateToken, requireRole('employer'), (req, res) => {
     });
 
   } catch (error) {
-    console.error('Analytics error:', error);
+    logger.error('Analytics error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });

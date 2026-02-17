@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -30,7 +31,7 @@ router.post('/:userId', authenticateToken, requireRole('employer'), validate(sch
     
     res.status(201).json({ saved_resume: saved });
   } catch (error) {
-    console.error('Error saving resume:', error);
+    logger.error('Error saving resume', { error: error.message });
     res.status(500).json({ error: 'Failed to save resume' });
   }
 });
@@ -49,7 +50,7 @@ router.delete('/:userId', authenticateToken, requireRole('employer'), (req, res)
 
     res.json({ message: 'Resume removed from saved' });
   } catch (error) {
-    console.error('Error removing saved resume:', error);
+    logger.error('Error removing saved resume', { error: error.message });
     res.status(500).json({ error: 'Failed to remove saved resume' });
   }
 });
@@ -129,7 +130,7 @@ router.get('/', authenticateToken, requireRole('employer'), (req, res) => {
 
     res.json({ saved_resumes, folders, total: saved_resumes.length });
   } catch (error) {
-    console.error('Error fetching saved resumes:', error);
+    logger.error('Error fetching saved resumes', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch saved resumes' });
   }
 });

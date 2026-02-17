@@ -13,6 +13,7 @@
  * POST /api/credits/admin/grant-credits   — Manually add credits
  */
 
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -35,7 +36,7 @@ router.get('/status', authenticateToken, (req, res) => {
     if (!status) return res.status(404).json({ error: 'Profile not found' });
     res.json(status);
   } catch (error) {
-    console.error('Credit status error:', error);
+    logger.error('Credit status error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch credit status' });
   }
 });
@@ -48,7 +49,7 @@ router.get('/transactions', authenticateToken, (req, res) => {
     const total = db.prepare('SELECT COUNT(*) as n FROM credit_transactions WHERE user_id = ?').get(req.user.id).n;
     res.json({ transactions, total });
   } catch (error) {
-    console.error('Transactions error:', error);
+    logger.error('Transactions error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });
@@ -63,7 +64,7 @@ router.get('/packages', authenticateToken, (req, res) => {
     `).all(req.user.role);
     res.json({ packages });
   } catch (error) {
-    console.error('Packages error:', error);
+    logger.error('Packages error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch packages' });
   }
 });
@@ -104,7 +105,7 @@ router.post('/trial/activate', authenticateToken, (req, res) => {
     
     res.json(result);
   } catch (error) {
-    console.error('Trial activation error:', error);
+    logger.error('Trial activation error', { error: error.message });
     res.status(500).json({ error: 'Failed to activate trial' });
   }
 });
@@ -128,7 +129,7 @@ router.post('/admin/grant-trial', authenticateToken, requireRole('admin'), (req,
     
     res.json(result);
   } catch (error) {
-    console.error('Grant trial error:', error);
+    logger.error('Grant trial error', { error: error.message });
     res.status(500).json({ error: 'Failed to grant trial' });
   }
 });
@@ -165,7 +166,7 @@ router.post('/admin/grant-credits', authenticateToken, requireRole('admin'), (re
     
     res.json({ success: true, newBalance, credit_type, amount: parseInt(amount) });
   } catch (error) {
-    console.error('Grant credits error:', error);
+    logger.error('Grant credits error', { error: error.message });
     res.status(500).json({ error: error.message || 'Failed to grant credits' });
   }
 });

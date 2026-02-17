@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -48,7 +49,7 @@ router.get('/profile-views', authenticateToken, (req, res) => {
       trend
     });
   } catch (error) {
-    console.error('Profile views analytics error:', error);
+    logger.error('Profile views analytics error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch profile views' });
   }
 });
@@ -80,8 +81,9 @@ router.get('/salary', authenticateToken, (req, res) => {
     }
 
     // Build search condition
-    const searchCondition = keywords.map(() => `title LIKE ?`).join(' OR ');
-    const searchParams = keywords.map(k => `%${k}%`);
+    const searchCondition = keywords.map(() => `title LIKE ? ESCAPE '\\'`).join(' OR ');
+    const { containsPattern } = require('../utils/sanitize');
+    const searchParams = keywords.map(k => containsPattern(k));
 
     const salaryStats = db.prepare(`
       SELECT 
@@ -108,7 +110,7 @@ router.get('/salary', authenticateToken, (req, res) => {
       job_count: salaryStats.job_count
     });
   } catch (error) {
-    console.error('Salary insights error:', error);
+    logger.error('Salary insights error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch salary insights' });
   }
 });

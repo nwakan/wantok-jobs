@@ -1,3 +1,5 @@
+const { stripHtml, sanitizeEmail } = require('../utils/sanitizeHtml');
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -48,10 +50,10 @@ function generateOnboardingChecklist(applicationId) {
       );
     }
 
-    console.log(`✓ Generated onboarding checklist for application ${applicationId}`);
+    logger.info('log', { detail: `✓ Generated onboarding checklist for application ${applicationId}` });
     return true;
   } catch (error) {
-    console.error('Failed to generate onboarding checklist:', error);
+    logger.error('Failed to generate onboarding checklist', { error: error.message });
     return false;
   }
 }
@@ -103,7 +105,7 @@ router.get('/:applicationId', authenticateToken, requireRole('employer', 'admin'
       }
     });
   } catch (error) {
-    console.error('Get onboarding checklist error:', error);
+    logger.error('Get onboarding checklist error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch onboarding checklist' });
   }
 });
@@ -154,7 +156,7 @@ router.put('/:applicationId/item/:itemId', authenticateToken, requireRole('emplo
 
     res.json(updated);
   } catch (error) {
-    console.error('Toggle checklist item error:', error);
+    logger.error('Toggle checklist item error', { error: error.message });
     res.status(500).json({ error: 'Failed to update checklist item' });
   }
 });
@@ -165,7 +167,11 @@ router.post('/:applicationId/item', authenticateToken, requireRole('employer', '
     const { applicationId } = req.params;
     const { item, category = 'general', due_date, notes } = req.body;
 
-    if (!item) {
+    // Sanitize inputs
+    const safeItem = item ? stripHtml(item) : null;
+    const safeNotes = notes ? stripHtml(notes) : null;
+
+    if (!safeItem) {
       return res.status(400).json({ error: 'Item text is required' });
     }
 
@@ -196,13 +202,13 @@ router.post('/:applicationId/item', authenticateToken, requireRole('employer', '
     const result = db.prepare(`
       INSERT INTO onboarding_checklists (application_id, item, category, due_date, notes, sort_order)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(applicationId, item, category, due_date || null, notes || null, sortOrder);
+    `).run(applicationId, safeItem, category, due_date || null, safeNotes || null, sortOrder);
 
     const newItem = db.prepare('SELECT * FROM onboarding_checklists WHERE id = ?').get(result.lastInsertRowid);
 
     res.status(201).json(newItem);
   } catch (error) {
-    console.error('Add checklist item error:', error);
+    logger.error('Add checklist item error', { error: error.message });
     res.status(500).json({ error: 'Failed to add checklist item' });
   }
 });
@@ -234,7 +240,7 @@ router.delete('/:applicationId/item/:itemId', authenticateToken, requireRole('em
 
     res.json({ success: true, message: 'Checklist item deleted' });
   } catch (error) {
-    console.error('Delete checklist item error:', error);
+    logger.error('Delete checklist item error', { error: error.message });
     res.status(500).json({ error: 'Failed to delete checklist item' });
   }
 });

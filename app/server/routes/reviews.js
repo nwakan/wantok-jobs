@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -37,7 +38,7 @@ router.get('/reviews', (req, res) => {
     
     res.json({ reviews, count: reviews.length });
   } catch (error) {
-    console.error('Get reviews error:', error);
+    logger.error('Get reviews error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
@@ -62,7 +63,7 @@ router.get('/reviews/:id', (req, res) => {
     
     res.json({ review });
   } catch (error) {
-    console.error('Get review error:', error);
+    logger.error('Get review error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch review' });
   }
 });
@@ -80,7 +81,7 @@ router.get('/company/:id/summary', (req, res) => {
 
     res.json(stats);
   } catch (error) {
-    console.error('Get review summary error:', error);
+    logger.error('Get review summary error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch review summary' });
   }
 });
@@ -157,7 +158,7 @@ router.get('/companies/:id/reviews', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get reviews error:', error);
+    logger.error('Get reviews error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
@@ -249,7 +250,7 @@ router.post('/reviews', authenticateToken, (req, res) => {
       message: 'Review submitted successfully. It will be visible after approval.' 
     });
   } catch (error) {
-    console.error('Create review error:', error);
+    logger.error('Create review error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit review' });
   }
 });
@@ -291,7 +292,7 @@ router.post('/reviews/:id/helpful', authenticateToken, (req, res) => {
 
     res.json({ message: 'Vote recorded successfully' });
   } catch (error) {
-    console.error('Mark helpful error:', error);
+    logger.error('Mark helpful error', { error: error.message });
     res.status(500).json({ error: 'Failed to record vote' });
   }
 });
@@ -309,7 +310,7 @@ router.get('/companies/:id/photos', (req, res) => {
 
     res.json({ photos });
   } catch (error) {
-    console.error('Get photos error:', error);
+    logger.error('Get photos error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch photos' });
   }
 });
@@ -335,7 +336,7 @@ router.post('/companies/:id/photos', authenticateToken, (req, res) => {
       message: 'Photo submitted successfully. It will be visible after approval.' 
     });
   } catch (error) {
-    console.error('Upload photo error:', error);
+    logger.error('Upload photo error', { error: error.message });
     res.status(500).json({ error: 'Failed to upload photo' });
   }
 });
@@ -360,7 +361,7 @@ router.get('/companies/:id/benefits', (req, res) => {
 
     res.json({ benefits: grouped });
   } catch (error) {
-    console.error('Get benefits error:', error);
+    logger.error('Get benefits error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch benefits' });
   }
 });
@@ -386,7 +387,7 @@ router.post('/companies/:id/benefits', authenticateToken, (req, res) => {
 
     res.json({ message: 'Benefit added successfully' });
   } catch (error) {
-    console.error('Add benefit error:', error);
+    logger.error('Add benefit error', { error: error.message });
     res.status(500).json({ error: 'Failed to add benefit' });
   }
 });
@@ -416,7 +417,7 @@ router.get('/companies/:id/interviews', (req, res) => {
 
     res.json({ interviews, stats });
   } catch (error) {
-    console.error('Get interviews error:', error);
+    logger.error('Get interviews error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch interview reviews' });
   }
 });
@@ -458,7 +459,7 @@ router.post('/interviews', authenticateToken, (req, res) => {
       message: 'Interview review submitted successfully. It will be visible after approval.' 
     });
   } catch (error) {
-    console.error('Submit interview error:', error);
+    logger.error('Submit interview error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit interview review' });
   }
 });
@@ -482,6 +483,12 @@ router.put('/reviews/:id', authenticateToken, (req, res) => {
     if (rating && (rating < 1 || rating > 5)) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
+
+    // Sanitize text inputs
+    const safeTitle = title ? stripHtml(title) : null;
+    const safePros = pros ? stripHtml(pros) : null;
+    const safeCons = cons ? stripHtml(cons) : null;
+    const safeAdvice = advice ? stripHtml(advice) : null;
     
     db.prepare(`
       UPDATE company_reviews
@@ -493,13 +500,13 @@ router.put('/reviews/:id', authenticateToken, (req, res) => {
         advice = COALESCE(?, advice),
         is_current_employee = COALESCE(?, is_current_employee)
       WHERE id = ?
-    `).run(rating, title, pros, cons, advice, is_current_employee, req.params.id);
+    `).run(rating, safeTitle, safePros, safeCons, safeAdvice, is_current_employee, req.params.id);
     
     const updatedReview = db.prepare('SELECT * FROM company_reviews WHERE id = ?').get(req.params.id);
     
     res.json({ review: updatedReview, message: 'Review updated successfully' });
   } catch (error) {
-    console.error('Update review error:', error);
+    logger.error('Update review error', { error: error.message });
     res.status(500).json({ error: 'Failed to update review' });
   }
 });
@@ -522,7 +529,7 @@ router.delete('/reviews/:id', authenticateToken, (req, res) => {
     
     res.json({ message: 'Review deleted successfully' });
   } catch (error) {
-    console.error('Delete review error:', error);
+    logger.error('Delete review error', { error: error.message });
     res.status(500).json({ error: 'Failed to delete review' });
   }
 });

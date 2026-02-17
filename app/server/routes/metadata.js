@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -30,7 +31,7 @@ router.get('/locations', (req, res) => {
 
     res.json({ locations, countries });
   } catch (error) {
-    console.error('Error fetching locations:', error);
+    logger.error('Error fetching locations', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch locations' });
   }
 });
@@ -82,7 +83,7 @@ router.get('/industries', (req, res) => {
 
     res.json({ industries });
   } catch (error) {
-    console.error('Error fetching industries:', error);
+    logger.error('Error fetching industries', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch industries' });
   }
 });

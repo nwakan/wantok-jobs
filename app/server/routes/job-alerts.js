@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const router = express.Router();
@@ -26,7 +27,7 @@ router.post('/subscribe', (req, res) => {
     }
     res.status(201).json({ message: 'Subscribed successfully', subscribed: true });
   } catch (error) {
-    console.error('Subscribe error:', error);
+    logger.error('Subscribe error', { error: error.message });
     res.status(500).json({ error: 'Failed to subscribe' });
   }
 });
@@ -45,7 +46,7 @@ router.post('/', authenticateToken, validate(schemas.jobAlert), (req, res) => {
     const alert = db.prepare('SELECT * FROM job_alerts WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ alert });
   } catch (error) {
-    console.error('Error creating job alert:', error);
+    logger.error('Error creating job alert', { error: error.message });
     res.status(500).json({ error: 'Failed to create job alert' });
   }
 });
@@ -65,7 +66,7 @@ router.get('/', authenticateToken, (req, res) => {
 
     res.json({ alerts });
   } catch (error) {
-    console.error('Error fetching job alerts:', error);
+    logger.error('Error fetching job alerts', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch job alerts' });
   }
 });
@@ -93,7 +94,7 @@ router.put('/:id', authenticateToken, (req, res) => {
     const updated = db.prepare('SELECT * FROM job_alerts WHERE id = ?').get(id);
     res.json({ alert: updated });
   } catch (error) {
-    console.error('Error updating job alert:', error);
+    logger.error('Error updating job alert', { error: error.message });
     res.status(500).json({ error: 'Failed to update job alert' });
   }
 });
@@ -113,7 +114,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
     db.prepare('DELETE FROM job_alerts WHERE id = ?').run(id);
     res.json({ message: 'Job alert deleted successfully' });
   } catch (error) {
-    console.error('Error deleting job alert:', error);
+    logger.error('Error deleting job alert', { error: error.message });
     res.status(500).json({ error: 'Failed to delete job alert' });
   }
 });

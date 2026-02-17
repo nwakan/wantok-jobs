@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -38,7 +39,7 @@ router.post('/track-view', authenticateToken, (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Track view error:', error);
+    logger.error('Track view error', { error: error.message });
     res.status(500).json({ error: 'Failed to track view' });
   }
 });
@@ -97,7 +98,7 @@ router.post('/track-apply', authenticateToken, requireRole('jobseeker'), (req, r
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Track apply error:', error);
+    logger.error('Track apply error', { error: error.message });
     res.status(500).json({ error: 'Failed to track application' });
   }
 });
@@ -135,7 +136,7 @@ router.post('/track-search', authenticateToken, (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Track search error:', error);
+    logger.error('Track search error', { error: error.message });
     res.status(500).json({ error: 'Failed to track search' });
   }
 });

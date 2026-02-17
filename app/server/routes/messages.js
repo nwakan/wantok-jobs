@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const router = express.Router();
@@ -37,7 +38,7 @@ router.post('/', authenticateToken, validate(schemas.message), (req, res) => {
     const message = db.prepare('SELECT * FROM admin_messages WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ message });
   } catch (error) {
-    console.error('Error sending message:', error);
+    logger.error('Error sending message', { error: error.message });
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
@@ -46,31 +47,44 @@ router.post('/', authenticateToken, validate(schemas.message), (req, res) => {
 router.get('/', authenticateToken, (req, res) => {
   try {
     const user_id = req.user.id;
-    const { type = 'received' } = req.query; // received or sent
+    const { type = 'received' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countCol = type === 'sent' ? 'from_user_id' : 'to_user_id';
+    const { total } = db.prepare(`SELECT COUNT(*) as total FROM admin_messages WHERE ${countCol} = ?`).get(user_id);
 
     let query;
     if (type === 'sent') {
       query = `
-        SELECT m.*, u.name as recipient_name, u.email as recipient_email
+        SELECT m.id, m.subject, m.body, m.read, m.created_at,
+               u.name as recipient_name, u.email as recipient_email
         FROM admin_messages m
         INNER JOIN users u ON m.to_user_id = u.id
         WHERE m.from_user_id = ?
         ORDER BY m.created_at DESC
+        LIMIT ? OFFSET ?
       `;
     } else {
       query = `
-        SELECT m.*, u.name as sender_name, u.email as sender_email
+        SELECT m.id, m.subject, m.body, m.read, m.created_at,
+               u.name as sender_name, u.email as sender_email
         FROM admin_messages m
         INNER JOIN users u ON m.from_user_id = u.id
         WHERE m.to_user_id = ?
         ORDER BY m.created_at DESC
+        LIMIT ? OFFSET ?
       `;
     }
 
-    const messages = db.prepare(query).all(user_id);
-    res.json({ messages });
+    const messages = db.prepare(query).all(user_id, limit, offset);
+    res.json({
+      data: messages,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logger.error('Error fetching messages', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 });
@@ -103,7 +117,7 @@ router.get('/:id', authenticateToken, (req, res) => {
 
     res.json({ message });
   } catch (error) {
-    console.error('Error fetching message:', error);
+    logger.error('Error fetching message', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch message' });
   }
 });
@@ -122,7 +136,7 @@ router.put('/:id/read', authenticateToken, (req, res) => {
     db.prepare('UPDATE admin_messages SET read = 1 WHERE id = ?').run(id);
     res.json({ message: 'Message marked as read' });
   } catch (error) {
-    console.error('Error marking message as read:', error);
+    logger.error('Error marking message as read', { error: error.message });
     res.status(500).json({ error: 'Failed to mark message as read' });
   }
 });

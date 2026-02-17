@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -57,7 +58,7 @@ router.get('/', (req, res) => {
 
     res.json({ data: companies, total: total.count });
   } catch (error) {
-    console.error('Error fetching companies:', error);
+    logger.error('Error fetching companies', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch companies' });
   }
 });
@@ -124,7 +125,7 @@ router.get('/:id', (req, res) => {
       review_count: avgRating?.review_count || 0
     });
   } catch (error) {
-    console.error('Error fetching company:', error);
+    logger.error('Error fetching company', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch company' });
   }
 });

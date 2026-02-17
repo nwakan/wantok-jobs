@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -13,7 +14,7 @@ router.get('/', (req, res) => {
     
     res.json({ plans });
   } catch (error) {
-    console.error('Error fetching plans:', error);
+    logger.error('Error fetching plans', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch plans' });
   }
 });

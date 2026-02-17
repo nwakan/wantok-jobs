@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * WantokJobs Notification Engine
  * 
@@ -196,7 +197,7 @@ function notify(userId, type, data = {}) {
   try {
     const template = NOTIFICATION_TEMPLATES[type];
     if (!template) {
-      console.warn(`Unknown notification type: ${type}`);
+      logger.warn('warning', { detail: `Unknown notification type: ${type}` });
       return null;
     }
 
@@ -232,13 +233,13 @@ function notify(userId, type, data = {}) {
     // Send email notification for critical types (async, don't block)
     setImmediate(() => {
       sendNotificationEmail(userId, type, data, title, message).catch(err => {
-        console.error('Email notification failed:', err.message);
+        logger.error('Email notification failed', { error: err.message });
       });
     });
 
     return result.lastInsertRowid;
   } catch (error) {
-    console.error(`Notification error (${type} for user ${userId}):`, error.message);
+    logger.error('Notification error', { type, userId, error: error.message });
     return null;
   }
 }
@@ -262,7 +263,7 @@ function notifyAdmins(type, data = {}) {
     const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
     return notifyMany(admins.map(a => a.id), type, data);
   } catch (error) {
-    console.error('Notify admins error:', error.message);
+    logger.error('Notify admins error', { error: error.message });
     return [];
   }
 }
@@ -451,7 +452,7 @@ const events = {
 
       return { expiringSoon: expiring.length, justExpired: expired.length };
     } catch (error) {
-      console.error('checkExpiringJobs error:', error.message);
+      logger.error('checkExpiringJobs error', { error: error.message });
       return { error: error.message };
     }
   },
@@ -500,7 +501,7 @@ const events = {
       }
       return { checked: incomplete.length, nudged };
     } catch (error) {
-      console.error('checkIncompleteProfiles error:', error.message);
+      logger.error('checkIncompleteProfiles error', { error: error.message });
       return { error: error.message };
     }
   },
@@ -537,7 +538,7 @@ const events = {
       }
       return { expiringNotified: expiring.length };
     } catch (error) {
-      console.error('checkExpiringSavedJobs error:', error.message);
+      logger.error('checkExpiringSavedJobs error', { error: error.message });
       return { error: error.message };
     }
   }

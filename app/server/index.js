@@ -2,23 +2,40 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const _rateLimit = require('express-rate-limit');
+// In test mode, effectively disable rate limiting by setting very high max
+const rateLimit = (opts) => _rateLimit({
+  ...opts,
+  max: process.env.NODE_ENV === 'test' ? 100000 : opts.max,
+});
 const path = require('path');
 const fs = require('fs');
+const logger = require('./utils/logger');
+const errorHandler = require('./middleware/errorHandler');
 
 // Security: Enforce JWT_SECRET in production
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error('❌ SECURITY ERROR: JWT_SECRET environment variable is required in production.');
-  console.error('   Set a strong random secret in your .env file:');
-  console.error('   JWT_SECRET=' + require('crypto').randomBytes(48).toString('base64'));
+  logger.error('SECURITY ERROR: JWT_SECRET environment variable is required in production.');
+  logger.error('Set a strong random secret in your .env file: JWT_SECRET=' + require('crypto').randomBytes(48).toString('base64'));
   process.exit(1);
 }
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Compression (gzip/deflate for all responses)
+try {
+  const compression = require('compression');
+  app.use(compression({ threshold: 512 }));
+} catch (e) {
+  logger.warn('compression module not installed, skipping');
+}
+
 // Request logging middleware
 const requestLogger = require('./middleware/logging');
+
+// API cache middleware
+const apiCache = require('./middleware/cache');
 
 
 // Security headers (enhanced CSRF protection)
@@ -44,7 +61,7 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
 // Default production origins if CORS_ORIGIN not set
 if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
   allowedOrigins.push('https://wantokjobs.com', 'https://www.wantokjobs.com');
-  console.warn('⚠️  No CORS_ORIGIN set in production. Using default: wantokjobs.com');
+  logger.warn('No CORS_ORIGIN set in production. Using default: wantokjobs.com');
 }
 
 app.use(cors({
@@ -55,7 +72,7 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`❌ CORS blocked: ${origin} (allowed: ${allowedOrigins.join(', ')})`);
+      logger.warn('CORS blocked', { origin, allowed: allowedOrigins });
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -74,20 +91,55 @@ app.use(rateLimit({
 // Request logging
 app.use(requestLogger);
 
-// Auth rate limit: 10 attempts/min per IP
+// Stricter per-route rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please wait a minute.', code: 'RATE_LIMIT' },
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many registration attempts. Please wait a minute.', code: 'RATE_LIMIT' },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset attempts. Please wait a minute.', code: 'RATE_LIMIT' },
+});
+
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many authentication attempts. Please wait a minute.' },
+  message: { error: 'Too many authentication attempts. Please wait a minute.', code: 'RATE_LIMIT' },
 });
 
 // Contact form rate limit: 5/min
 const contactLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
-  message: { error: 'Too many submissions. Please wait a minute.' },
+  message: { error: 'Too many submissions. Please wait a minute.', code: 'RATE_LIMIT' },
+});
+
+// Application rate limit: 10/min per user (keyed by auth user)
+const applicationLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  validate: false,
+  message: { error: 'Too many applications. Please wait a minute.', code: 'RATE_LIMIT' },
 });
 
 app.use(express.json({ limit: '1mb' }));
@@ -102,6 +154,9 @@ app.use((req, res, next) => {
 
 // Initialize database
 require('./database');
+
+// API caching for GET requests
+app.use('/api', apiCache);
 
 // Health check (enhanced for production monitoring)
 app.get('/health', (req, res) => {
@@ -136,7 +191,7 @@ app.get('/health', (req, res) => {
       node: process.version
     });
   } catch (error) {
-    console.error('Health check error:', error);
+    logger.error('Health check error', { error: error.message });
     res.status(503).json({
       status: 'error',
       timestamp: new Date().toISOString(),
@@ -156,24 +211,28 @@ app.get('/api/stats', (req, res) => {
       totalJobs: db.prepare('SELECT COUNT(*) as count FROM jobs').get().count,
       activeJobs: db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'active'").get().count,
     };
-    res.json(stats);
+    res.json({ data: stats });
   } catch (error) {
-    console.error('Stats error:', error);
+    logger.error('Stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
 // API Routes (auth endpoints get stricter rate limiting)
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/register', registerLimiter);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/auth/oauth/google', authLimiter);
 app.use('/api/auth/oauth/facebook', authLimiter);
 app.use('/api/auth', require('./routes/auth'));
 
+// Force password reset middleware — blocks all non-auth routes for fpr users
+const { checkForcePasswordReset } = require('./middleware/auth');
+app.use('/api', checkForcePasswordReset);
+
 // Core routes
 app.use('/api/jobs', require('./routes/jobs'));
-app.use('/api/applications', require('./routes/applications'));
+app.use('/api/applications', applicationLimiter, require('./routes/applications'));
 app.use('/api/offer-letters', require('./routes/offer-letters'));
 app.use('/api/interviews', require('./routes/interviews'));
 app.use('/api/profile', require('./routes/profiles'));
@@ -265,7 +324,7 @@ app.get('/sitemap.xml', (req, res) => {
     xml += '\n</urlset>';
     res.type('application/xml').send(xml);
   } catch (error) {
-    console.error('Sitemap error:', error);
+    logger.error('Sitemap error', { error: error.message });
     res.status(500).send('Error generating sitemap');
   }
 });
@@ -284,7 +343,36 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 }
 
+// Token refresh endpoint
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('./middleware/auth');
+
+app.post('/api/auth/refresh', authenticateToken, (req, res) => {
+  try {
+    const token = jwt.sign(
+      { id: req.user.id, email: req.user.email, role: req.user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({ token });
+  } catch (error) {
+    logger.error('Token refresh error', { error: error.message, userId: req.user?.id });
+    res.status(500).json({ error: 'Failed to refresh token', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Add password_changed_at column for token invalidation (run once)
+try {
+  const db = require('./database');
+  db.exec("ALTER TABLE users ADD COLUMN password_changed_at TEXT");
+  logger.info('Added password_changed_at column to users table');
+} catch(e) {
+  // Column already exists — expected
+}
+
+// Global error handler (MUST be last middleware)
+app.use(errorHandler);
+
 app.listen(PORT, () => {
-  console.log(`🚀 WantokJobs server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`WantokJobs server running on port ${PORT}`, { port: PORT, env: process.env.NODE_ENV || 'development' });
 });

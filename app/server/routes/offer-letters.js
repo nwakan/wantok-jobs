@@ -1,3 +1,5 @@
+const { stripHtml, sanitizeEmail } = require('../utils/sanitizeHtml');
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -26,7 +28,7 @@ router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
 
     res.json(offers);
   } catch (error) {
-    console.error('Get my offers error:', error);
+    logger.error('Get my offers error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch offers' });
   }
 });
@@ -71,7 +73,7 @@ router.get('/:id', authenticateToken, (req, res) => {
 
     res.json(offer);
   } catch (error) {
-    console.error('Get offer error:', error);
+    logger.error('Get offer error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch offer' });
   }
 });
@@ -156,7 +158,7 @@ router.post('/', authenticateToken, requireRole('employer', 'admin'), (req, res)
 
     res.status(201).json(offer);
   } catch (error) {
-    console.error('Create offer error:', error);
+    logger.error('Create offer error', { error: error.message });
     res.status(500).json({ error: 'Failed to create offer' });
   }
 });
@@ -240,7 +242,7 @@ router.put('/:id', authenticateToken, requireRole('employer', 'admin'), (req, re
     const updated = db.prepare('SELECT * FROM offer_letters WHERE id = ?').get(req.params.id);
     res.json(updated);
   } catch (error) {
-    console.error('Update offer error:', error);
+    logger.error('Update offer error', { error: error.message });
     res.status(500).json({ error: 'Failed to update offer' });
   }
 });
@@ -335,7 +337,7 @@ router.post('/:id/send', authenticateToken, requireRole('employer', 'admin'), as
     const updated = db.prepare('SELECT * FROM offer_letters WHERE id = ?').get(req.params.id);
     res.json(updated);
   } catch (error) {
-    console.error('Send offer error:', error);
+    logger.error('Send offer error', { error: error.message });
     res.status(500).json({ error: 'Failed to send offer' });
   }
 });
@@ -421,7 +423,7 @@ router.post('/:id/respond', authenticateToken, requireRole('jobseeker'), async (
     const updated = db.prepare('SELECT * FROM offer_letters WHERE id = ?').get(req.params.id);
     res.json(updated);
   } catch (error) {
-    console.error('Respond to offer error:', error);
+    logger.error('Respond to offer error', { error: error.message });
     res.status(500).json({ error: 'Failed to respond to offer' });
   }
 });

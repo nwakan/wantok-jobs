@@ -3,6 +3,7 @@
  * Generates dynamic XML sitemaps for search engine crawling
  */
 
+const logger = require('../utils/logger');
 const { Router } = require('express');
 const db = require('../database.js');
 
@@ -87,7 +88,7 @@ router.get('/sitemap.xml', (req, res) => {
     res.header('Content-Type', 'application/xml');
     res.send(sitemap);
   } catch (error) {
-    console.error('Sitemap index error:', error);
+    logger.error('Sitemap index error', { error: error.message });
     res.status(500).send('Sitemap generation failed');
   }
 });
@@ -124,7 +125,7 @@ router.get('/sitemap-static.xml', (req, res) => {
     res.header('Content-Type', 'application/xml');
     res.send(sitemap);
   } catch (error) {
-    console.error('Static sitemap error:', error);
+    logger.error('Static sitemap error', { error: error.message });
     res.status(500).send('Sitemap generation failed');
   }
 });
@@ -166,7 +167,7 @@ router.get('/sitemap-jobs.xml', (req, res) => {
     res.header('Content-Type', 'application/xml');
     res.send(sitemap);
   } catch (error) {
-    console.error('Jobs sitemap error:', error);
+    logger.error('Jobs sitemap error', { error: error.message });
     res.status(500).send('Sitemap generation failed');
   }
 });
@@ -212,7 +213,7 @@ router.get('/sitemap-companies.xml', (req, res) => {
     res.header('Content-Type', 'application/xml');
     res.send(sitemap);
   } catch (error) {
-    console.error('Companies sitemap error:', error);
+    logger.error('Companies sitemap error', { error: error.message });
     res.status(500).send('Sitemap generation failed');
   }
 });
@@ -257,7 +258,7 @@ router.get('/sitemap-categories.xml', (req, res) => {
     res.header('Content-Type', 'application/xml');
     res.send(sitemap);
   } catch (error) {
-    console.error('Categories sitemap error:', error);
+    logger.error('Categories sitemap error', { error: error.message });
     res.status(500).send('Sitemap generation failed');
   }
 });
@@ -272,7 +273,7 @@ router.post('/sitemap/clear-cache', (req, res) => {
     cacheTimestamps = {};
     res.json({ success: true, message: 'Sitemap cache cleared' });
   } catch (error) {
-    console.error('Cache clear error:', error);
+    logger.error('Cache clear error', { error: error.message });
     res.status(500).json({ error: 'Failed to clear cache' });
   }
 });

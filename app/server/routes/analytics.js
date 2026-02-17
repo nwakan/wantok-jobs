@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -49,7 +50,7 @@ router.get('/employer/overview', authenticateToken, requireRole('employer'), (re
       top_jobs: topJobs
     });
   } catch (error) {
-    console.error('Error fetching employer analytics:', error);
+    logger.error('Error fetching employer analytics', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch employer analytics' });
   }
 });
@@ -139,7 +140,7 @@ router.get('/admin/overview', authenticateToken, requireRole('admin'), (req, res
       top_categories: topCategories
     });
   } catch (error) {
-    console.error('Error fetching admin analytics:', error);
+    logger.error('Error fetching admin analytics', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch admin analytics' });
   }
 });

@@ -10,6 +10,7 @@
  * Served statically at /uploads/<type>/<filename>
  */
 
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -102,7 +103,7 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), handleM
     
     res.json({ url, message: 'Avatar uploaded successfully' });
   } catch (error) {
-    console.error('Avatar upload error:', error);
+    logger.error('Avatar upload error', { error: error.message });
     res.status(500).json({ error: 'Failed to upload avatar' });
   }
 });
@@ -123,7 +124,7 @@ router.post('/logo', authenticateToken, requireRole('employer'), logoUpload.sing
     
     res.json({ url, message: 'Logo uploaded successfully' });
   } catch (error) {
-    console.error('Logo upload error:', error);
+    logger.error('Logo upload error', { error: error.message });
     res.status(500).json({ error: 'Failed to upload logo' });
   }
 });
@@ -154,7 +155,7 @@ router.post('/cv', authenticateToken, requireRole('jobseeker'), cvUpload.single(
     
     res.json({ url, filename: req.file.originalname, message: 'CV uploaded successfully' });
   } catch (error) {
-    console.error('CV upload error:', error);
+    logger.error('CV upload error', { error: error.message });
     res.status(500).json({ error: 'Failed to upload CV' });
   }
 });
@@ -170,7 +171,7 @@ router.post('/banner', authenticateToken, bannerUpload.single('banner'), handleM
     const url = `/uploads/banners/${req.file.filename}`;
     res.json({ url, message: 'Banner uploaded successfully' });
   } catch (error) {
-    console.error('Banner upload error:', error);
+    logger.error('Banner upload error', { error: error.message });
     res.status(500).json({ error: 'Failed to upload banner' });
   }
 });

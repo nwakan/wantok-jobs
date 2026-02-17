@@ -11,6 +11,28 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'wantokjobs.db');
 const db = new Database(dbPath);
 
+// Performance: WAL mode + busy timeout
+db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 5000');
+db.pragma('cache_size = -8000'); // 8MB cache
+
+// Run PRAGMA optimize periodically (every 2 hours)
+setInterval(() => {
+  try { db.pragma('optimize'); } catch (e) { /* ignore */ }
+}, 2 * 60 * 60 * 1000);
+
+// Graceful shutdown
+function closeDatabase() {
+  try {
+    db.pragma('optimize');
+    db.close();
+    console.log('📦 Database connection closed');
+  } catch (e) { /* already closed */ }
+}
+process.on('SIGINT', () => { closeDatabase(); process.exit(0); });
+process.on('SIGTERM', () => { closeDatabase(); process.exit(0); });
+process.on('exit', closeDatabase);
+
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
 

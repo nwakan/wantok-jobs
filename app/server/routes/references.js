@@ -1,3 +1,5 @@
+const { stripHtml, sanitizeEmail } = require('../utils/sanitizeHtml');
+const logger = require('../utils/logger');
 const express = require('express');
 const crypto = require('crypto');
 const db = require('../database');
@@ -47,9 +49,9 @@ async function sendReferenceRequestEmail(referee, candidate, job, employer, toke
     `;
     
     await sendEmail(referee.referee_email, subject, html);
-    console.log(`✓ Reference request email sent to ${referee.referee_email}`);
+    logger.info('log', { detail: `✓ Reference request email sent to ${referee.referee_email}` });
   } catch (error) {
-    console.error('Failed to send reference request email:', error);
+    logger.error('Failed to send reference request email', { error: error.message });
   }
 }
 
@@ -77,9 +79,9 @@ async function sendReferenceReminderEmail(reference, candidate, job, employer) {
     `;
     
     await sendEmail(reference.referee_email, subject, html);
-    console.log(`✓ Reference reminder email sent to ${reference.referee_email}`);
+    logger.info('log', { detail: `✓ Reference reminder email sent to ${reference.referee_email}` });
   } catch (error) {
-    console.error('Failed to send reference reminder email:', error);
+    logger.error('Failed to send reference reminder email', { error: error.message });
   }
 }
 
@@ -101,9 +103,9 @@ async function sendReferenceThankYouEmail(referee) {
     `;
     
     await sendEmail(referee.referee_email, subject, html);
-    console.log(`✓ Thank you email sent to ${referee.referee_email}`);
+    logger.info('log', { detail: `✓ Thank you email sent to ${referee.referee_email}` });
   } catch (error) {
-    console.error('Failed to send thank you email:', error);
+    logger.error('Failed to send thank you email', { error: error.message });
   }
 }
 
@@ -120,7 +122,12 @@ router.post('/', authenticateToken, requireRole('employer', 'admin'), async (req
       custom_questions
     } = req.body;
 
-    if (!application_id || !referee_name || !referee_email) {
+    // Sanitize inputs
+    const safeRefereeName = referee_name ? stripHtml(referee_name) : null;
+    const safeRefereeEmail = referee_email ? sanitizeEmail(referee_email) : null;
+    const safeRefereeCompany = referee_company ? stripHtml(referee_company) : null;
+
+    if (!application_id || !safeRefereeName || !safeRefereeEmail) {
       return res.status(400).json({ error: 'Application ID, referee name, and email are required' });
     }
 
@@ -157,10 +164,10 @@ router.post('/', authenticateToken, requireRole('employer', 'admin'), async (req
       ) VALUES (?, ?, ?, ?, ?, ?, 'sent', ?, ?, datetime('now'))
     `).run(
       application_id,
-      referee_name,
-      referee_email,
+      safeRefereeName,
+      safeRefereeEmail,
       referee_phone || null,
-      referee_company || null,
+      safeRefereeCompany || null,
       referee_relationship || 'colleague',
       token,
       JSON.stringify(questions)
@@ -187,7 +194,7 @@ router.post('/', authenticateToken, requireRole('employer', 'admin'), async (req
 
     res.status(201).json(reference);
   } catch (error) {
-    console.error('Request reference error:', error);
+    logger.error('Request reference error', { error: error.message });
     res.status(500).json({ error: 'Failed to request reference' });
   }
 });
@@ -231,7 +238,7 @@ router.get('/application/:appId', authenticateToken, requireRole('employer', 'ad
 
     res.json(references);
   } catch (error) {
-    console.error('Get references error:', error);
+    logger.error('Get references error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch references' });
   }
 });
@@ -274,7 +281,7 @@ router.get('/respond/:token', (req, res) => {
 
     res.json(reference);
   } catch (error) {
-    console.error('Get reference form error:', error);
+    logger.error('Get reference form error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch reference form' });
   }
 });
@@ -325,7 +332,7 @@ router.post('/respond/:token', async (req, res) => {
 
     res.json({ success: true, message: 'Reference submitted successfully' });
   } catch (error) {
-    console.error('Submit reference error:', error);
+    logger.error('Submit reference error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit reference' });
   }
 });
@@ -370,7 +377,7 @@ router.post('/:id/remind', authenticateToken, requireRole('employer', 'admin'), 
 
     res.json({ success: true, message: 'Reminder sent' });
   } catch (error) {
-    console.error('Send reminder error:', error);
+    logger.error('Send reminder error', { error: error.message });
     res.status(500).json({ error: 'Failed to send reminder' });
   }
 });

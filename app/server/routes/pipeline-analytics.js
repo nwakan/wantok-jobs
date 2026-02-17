@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -258,7 +259,7 @@ router.get('/', authenticateToken, requireRole('employer', 'admin'), (req, res) 
     });
 
   } catch (error) {
-    console.error('Pipeline analytics error:', error);
+    logger.error('Pipeline analytics error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch pipeline analytics' });
   }
 });

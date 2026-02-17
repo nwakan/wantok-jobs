@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -20,7 +21,7 @@ router.get('/', (req, res) => {
     
     res.json({ categories });
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    logger.error('Error fetching categories', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
 });
@@ -43,7 +44,7 @@ router.get('/featured', (req, res) => {
     
     res.json({ categories });
   } catch (error) {
-    console.error('Error fetching featured categories:', error);
+    logger.error('Error fetching featured categories', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch featured categories' });
   }
 });
@@ -66,7 +67,7 @@ router.get('/trending', (req, res) => {
     
     res.json({ categories });
   } catch (error) {
-    console.error('Error fetching trending categories:', error);
+    logger.error('Error fetching trending categories', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch trending categories' });
   }
 });
@@ -128,7 +129,7 @@ router.get('/:slug', (req, res) => {
       topEmployers
     });
   } catch (error) {
-    console.error('Error fetching category:', error);
+    logger.error('Error fetching category', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch category' });
   }
 });
@@ -178,7 +179,7 @@ router.get('/:slug/jobs', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching category jobs:', error);
+    logger.error('Error fetching category jobs', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch category jobs' });
   }
 });

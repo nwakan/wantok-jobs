@@ -12,6 +12,14 @@ MSG="${1:-deploy: manual update}"
 log() { echo "[$(date '+%H:%M:%S')] $1"; }
 ssh_cmd() { ssh $SSH_OPTS $VPS "$@"; }
 
+# Pre-deploy validation
+log "🔍 Running pre-deploy validation..."
+cd /data/.openclaw/workspace/data/wantok/app
+if ! node scripts/validate.js; then
+  log "❌ Pre-deploy validation failed — aborting"
+  exit 1
+fi
+
 # Check VPS
 if ! ssh_cmd "echo ok" >/dev/null 2>&1; then
   log "❌ VPS unreachable"; exit 1

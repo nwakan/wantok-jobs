@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -28,7 +29,7 @@ router.post('/:jobId', authenticateToken, (req, res) => {
 
     res.status(201).json({ id: result.lastInsertRowid, message: 'Job saved successfully' });
   } catch (error) {
-    console.error('Save job error:', error);
+    logger.error('Save job error', { error: error.message });
     res.status(500).json({ error: 'Failed to save job' });
   }
 });
@@ -46,7 +47,7 @@ router.delete('/:jobId', authenticateToken, (req, res) => {
 
     res.json({ message: 'Job unsaved successfully' });
   } catch (error) {
-    console.error('Unsave job error:', error);
+    logger.error('Unsave job error', { error: error.message });
     res.status(500).json({ error: 'Failed to unsave job' });
   }
 });
@@ -68,7 +69,7 @@ router.get('/', authenticateToken, (req, res) => {
 
     res.json(savedJobs);
   } catch (error) {
-    console.error('Get saved jobs error:', error);
+    logger.error('Get saved jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch saved jobs' });
   }
 });

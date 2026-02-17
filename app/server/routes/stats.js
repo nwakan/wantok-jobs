@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
@@ -168,7 +169,7 @@ router.get('/dashboard', authenticateToken, requireRole('admin'), (req, res) => 
       application_statuses: applicationStatusStats
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    logger.error('Error fetching dashboard stats', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
   }
 });
@@ -186,7 +187,7 @@ router.get('/categories', (req, res) => {
     `).all();
     res.json({ data: categories });
   } catch (error) {
-    console.error('Category stats error:', error);
+    logger.error('Category stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch category stats' });
   }
 });
@@ -206,7 +207,7 @@ router.get('/top-employers', (req, res) => {
     `).all();
     res.json({ data: employers });
   } catch (error) {
-    console.error('Top employers error:', error);
+    logger.error('Top employers error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch top employers' });
   }
 });

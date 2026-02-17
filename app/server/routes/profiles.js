@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -24,7 +25,7 @@ router.get('/', authenticateToken, (req, res) => {
 
     res.json({ user, profile });
   } catch (error) {
-    console.error('Get profile error:', error);
+    logger.error('Get profile error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
@@ -229,7 +230,7 @@ router.put('/', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Admin users do not have profiles' });
     }
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error', { error: error.message });
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
@@ -260,7 +261,7 @@ router.get('/:userId', (req, res) => {
 
     res.json({ user, profile });
   } catch (error) {
-    console.error('Get public profile error:', error);
+    logger.error('Get public profile error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
@@ -322,7 +323,7 @@ router.get('/views-analytics', authenticateToken, (req, res) => {
       trend
     });
   } catch (error) {
-    console.error('Profile views analytics error:', error);
+    logger.error('Profile views analytics error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch profile views' });
   }
 });

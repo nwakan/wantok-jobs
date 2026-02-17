@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 
@@ -90,7 +91,7 @@ router.get('/', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Public stats error:', error);
+    logger.error('Public stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

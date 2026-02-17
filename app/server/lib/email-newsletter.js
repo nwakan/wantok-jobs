@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Newsletter Email Service — Batch sending via Brevo
  * Handles rate limiting and retry logic
@@ -17,7 +18,7 @@ const BATCH_DELAY_MS = 12000; // 12 seconds between batches (~250/min)
  */
 async function sendNewsletterBatch({ recipients, subject, htmlContent, targetAudience }) {
   if (!BREVO_API_KEY) {
-    console.error('📧 BREVO_API_KEY not set - cannot send newsletter');
+    logger.error('📧 BREVO_API_KEY not set - cannot send newsletter');
     return { sent: 0, failed: recipients.length, errors: ['BREVO_API_KEY not configured'] };
   }
 
@@ -36,12 +37,12 @@ async function sendNewsletterBatch({ recipients, subject, htmlContent, targetAud
     batches.push(recipients.slice(i, i + BATCH_SIZE));
   }
 
-  console.log(`📧 Sending newsletter to ${recipients.length} recipients in ${batches.length} batches`);
+  logger.info('log', { detail: `📧 Sending newsletter to ${recipients.length} recipients in ${batches.length} batches` });
 
   // Process batches sequentially to respect rate limits
   for (let i = 0; i < batches.length; i++) {
     const batch = batches[i];
-    console.log(`📧 Processing batch ${i + 1}/${batches.length} (${batch.length} emails)...`);
+    logger.info("Processing newsletter batch", { batch: i + 1, total: batches.length, size: batch.length });
 
     try {
       const batchResults = await sendBatch(batch, subject, htmlWithFooter);
@@ -56,13 +57,13 @@ async function sendNewsletterBatch({ recipients, subject, htmlContent, targetAud
         await delay(BATCH_DELAY_MS);
       }
     } catch (error) {
-      console.error(`📧 Batch ${i + 1} error:`, error.message);
+      logger.error('Newsletter batch error', { batch: i + 1, error: error.message });
       results.failed += batch.length;
       results.errors.push(`Batch ${i + 1} failed: ${error.message}`);
     }
   }
 
-  console.log(`📧 Newsletter complete: ${results.sent} sent, ${results.failed} failed`);
+  logger.info('log', { detail: `📧 Newsletter complete: ${results.sent} sent, ${results.failed} failed` });
   return results;
 }
 
@@ -100,7 +101,7 @@ async function sendBatch(recipients, subject, htmlContent) {
       } else {
         results.failed++;
         results.errors.push(`${recipient.email}: ${data.message || 'Unknown error'}`);
-        console.error(`📧 ✗ ${recipient.email}: ${data.message}`);
+        logger.error('error', { detail: `📧 ✗ ${recipient.email}: ${data.message}` });
       }
 
       // Small delay between individual emails to avoid hitting rate limits
@@ -109,7 +110,7 @@ async function sendBatch(recipients, subject, htmlContent) {
     } catch (error) {
       results.failed++;
       results.errors.push(`${recipient.email}: ${error.message}`);
-      console.error(`📧 ✗ ${recipient.email}: ${error.message}`);
+      logger.error('error', { detail: `📧 ✗ ${recipient.email}: ${error.message}` });
     }
   }
 
@@ -182,14 +183,14 @@ async function sendTestNewsletter({ to, toName, subject, htmlContent }) {
     const data = await res.json();
 
     if (res.ok) {
-      console.log(`📧 Test newsletter sent to ${to}`);
+      logger.info('log', { detail: `📧 Test newsletter sent to ${to}` });
       return { success: true, messageId: data.messageId };
     } else {
-      console.error(`📧 Test newsletter failed: ${data.message}`);
+      logger.error('error', { detail: `📧 Test newsletter failed: ${data.message}` });
       return { success: false, error: data.message };
     }
   } catch (error) {
-    console.error(`📧 Test newsletter error:`, error);
+    logger.error('error', { detail: `📧 Test newsletter error:`, error });
     return { success: false, error: error.message };
   }
 }

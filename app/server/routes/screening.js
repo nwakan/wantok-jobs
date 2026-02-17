@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const router = express.Router();
@@ -40,7 +41,7 @@ router.post('/jobs/:jobId/questions', authenticateToken, requireRole('employer',
 
     res.status(201).json({ question: newQuestion });
   } catch (error) {
-    console.error('Error creating screening question:', error);
+    logger.error('Error creating screening question', { error: error.message });
     res.status(500).json({ error: 'Failed to create screening question' });
   }
 });
@@ -75,7 +76,7 @@ router.get('/jobs/:jobId/questions', (req, res) => {
 
     res.json({ questions });
   } catch (error) {
-    console.error('Error fetching screening questions:', error);
+    logger.error('Error fetching screening questions', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch screening questions' });
   }
 });
@@ -104,7 +105,7 @@ router.delete('/jobs/:jobId/questions/:questionId', authenticateToken, requireRo
 
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {
-    console.error('Error deleting screening question:', error);
+    logger.error('Error deleting screening question', { error: error.message });
     res.status(500).json({ error: 'Failed to delete screening question' });
   }
 });
@@ -176,7 +177,7 @@ router.post('/applications/:appId/answers', authenticateToken, requireRole('jobs
 
     res.status(201).json({ answers: savedAnswers, message: 'Screening answers submitted successfully' });
   } catch (error) {
-    console.error('Error saving screening answers:', error);
+    logger.error('Error saving screening answers', { error: error.message });
     res.status(500).json({ error: 'Failed to save screening answers' });
   }
 });
@@ -227,7 +228,7 @@ router.get('/applications/:appId/answers', authenticateToken, (req, res) => {
 
     res.json({ answers });
   } catch (error) {
-    console.error('Error fetching screening answers:', error);
+    logger.error('Error fetching screening answers', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch screening answers' });
   }
 });

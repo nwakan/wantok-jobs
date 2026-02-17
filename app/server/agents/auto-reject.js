@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Auto-Reject Stale Applications Agent
  * Runs daily to auto-reject applications that have been stale for too long
@@ -13,7 +14,7 @@ const DEFAULT_THRESHOLDS = {
 };
 
 async function autoRejectStaleApplications() {
-  console.log('[Auto-Reject Agent] Running stale application check...');
+  logger.info('log', { detail: '[Auto-Reject Agent] Running stale application check...' });
 
   try {
     const now = new Date();
@@ -38,7 +39,7 @@ async function autoRejectStaleApplications() {
           AND julianday('now') - julianday(a.updated_at) >= ?
       `).all(status, thresholdDays);
 
-      console.log(`  Found ${staleApps.length} stale applications in '${status}' status (>${thresholdDays} days)`);
+      logger.info('Found stale applications', { count: staleApps.length, status, thresholdDays });
 
       for (const app of staleApps) {
         // Check if employer has been active on this job recently (last 7 days)
@@ -53,7 +54,7 @@ async function autoRejectStaleApplications() {
 
         // Skip if employer has been active recently
         if (recentActivity && recentActivity.count > 0) {
-          console.log(`  Skipping app ${app.id} - employer active on this job recently`);
+          logger.info('log', { detail: `  Skipping app ${app.id} - employer active on this job recently` });
           continue;
         }
 
@@ -98,15 +99,15 @@ async function autoRejectStaleApplications() {
             subject: `Application Update: ${app.job_title}`,
             html: emailHtml
           });
-          console.log(`  ✅ Rejected app ${app.id} and sent email to ${app.candidate_email}`);
+          logger.info('log', { detail: `  ✅ Rejected app ${app.id} and sent email to ${app.candidate_email}` });
         } catch (emailError) {
-          console.error(`  ⚠️  Rejected app ${app.id} but failed to send email:`, emailError.message);
+          logger.error('Rejected app but failed to send email', { appId: app.id, error: emailError.message });
         }
       }
     }
 
     const totalRejected = Object.values(rejectedCount).reduce((sum, n) => sum + n, 0);
-    console.log(`[Auto-Reject Agent] Completed. Total rejected: ${totalRejected} (applied: ${rejectedCount.applied}, screening: ${rejectedCount.screening}, shortlisted: ${rejectedCount.shortlisted})`);
+    logger.info("Auto-Reject Agent completed", { totalRejected, rejectedCount });
 
     return {
       success: true,
@@ -115,7 +116,7 @@ async function autoRejectStaleApplications() {
     };
 
   } catch (error) {
-    console.error('[Auto-Reject Agent] Error:', error);
+    logger.error('[Auto-Reject Agent] Error', { error: error.message });
     return {
       success: false,
       error: error.message
@@ -127,11 +128,11 @@ async function autoRejectStaleApplications() {
 if (require.main === module) {
   autoRejectStaleApplications()
     .then(result => {
-      console.log('Result:', result);
+      logger.info('log', { detail: 'Result:', result });
       process.exit(result.success ? 0 : 1);
     })
     .catch(error => {
-      console.error('Fatal error:', error);
+      logger.error('Fatal error', { error: error.message });
       process.exit(1);
     });
 }

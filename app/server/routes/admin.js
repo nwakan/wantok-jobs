@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -27,7 +28,7 @@ router.get("/stats", (req, res) => {
 
     res.json(stats);
   } catch (error) {
-    console.error('Get stats error:', error);
+    logger.error('Get stats error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
@@ -35,7 +36,9 @@ router.get("/stats", (req, res) => {
 // Get all users
 router.get("/users", (req, res) => {
   try {
-    const { role, page = 1, limit = 50 } = req.query;
+    const { role, page = 1, limit = 20 } = req.query;
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const pageNum = Math.max(1, parseInt(page));
 
     let query = 'SELECT id, email, role, name, created_at FROM users';
     const params = [];
@@ -51,20 +54,17 @@ router.get("/users", (req, res) => {
 
     // Pagination
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    const limitNum = parseInt(limit);
-    const offset = (parseInt(page) - 1) * limitNum;
+    const offset = (pageNum - 1) * limitNum;
     params.push(limitNum, offset);
 
     const users = db.prepare(query).all(...params);
 
     res.json({
       data: users,
-      total,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / limitNum)
+      pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) }
     });
   } catch (error) {
-    console.error('Get users error:', error);
+    logger.error('Get users error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
@@ -93,7 +93,7 @@ router.put('/users/:id', (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Update user error:', error);
+    logger.error('Update user error', { error: error.message });
     res.status(500).json({ error: 'Failed to update user' });
   }
 });
@@ -101,10 +101,12 @@ router.put('/users/:id', (req, res) => {
 // Get all jobs (for management)
 router.get("/jobs", (req, res) => {
   try {
-    const { status, page = 1, limit = 50 } = req.query;
+    const { status, page = 1, limit = 20 } = req.query;
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const pageNum = Math.max(1, parseInt(page));
 
     let query = `
-      SELECT j.*, 
+      SELECT j.id, j.title, j.status, j.job_type, j.location, j.created_at, j.views_count,
              u.name as employer_name,
              pe.company_name
       FROM jobs j
@@ -119,25 +121,22 @@ router.get("/jobs", (req, res) => {
     }
 
     // Count total
-    const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM');
+    const countQuery = query.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(*) as total FROM');
     const { total } = db.prepare(countQuery).get(...params);
 
     // Pagination
     query += ' ORDER BY j.created_at DESC LIMIT ? OFFSET ?';
-    const limitNum = parseInt(limit);
-    const offset = (parseInt(page) - 1) * limitNum;
+    const offset = (pageNum - 1) * limitNum;
     params.push(limitNum, offset);
 
     const jobs = db.prepare(query).all(...params);
 
     res.json({
       data: jobs,
-      total,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / limitNum)
+      pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) }
     });
   } catch (error) {
-    console.error('Get jobs error:', error);
+    logger.error('Get jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch jobs' });
   }
 });
@@ -155,7 +154,7 @@ router.delete("/jobs/:id", (req, res) => {
 
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
-    console.error('Delete job error:', error);
+    logger.error('Delete job error', { error: error.message });
     res.status(500).json({ error: 'Failed to delete job' });
   }
 });
@@ -186,7 +185,7 @@ router.post('/banners', (req, res) => {
     const banner = db.prepare('SELECT * FROM banners WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(banner);
   } catch (error) {
-    console.error('Create banner error:', error);
+    logger.error('Create banner error', { error: error.message });
     res.status(500).json({ error: 'Failed to create banner' });
   }
 });
@@ -256,7 +255,7 @@ router.post('/articles', (req, res) => {
     
     res.status(201).json(db.prepare('SELECT * FROM articles WHERE id = ?').get(result.lastInsertRowid));
   } catch (error) {
-    console.error('Create article error:', error);
+    logger.error('Create article error', { error: error.message });
     res.status(500).json({ error: error.message?.includes('UNIQUE') ? 'Article slug already exists' : 'Failed to create article' });
   }
 });
@@ -326,7 +325,7 @@ router.put('/jobs/:id/feature', (req, res) => {
       job: updated 
     });
   } catch (error) {
-    console.error('Feature job error:', error);
+    logger.error('Feature job error', { error: error.message });
     res.status(500).json({ error: 'Failed to update featured status' });
   }
 });
@@ -372,7 +371,7 @@ router.put('/employers/:id/verify', (req, res) => {
       employer: updated 
     });
   } catch (error) {
-    console.error('Verify employer error:', error);
+    logger.error('Verify employer error', { error: error.message });
     res.status(500).json({ error: 'Failed to update verification status' });
   }
 });
@@ -415,7 +414,7 @@ router.get('/employers', (req, res) => {
       totalPages: Math.ceil(total / limitNum)
     });
   } catch (error) {
-    console.error('Get employers error:', error);
+    logger.error('Get employers error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch employers' });
   }
 });
@@ -464,7 +463,7 @@ router.get('/reports', (req, res) => {
       totalPages: Math.ceil(total / limitNum)
     });
   } catch (error) {
-    console.error('Get reports error:', error);
+    logger.error('Get reports error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch reports' });
   }
 });
@@ -506,7 +505,7 @@ router.put('/reports/:id', (req, res) => {
       report: updated 
     });
   } catch (error) {
-    console.error('Update report error:', error);
+    logger.error('Update report error', { error: error.message });
     res.status(500).json({ error: 'Failed to update report' });
   }
 });

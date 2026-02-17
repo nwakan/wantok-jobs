@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
@@ -49,7 +50,7 @@ router.post('/google', async (req, res) => {
     const googleResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
     
     if (!googleResponse.ok) {
-      console.error('Google token verification failed:', googleResponse.status);
+      logger.error('Google token verification failed:', { detail: googleResponse.status });
       return res.status(401).json({ error: 'Invalid Google token' });
     }
     
@@ -57,7 +58,7 @@ router.post('/google', async (req, res) => {
     
     // Validate token audience (client ID)
     if (process.env.GOOGLE_CLIENT_ID && googleData.aud !== process.env.GOOGLE_CLIENT_ID) {
-      console.error('Google token audience mismatch');
+      logger.error('Google token audience mismatch');
       return res.status(401).json({ error: 'Invalid token audience' });
     }
     
@@ -114,7 +115,7 @@ router.post('/google', async (req, res) => {
       notifEvents.onUserRegistered({ id: userId, email, role, name });
       
       // Send welcome email (async)
-      sendWelcomeEmail({ email, name, role }).catch(e => console.error('Welcome email error:', e.message));
+      sendWelcomeEmail({ email, name, role }).catch(e => logger.error('Welcome email error:', { error: e.message }));
       
       // Log activity
       try {
@@ -143,7 +144,7 @@ router.post('/google', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Google OAuth error:', error);
+    logger.error('Google OAuth error', { error: error.message });
     res.status(500).json({ error: 'OAuth login failed' });
   }
 });
@@ -167,14 +168,14 @@ router.post('/facebook', async (req, res) => {
     );
     
     if (!facebookResponse.ok) {
-      console.error('Facebook token verification failed:', facebookResponse.status);
+      logger.error('Facebook token verification failed:', { detail: facebookResponse.status });
       return res.status(401).json({ error: 'Invalid Facebook token' });
     }
     
     const facebookData = await facebookResponse.json();
     
     if (facebookData.error) {
-      console.error('Facebook API error:', facebookData.error);
+      logger.error('Facebook API error:', { detail: facebookData.error });
       return res.status(401).json({ error: 'Invalid Facebook token' });
     }
     
@@ -232,7 +233,7 @@ router.post('/facebook', async (req, res) => {
       notifEvents.onUserRegistered({ id: userId, email, role, name });
       
       // Send welcome email (async)
-      sendWelcomeEmail({ email, name, role }).catch(e => console.error('Welcome email error:', e.message));
+      sendWelcomeEmail({ email, name, role }).catch(e => logger.error('Welcome email error:', { error: e.message }));
       
       // Log activity
       try {
@@ -261,7 +262,7 @@ router.post('/facebook', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Facebook OAuth error:', error);
+    logger.error('Facebook OAuth error', { error: error.message });
     res.status(500).json({ error: 'OAuth login failed' });
   }
 });

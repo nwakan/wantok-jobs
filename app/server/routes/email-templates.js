@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -16,7 +17,7 @@ router.get('/', authenticateToken, requireRole('employer', 'admin'), (req, res) 
 
     res.json(templates);
   } catch (error) {
-    console.error('Get email templates error:', error);
+    logger.error('Get email templates error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch email templates' });
   }
 });
@@ -34,7 +35,7 @@ router.get('/:id', authenticateToken, requireRole('employer', 'admin'), (req, re
 
     res.json(template);
   } catch (error) {
-    console.error('Get email template error:', error);
+    logger.error('Get email template error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch email template' });
   }
 });
@@ -57,7 +58,7 @@ router.post('/', authenticateToken, requireRole('admin'), (req, res) => {
 
     res.status(201).json(template);
   } catch (error) {
-    console.error('Create email template error:', error);
+    logger.error('Create email template error', { error: error.message });
     res.status(500).json({ error: 'Failed to create email template' });
   }
 });
@@ -91,7 +92,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Update email template error:', error);
+    logger.error('Update email template error', { error: error.message });
     res.status(500).json({ error: 'Failed to update email template' });
   }
 });
@@ -109,7 +110,7 @@ router.delete('/:id', authenticateToken, requireRole('admin'), (req, res) => {
 
     res.json({ message: 'Template deleted successfully' });
   } catch (error) {
-    console.error('Delete email template error:', error);
+    logger.error('Delete email template error', { error: error.message });
     res.status(500).json({ error: 'Failed to delete email template' });
   }
 });

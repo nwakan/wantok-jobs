@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const router = express.Router();
@@ -48,7 +49,7 @@ router.post('/', validate(schemas.contact), (req, res) => {
       id: result.lastInsertRowid 
     });
   } catch (error) {
-    console.error('Error submitting contact message:', error);
+    logger.error('Error submitting contact message', { error: error.message });
     res.status(500).json({ error: 'Failed to submit contact message' });
   }
 });
@@ -74,7 +75,7 @@ router.get('/', authenticateToken, requireRole('admin'), (req, res) => {
 
     res.json({ messages, total: total.count });
   } catch (error) {
-    console.error('Error fetching contact messages:', error);
+    logger.error('Error fetching contact messages', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch contact messages' });
   }
 });
@@ -106,7 +107,7 @@ router.put('/:id/reply', authenticateToken, requireRole('admin'), (req, res) => 
     const updated = db.prepare('SELECT * FROM contact_messages WHERE id = ?').get(id);
     res.json({ message: updated });
   } catch (error) {
-    console.error('Error replying to contact message:', error);
+    logger.error('Error replying to contact message', { error: error.message });
     res.status(500).json({ error: 'Failed to reply to contact message' });
   }
 });

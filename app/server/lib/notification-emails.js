@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * WantokJobs Notification Email Service
  * 
@@ -135,7 +136,7 @@ async function sendNotificationEmail(userId, type, data, title, message) {
 
     return result;
   } catch (error) {
-    console.error(`Failed to send notification email (${type} for user ${userId}):`, error.message);
+    logger.error('Failed to send notification email', { type, userId, error: error.message });
     return null;
   }
 }
@@ -185,7 +186,7 @@ async function sendDigestEmail(userId, notifications, digestType = 'daily') {
 
     return result;
   } catch (error) {
-    console.error(`Failed to send digest email for user ${userId}:`, error.message);
+    logger.error('error', { detail: `Failed to send digest email for user ${userId}:`, message: error.message });
     return null;
   }
 }

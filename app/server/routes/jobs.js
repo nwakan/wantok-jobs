@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const { sendJobPostedEmail, sendNewJobAlerts } = require('../lib/email');
 const { canPostJob, consumeEmployerServiceCredit } = require('../lib/billing');
@@ -48,7 +49,7 @@ router.get('/suggestions', (req, res) => {
 
     res.json({ data: suggestions });
   } catch (error) {
-    console.error('Get suggestions error:', error);
+    logger.error('Get suggestions error', { error: error.message });
     res.json({ data: [] });
   }
 });
@@ -75,7 +76,7 @@ router.get('/featured', (req, res) => {
 
     res.json({ data: jobs });
   } catch (error) {
-    console.error('Get featured jobs error:', error);
+    logger.error('Get featured jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch featured jobs' });
   }
 });
@@ -120,8 +121,9 @@ router.get('/', (req, res) => {
       try {
         const ftsIds = db.prepare('SELECT rowid FROM jobs_fts WHERE jobs_fts MATCH ?').all(keyword.replace(/[^\w\s]/g, ' '));
         if (ftsIds.length > 0) {
-          const idList = ftsIds.map(r => r.rowid).join(',');
-          query += ` AND j.id IN (${idList})`;
+          const ftsPlaceholders = ftsIds.map(() => '?').join(',');
+          query += ` AND j.id IN (${ftsPlaceholders})`;
+          params.push(...ftsIds.map(r => r.rowid));
         } else {
           query += ' AND 0'; // No FTS matches
         }
@@ -186,8 +188,9 @@ router.get('/', (req, res) => {
     if (date_posted) {
       // Filter by days since posting (e.g., '1', '7', '30')
       const days = parseInt(date_posted);
-      if (!isNaN(days) && days > 0) {
-        query += ` AND j.created_at >= datetime('now', '-${days} days')`;
+      if (!isNaN(days) && days > 0 && days <= 365) {
+        query += ` AND j.created_at >= datetime('now', ? || ' days')`;
+        params.push(`-${days}`);
       }
     }
 
@@ -242,7 +245,7 @@ router.get('/', (req, res) => {
       totalPages: Math.ceil(total / limitNum)
     });
   } catch (error) {
-    console.error('Get jobs error:', error);
+    logger.error('Get jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch jobs', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
@@ -255,7 +258,7 @@ router.get('/my', authenticateToken, requireRole('employer'), (req, res) => {
              u.name as employer_name,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              COALESCE(j.logo_url, pe.logo_url) as logo_url,
-             (SELECT COUNT(*) FROM applications WHERE job_id = j.id) as applications_count
+             (SELECT COUNT(*) FROM applications WHERE job_id = j.id AND status != 'withdrawn') as applications_count
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
@@ -265,7 +268,7 @@ router.get('/my', authenticateToken, requireRole('employer'), (req, res) => {
 
     res.json({ data: jobs, total: jobs.length });
   } catch (error) {
-    console.error('Get my jobs error:', error);
+    logger.error('Get my jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch jobs' });
   }
 });
@@ -348,12 +351,12 @@ router.get('/:id', (req, res) => {
       }
     } catch (viewError) {
       // Don't fail the request if view tracking fails
-      console.error('View tracking error:', viewError.message);
+      logger.error('View tracking error', { error: viewError.message });
     }
 
     res.json(job);
   } catch (error) {
-    console.error('Get job error:', error);
+    logger.error('Get job error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch job' });
   }
 });
@@ -409,7 +412,7 @@ router.get('/:id/similar', (req, res) => {
 
     res.json({ data: similarJobs });
   } catch (error) {
-    console.error('Get similar jobs error:', error);
+    logger.error('Get similar jobs error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch similar jobs' });
   }
 });
@@ -437,7 +440,7 @@ router.patch('/:id/status', authenticateToken, requireRole('employer', 'admin'),
     
     res.json(updated);
   } catch (error) {
-    console.error('Update job status error:', error);
+    logger.error('Update job status error', { error: error.message });
     res.status(500).json({ error: 'Failed to update job status' });
   }
 });
@@ -565,7 +568,7 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
 
     // Send job alerts to matching subscribers (async, don't block response)
     if (status === 'active') {
-      sendNewJobAlerts(job, employer).catch(e => console.error('Job alerts error:', e.message));
+      sendNewJobAlerts(job, employer).catch(e => logger.error('Job alerts error:', { error: e.message }));
     }
 
     // Log activity
@@ -573,7 +576,7 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
 
     res.status(201).json({ data: job, id: job.id });
   } catch (error) {
-    console.error('Create job error:', error);
+    logger.error('Create job error', { error: error.message });
     res.status(500).json({ error: 'Failed to create job: ' + error.message });
   }
 });
@@ -680,7 +683,7 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
     const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
     res.json(updated);
   } catch (error) {
-    console.error('Update job error:', error);
+    logger.error('Update job error', { error: error.message });
     res.status(500).json({ error: 'Failed to update job' });
   }
 });
@@ -702,7 +705,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
-    console.error('Delete job error:', error);
+    logger.error('Delete job error', { error: error.message });
     res.status(500).json({ error: 'Failed to delete job' });
   }
 });
@@ -742,7 +745,7 @@ router.get('/:id/skills-match', authenticateToken, (req, res) => {
 
     res.json(matchedSkills);
   } catch (error) {
-    console.error('Get skills match error:', error);
+    logger.error('Get skills match error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch skills match' });
   }
 });
@@ -810,13 +813,13 @@ router.post('/report', async (req, res) => {
           `/admin/reports/${result.lastInsertRowid}`
         );
       } catch (e) {
-        console.error('Failed to create admin notification:', e);
+        logger.error('Failed to create admin notification', { error: e.message });
       }
     });
 
     res.json({ message: 'Report submitted successfully', id: result.lastInsertRowid });
   } catch (error) {
-    console.error('Report error:', error);
+    logger.error('Report error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit report' });
   }
 });

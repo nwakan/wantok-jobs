@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -54,7 +55,7 @@ router.get('/preview', authenticateToken, requireRole('jobseeker'), (req, res) =
     });
 
   } catch (error) {
-    console.error('Resume preview error:', error);
+    logger.error('Resume preview error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch resume data' });
   }
 });
@@ -107,7 +108,7 @@ router.get('/download', authenticateToken, requireRole('jobseeker'), (req, res) 
     res.send(html);
 
   } catch (error) {
-    console.error('Resume download error:', error);
+    logger.error('Resume download error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate resume' });
   }
 });

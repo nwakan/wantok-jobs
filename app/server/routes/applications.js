@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { validate, schemas } = require("../middleware/validate");
 const express = require('express');
 const db = require('../database');
@@ -8,6 +9,23 @@ const { sendApplicationStatusEmail, sendNewApplicationEmail, sendApplicationConf
 const { stripHtml, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
+
+// Strip employer-only fields from application data before sending to jobseekers
+function sanitizeApplicationForJobseeker(app) {
+  if (!app) return app;
+  const sanitized = { ...app };
+  delete sanitized.notes;
+  delete sanitized.employer_notes;
+  delete sanitized.rating;
+  delete sanitized.tags;
+  delete sanitized.ai_score;
+  delete sanitized.match_score;
+  delete sanitized.match_notes;
+  delete sanitized.source;
+  delete sanitized.reviewer;
+  delete sanitized.screening_answers;
+  return sanitized;
+}
 
 // AI Resume Scoring Function
 function calculateMatchScore(jobseeker, job) {
@@ -120,7 +138,7 @@ function calculateMatchScore(jobseeker, job) {
     score += completeness;
 
   } catch (error) {
-    console.error('Error calculating match score:', error);
+    logger.error('Error calculating match score', { error: error.message });
     return 50; // Default middle score on error
   }
 
@@ -153,15 +171,6 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
       return res.status(404).json({ error: 'Job not found or not active' });
     }
 
-    // Check if already applied
-    const existing = db.prepare(
-      'SELECT id FROM applications WHERE job_id = ? AND jobseeker_id = ?'
-    ).get(job_id, req.user.id);
-
-    if (existing) {
-      return res.status(400).json({ error: 'Already applied to this job' });
-    }
-
     // Get jobseeker CV if not provided
     let finalCvUrl = cv_url;
     if (!finalCvUrl) {
@@ -180,11 +189,19 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
     // Calculate AI match score
     const matchScore = calculateMatchScore(jobseekerProfile || {}, job);
 
-    // Create application with AI score
-    const result = db.prepare(`
-      INSERT INTO applications (job_id, jobseeker_id, cover_letter, cv_url, ai_score)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(job_id, req.user.id, safeCoverLetter, finalCvUrl, matchScore);
+    // Create application with AI score (UNIQUE constraint prevents duplicates atomically)
+    let result;
+    try {
+      result = db.prepare(`
+        INSERT INTO applications (job_id, jobseeker_id, cover_letter, cv_url, ai_score)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(job_id, req.user.id, safeCoverLetter, finalCvUrl, matchScore);
+    } catch (err) {
+      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || (err.message && err.message.includes('UNIQUE constraint failed'))) {
+        return res.status(400).json({ error: 'Already applied to this job' });
+      }
+      throw err;
+    }
 
     const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(result.lastInsertRowid);
     
@@ -214,7 +231,7 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
           );
         }
       } catch (e) {
-        console.error('Failed to save screening answers:', e);
+        logger.error('Failed to save screening answers', { error: e.message });
         // Continue anyway
       }
     }
@@ -237,7 +254,7 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
           db.prepare(`UPDATE profiles_jobseeker SET ${updates.join(', ')} WHERE user_id = ?`).run(...params);
         }
       } catch (e) {
-        console.error('Failed to update profile:', e);
+        logger.error('Failed to update profile', { error: e.message });
         // Continue anyway
       }
     }
@@ -261,7 +278,7 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
 
     res.status(201).json(application);
   } catch (error) {
-    console.error('Apply error:', error);
+    logger.error('Apply error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit application' });
   }
 });
@@ -269,6 +286,14 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
 // Get my applications (jobseeker)
 router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const { total } = db.prepare(
+      'SELECT COUNT(*) as total FROM applications WHERE jobseeker_id = ?'
+    ).get(req.user.id);
+
     const applications = db.prepare(`
       SELECT a.id,
              a.job_id,
@@ -290,11 +315,15 @@ router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
       LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
       WHERE a.jobseeker_id = ?
       ORDER BY a.applied_at DESC
-    `).all(req.user.id);
+      LIMIT ? OFFSET ?
+    `).all(req.user.id, limit, offset);
 
-    res.json(applications);
+    res.json({
+      data: applications.map(sanitizeApplicationForJobseeker),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
-    console.error('Get applications error:', error);
+    logger.error('Get applications error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch applications' });
   }
 });
@@ -302,9 +331,12 @@ router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
 // Get applications for a job (employer - own jobs only, enhanced with full profile data)
 router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
   try {
-    const { sort = 'date' } = req.query; // sort options: date, score, status
+    const { sort = 'date' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
 
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.jobId);
+    const job = db.prepare('SELECT id, employer_id FROM jobs WHERE id = ?').get(req.params.jobId);
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
@@ -338,6 +370,9 @@ router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (
       WHERE a.job_id = ?
     `;
 
+    // Count total
+    const { total } = db.prepare('SELECT COUNT(*) as total FROM applications WHERE job_id = ?').get(req.params.jobId);
+
     // Sorting
     if (sort === 'score') {
       query += ' ORDER BY a.ai_score DESC NULLS LAST, a.applied_at DESC';
@@ -347,27 +382,43 @@ router.get('/job/:jobId', authenticateToken, requireRole('employer', 'admin'), (
       query += ' ORDER BY a.applied_at DESC';
     }
 
-    const applications = db.prepare(query).all(req.params.jobId);
+    query += ' LIMIT ? OFFSET ?';
 
-    // Get screening answers for each application if screening questions exist
-    const hasScreening = db.prepare('SELECT COUNT(*) as count FROM screening_questions WHERE job_id = ?').get(req.params.jobId);
-    
-    if (hasScreening?.count > 0) {
-      applications.forEach(app => {
-        const answers = db.prepare(`
+    const applications = db.prepare(query).all(req.params.jobId, limit, offset);
+
+    // Batch-load screening answers for all applications (avoids N+1)
+    if (applications.length > 0) {
+      const hasScreening = db.prepare('SELECT COUNT(*) as count FROM screening_questions WHERE job_id = ?').get(req.params.jobId);
+      
+      if (hasScreening?.count > 0) {
+        const appIds = applications.map(a => a.id);
+        const placeholders = appIds.map(() => '?').join(',');
+        const allAnswers = db.prepare(`
           SELECT sa.*, sq.question, sq.question_type
           FROM screening_answers sa
           INNER JOIN screening_questions sq ON sa.question_id = sq.id
-          WHERE sa.application_id = ?
+          WHERE sa.application_id IN (${placeholders})
           ORDER BY sq.sort_order
-        `).all(app.id);
-        app.screening_answers = answers;
-      });
+        `).all(...appIds);
+        
+        // Group answers by application_id
+        const answersByApp = {};
+        for (const ans of allAnswers) {
+          if (!answersByApp[ans.application_id]) answersByApp[ans.application_id] = [];
+          answersByApp[ans.application_id].push(ans);
+        }
+        for (const app of applications) {
+          app.screening_answers = answersByApp[app.id] || [];
+        }
+      }
     }
 
-    res.json({ data: applications, total: applications.length });
+    res.json({
+      data: applications,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
-    console.error('Get job applications error:', error);
+    logger.error('Get job applications error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch applications' });
   }
 });
@@ -407,7 +458,7 @@ router.patch('/:id/notes', authenticateToken, requireRole('employer', 'admin'), 
 
     res.json(updated);
   } catch (error) {
-    console.error('Update application notes error:', error);
+    logger.error('Update application notes error', { error: error.message });
     res.status(500).json({ error: 'Failed to update application notes' });
   }
 });
@@ -486,7 +537,7 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
           generateOnboardingChecklist(req.params.id);
         }
       } catch (error) {
-        console.error('Failed to generate onboarding checklist:', error);
+        logger.error('Failed to generate onboarding checklist', { error: error.message });
         // Don't fail the status update if checklist generation fails
       }
     }
@@ -507,8 +558,53 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
 
     res.json(updated);
   } catch (error) {
-    console.error('Update application error:', error);
+    logger.error('Update application error', { error: error.message });
     res.status(500).json({ error: 'Failed to update application' });
+  }
+});
+
+// Withdraw application (jobseeker only)
+router.post('/:id/withdraw', authenticateToken, requireRole('jobseeker'), (req, res) => {
+  try {
+    const application = db.prepare(`
+      SELECT a.*, j.title as job_title, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.jobseeker_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (application.status === 'withdrawn') {
+      return res.status(400).json({ error: 'Application already withdrawn' });
+    }
+
+    if (['hired', 'rejected'].includes(application.status)) {
+      return res.status(400).json({ error: `Cannot withdraw a ${application.status} application` });
+    }
+
+    const oldStatus = application.status;
+
+    db.prepare(`UPDATE applications SET status = 'withdrawn', updated_at = datetime('now') WHERE id = ?`).run(req.params.id);
+
+    // Log event
+    db.prepare(`INSERT INTO application_events (application_id, from_status, to_status, changed_by, notes) VALUES (?, ?, 'withdrawn', ?, 'Withdrawn by jobseeker')`).run(application.id, oldStatus, req.user.id);
+
+    // Notify employer
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(application.job_id);
+    notifEvents.onApplicationStatusChanged(application, 'withdrawn', job || { title: application.job_title });
+
+    const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
+    res.json(sanitizeApplicationForJobseeker(updated));
+  } catch (error) {
+    logger.error('Withdraw application error', { error: error.message });
+    res.status(500).json({ error: 'Failed to withdraw application' });
   }
 });
 
@@ -552,7 +648,7 @@ router.post('/tag', authenticateToken, requireRole('employer', 'admin'), (req, r
 
     res.json({ success: true, message: 'Tag added' });
   } catch (error) {
-    console.error('Add tag error:', error);
+    logger.error('Add tag error', { error: error.message });
     res.status(500).json({ error: 'Failed to add tag' });
   }
 });
@@ -591,7 +687,7 @@ router.post('/rate', authenticateToken, requireRole('employer', 'admin'), (req, 
 
     res.json({ success: true, rating });
   } catch (error) {
-    console.error('Rate applicant error:', error);
+    logger.error('Rate applicant error', { error: error.message });
     res.status(500).json({ error: 'Failed to rate applicant' });
   }
 });
@@ -632,7 +728,7 @@ router.post('/notes', authenticateToken, requireRole('employer', 'admin'), (req,
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Save notes error:', error);
+    logger.error('Save notes error', { error: error.message });
     res.status(500).json({ error: 'Failed to save notes' });
   }
 });
@@ -668,7 +764,7 @@ router.get('/upcoming-deadlines', authenticateToken, requireRole('jobseeker'), (
 
     res.json(deadlines);
   } catch (error) {
-    console.error('Upcoming deadlines error:', error);
+    logger.error('Upcoming deadlines error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch upcoming deadlines' });
   }
 });
@@ -767,7 +863,7 @@ router.get('/compare', authenticateToken, requireRole('employer', 'admin'), (req
 
     res.json({ data: applications });
   } catch (error) {
-    console.error('Compare applications error:', error);
+    logger.error('Compare applications error', { error: error.message });
     res.status(500).json({ error: 'Failed to compare applications' });
   }
 });
@@ -838,7 +934,7 @@ router.post('/:id/review', authenticateToken, requireRole('employer', 'admin'), 
 
     res.status(201).json(review);
   } catch (error) {
-    console.error('Submit review error:', error);
+    logger.error('Submit review error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit review' });
   }
 });
@@ -885,7 +981,7 @@ router.get('/:id/reviews', authenticateToken, requireRole('employer', 'admin'), 
 
     res.json({ reviews, summary });
   } catch (error) {
-    console.error('Get reviews error:', error);
+    logger.error('Get reviews error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
