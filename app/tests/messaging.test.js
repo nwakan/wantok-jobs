@@ -12,7 +12,7 @@ module.exports = async function messagingTests() {
   await test('Create conversation', async () => {
     const res = await request('POST', '/api/conversations', {
       token: user1.token,
-      body: { recipient_id: user2.user.id, message: 'Hello from employer' }
+      body: { jobseeker_id: user2.user.id, message: 'Hello from employer' }
     });
     assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     conversationId = res.body.id || res.body.conversation_id || res.body.data?.id;
@@ -52,7 +52,7 @@ module.exports = async function messagingTests() {
   await test('Send message', async () => {
     const res = await request('POST', '/api/messages', {
       token: user1.token,
-      body: { recipient_id: user2.user.id, subject: 'Test', content: 'Hello' }
+      body: { to_user_id: user2.user.id, subject: 'Test Subject', body: 'Hello there' }
     });
     assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
   });
