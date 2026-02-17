@@ -169,7 +169,7 @@ export default function JobSearch() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <PageHead
-        title={filters.keyword ? `${filters.keyword} Jobs` : 'Search Jobs in Papua New Guinea'}
+        title={filters.keyword ? `${filters.keyword} Jobs in PNG` : 'Search Jobs in Papua New Guinea'}
         description={`Browse ${pagination.total || ''}+ job opportunities in Papua New Guinea. Filter by category, location, salary, and more.`}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

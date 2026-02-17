@@ -128,7 +128,7 @@ export default function Home() {
     <>
       <ActivityToast />
       <PageHead
-        title="Find Jobs in Papua New Guinea"
+        title="WantokJobs — Papua New Guinea's #1 Job Board | Find Jobs in PNG"
         description={`Leading job platform for Papua New Guinea and the Pacific. ${stats.activeJobs}+ active jobs from ${stats.totalEmployers}+ employers. Connect with top employers, search jobs, and advance your career.`}
         keywords="jobs PNG, Papua New Guinea jobs, Port Moresby jobs, Lae jobs, careers PNG, employment PNG"
         jsonLd={{

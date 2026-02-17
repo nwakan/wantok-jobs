@@ -52,7 +52,7 @@ export default function Companies() {
   return (
     <>
       <PageHead
-        title="Company Directory"
+        title="Top Employers in Papua New Guinea"
         description="Browse companies hiring in Papua New Guinea. Discover top employers and find your next career opportunity."
       />
       

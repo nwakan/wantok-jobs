@@ -135,7 +135,7 @@ export default function Categories() {
     return (
       <>
         <PageHead
-          title="Browse Jobs by Category | WantokJobs"
+          title="Job Categories in PNG"
           description="Explore jobs across all industries in Papua New Guinea."
         />
         <div className="min-h-screen bg-gray-50 py-12">
@@ -154,7 +154,7 @@ export default function Categories() {
   return (
     <>
       <PageHead
-        title="Browse Jobs by Category | WantokJobs"
+        title="Job Categories in PNG"
         description="Explore jobs across all industries in Papua New Guinea. Find opportunities in mining, healthcare, IT, education, and more. Start your career search today."
       />
       
