@@ -8,6 +8,7 @@ const logger = require('../utils/logger');
 
 const db = require('../database');
 const email = require('./email');
+const { isEmailEnabled } = require('../routes/notification-preferences');
 
 // Email notification types (subset of in-app notifications that warrant email)
 const EMAIL_ENABLED_TYPES = new Set([
@@ -35,6 +36,18 @@ const EMAIL_ENABLED_TYPES = new Set([
 async function sendNotificationEmail(userId, type, data, title, message) {
   // Only send emails for critical notification types
   if (!EMAIL_ENABLED_TYPES.has(type)) {
+    return null;
+  }
+
+  // Check user notification preferences
+  const prefMap = {
+    'new_application': 'email_new_application',
+    'application_status_changed': 'email_status_change',
+    'new_matching_job': 'email_job_alert',
+    'ai_match_found': 'email_job_alert',
+  };
+  const prefField = prefMap[type];
+  if (prefField && !isEmailEnabled(userId, prefField)) {
     return null;
   }
 

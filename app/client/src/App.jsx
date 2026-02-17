@@ -92,6 +92,7 @@ const EmployerMessages = lazy(() => import('./pages/dashboard/employer/Messages'
 const AgencyClients = lazy(() => import('./pages/dashboard/employer/AgencyClients'));
 const EmployerWallet = lazy(() => import('./pages/dashboard/employer/Wallet'));
 const EmployerInterviews = lazy(() => import('./pages/dashboard/employer/Interviews'));
+const EmployerSettings = lazy(() => import('./pages/dashboard/employer/Settings'));
 
 // === Admin dashboard ===
 const AdminOverview = lazy(() => import('./pages/dashboard/admin/Overview'));
