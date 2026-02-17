@@ -6,6 +6,7 @@
 
 const { getResponse } = require('./responses');
 const actions = require('./actions');
+const personality = require('./personality');
 const logger = require('../../utils/logger');
 
 /**
@@ -110,14 +111,13 @@ const FLOW_DEFS = {
       }
 
       return {
-        message: getResponse('profile', 'missing_fields', {
+        message: personality.humanize(getResponse('profile', 'missing_fields', {
           percent: Math.round(((7 - missing.length) / 7) * 100),
           fields: missing.join(', '),
-        }),
+        }), { flowStep: true }),
       };
     },
     onComplete: async (ctx, collected) => {
-      // Transform multi-field entries
       const data = {};
       for (const [key, value] of Object.entries(collected)) {
         if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
@@ -127,10 +127,13 @@ const FLOW_DEFS = {
         }
       }
       const updated = actions.updateJobseekerProfile(ctx.db, ctx.userId, data);
+      const summary = personality.formatProfileSummary(updated, ctx.user);
+      const followUp = personality.getFollowUpSuggestions({ role: 'jobseeker' }, 'profile-updated');
+      let msg = personality.humanize(getResponse('profile', 'saved', { summary }), { profileComplete: true });
+      if (followUp?.text) msg += '\n\n💡 ' + followUp.text;
       return {
-        message: getResponse('profile', 'saved', {
-          summary: formatJobseekerSummary(updated, ctx.user),
-        }),
+        message: msg,
+        quickReplies: followUp?.quickReplies,
       };
     },
   },
@@ -189,7 +192,14 @@ const FLOW_DEFS = {
     },
     onComplete: async (ctx, collected) => {
       const updated = actions.updateEmployerProfile(ctx.db, ctx.userId, collected);
-      return { message: getResponse('profile', 'saved', { summary: formatEmployerSummary(updated) }) };
+      const summary = formatEmployerSummary(updated);
+      const followUp = personality.getFollowUpSuggestions({ role: 'employer' }, 'profile-updated');
+      let msg = personality.humanize(getResponse('profile', 'saved', { summary }), { profileComplete: true });
+      if (followUp?.text) msg += '\n\n💡 ' + followUp.text;
+      return {
+        message: msg,
+        quickReplies: followUp?.quickReplies,
+      };
     },
   },
 
@@ -285,10 +295,14 @@ const FLOW_DEFS = {
       actions.updateJobseekerProfile(ctx.db, ctx.userId, updates);
 
       const profile = actions.getProfile(ctx.db, ctx.userId);
+      const followUp = personality.getFollowUpSuggestions({ role: 'jobseeker' }, 'resume-built');
+      let msg = personality.humanize(getResponse('resume', 'from_profile', {
+        preview: formatResumeSummary(profile.user, profile.profile),
+      }));
+      if (followUp?.text) msg += '\n\n💡 ' + followUp.text;
       return {
-        message: getResponse('resume', 'from_profile', {
-          preview: formatResumeSummary(profile.user, profile.profile),
-        }),
+        message: msg,
+        quickReplies: followUp?.quickReplies,
       };
     },
   },
@@ -355,12 +369,16 @@ const FLOW_DEFS = {
 
       if (prefs.auto_post === 'auto') {
         const result = actions.postJob(ctx.db, ctx.userId, data);
-        return { message: getResponse('post_job', 'posted', { title: data.title }) };
+        const followUp = personality.getFollowUpSuggestions({ role: 'employer' }, 'job-posted');
+        let msg = personality.humanize(getResponse('post_job', 'posted', { title: data.title }), { firstJob: true });
+        if (followUp?.text) msg += '\n\n💡 ' + followUp.text;
+        return { message: msg, quickReplies: followUp?.quickReplies };
       } else {
         // Save as draft
         const draft = actions.createJobDraft(ctx.db, ctx.userId, ctx.sessionId, { ...data, source_filename: 'chat' });
         return {
-          message: `📝 Draft saved: **${data.title}**\n\nWant me to post it now, or review it in your dashboard?\n\n[Post Now] [Save as Draft]`,
+          message: personality.humanize(`📝 Draft saved: **${data.title}**\n\nWant me to post it now, or review it in your [dashboard](/dashboard/employer/jobs)? Tokim mi!`),
+          quickReplies: ['Post Now', 'Save as Draft'],
           awaitingDraftApproval: draft.draftId,
         };
       }
@@ -437,7 +455,8 @@ const FLOW_DEFS = {
       };
       actions.createAutoApplyRule(ctx.db, ctx.userId, rule);
       return {
-        message: getResponse('auto_apply', 'activated', { min_score: minScore }),
+        message: personality.humanize(getResponse('auto_apply', 'activated', { min_score: minScore })),
+        quickReplies: ['My Applications', 'Search Jobs', 'Stop Auto-Apply'],
       };
     },
   },
@@ -482,7 +501,10 @@ const FLOW_DEFS = {
     },
     onComplete: async (ctx, collected) => {
       actions.updateEmployerPrefs(ctx.db, ctx.userId, collected);
-      return { message: getResponse('employer_prefs', 'updated', { summary: JSON.stringify(collected) }) };
+      return {
+        message: personality.humanize(getResponse('employer_prefs', 'updated', { summary: JSON.stringify(collected) })),
+        quickReplies: ['Post a Job', 'My Jobs', 'Upload Document'],
+      };
     },
   },
 
@@ -507,7 +529,10 @@ const FLOW_DEFS = {
         subject: collected.subject,
         message: collected.message,
       });
-      return { message: getResponse('contact', 'submitted', { email }) };
+      return {
+        message: personality.humanize(getResponse('contact', 'submitted', { email })),
+        quickReplies: ['Search Jobs', 'My Profile', 'FAQ'],
+      };
     },
   },
 };
@@ -589,8 +614,13 @@ class FlowEngine {
         state.multiBuffer[step.key].push(value);
 
         // Ask for more
+        const morePrompts = [
+          "✅ Got it! Any more to add? (say 'done' when finished)",
+          "✅ Saved! More to add? Say 'done' when you're finished. Em i isi tasol!",
+          "✅ Nice one! Got any more? (say 'done' to move on)",
+        ];
         return {
-          message: `✅ Got it! Any more to add? (say 'done' when finished)`,
+          message: personality.randomFrom(morePrompts),
           state,
         };
       }
