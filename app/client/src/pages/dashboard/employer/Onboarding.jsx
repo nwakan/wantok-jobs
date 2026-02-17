@@ -16,11 +16,15 @@ const STEPS = [
 ];
 
 const INDUSTRIES = [
-  'Agriculture & Farming', 'Banking & Finance', 'Construction', 'Education',
-  'Energy & Mining', 'Government', 'Healthcare', 'Hospitality & Tourism',
-  'IT & Technology', 'Legal', 'Manufacturing', 'Media & Communications',
-  'NGO & Development', 'Oil & Gas', 'Real Estate', 'Retail & Trade',
-  'Security', 'Shipping & Logistics', 'Telecommunications', 'Other'
+  'Agriculture & Farming', 'Automotive', 'Aviation & Airlines',
+  'Banking & Finance', 'Construction', 'Consulting',
+  'Education', 'Energy & Mining', 'Engineering',
+  'Forestry & Timber', 'Government', 'Healthcare',
+  'Hospitality & Tourism', 'Insurance', 'IT & Technology',
+  'Legal', 'Manufacturing', 'Media & Communications',
+  'NGO & Development', 'Oil & Gas', 'Real Estate',
+  'Retail & Trade', 'Security', 'Shipping & Logistics',
+  'Telecommunications',
 ];
 
 const COMPANY_SIZES = [
