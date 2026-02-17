@@ -314,6 +314,7 @@ app.use('/api/offer-letters', require('./routes/offer-letters'));
 app.use('/api/interviews', require('./routes/interviews'));
 app.use('/api/profile', require('./routes/profiles'));
 app.use('/api/saved-jobs', require('./routes/saved-jobs'));
+app.use('/api/saved-searches', require('./routes/saved-searches'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/references', require('./routes/references'));
@@ -357,6 +358,7 @@ app.use('/api/badges', require('./routes/badges'));
 
 // New metadata and stats routes
 app.use('/api', require('./routes/metadata')); // Provides /api/locations and /api/industries
+app.use('/api/industries', require('./routes/industries')); // Industry landing pages
 app.use('/api/stats', require('./routes/stats')); // Provides /api/stats/dashboard
 
 // Contact with rate limiting

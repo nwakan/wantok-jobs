@@ -10,6 +10,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'My Applications', path: '/dashboard/jobseeker/applications', icon: '📝' },
     { name: 'Saved Jobs', path: '/dashboard/jobseeker/saved', icon: '💾' },
     { name: 'Job Alerts', path: '/dashboard/jobseeker/job-alerts', icon: '🔔' },
+    { name: 'Saved Searches', path: '/dashboard/jobseeker/saved-searches', icon: '🔍' },
     { name: 'Followed Companies', path: '/dashboard/jobseeker/followed-companies', icon: '🏢' },
     { name: 'Recommendations', path: '/dashboard/jobseeker/recommendations', icon: '✨' },
     { name: 'Wallet', path: '/dashboard/jobseeker/wallet', icon: '💰' },

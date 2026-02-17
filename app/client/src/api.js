@@ -341,6 +341,32 @@ export const screening = {
 };
 
 // Job Alerts
+export const savedSearches = {
+  getAll: () =>
+    fetch(`${API_URL}/saved-searches`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  create: (data) =>
+    fetch(`${API_URL}/saved-searches`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  toggleNotify: (id) =>
+    fetch(`${API_URL}/saved-searches/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
+  remove: (id) =>
+    fetch(`${API_URL}/saved-searches/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+};
+
 export const jobAlerts = {
   getAll: () =>
     fetch(`${API_URL}/job-alerts`, {

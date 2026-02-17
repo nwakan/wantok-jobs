@@ -235,7 +235,7 @@ export default function Layout() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white mt-12" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-bold mb-4">WantokJobs</h3>
               <p className="text-gray-400">
@@ -250,6 +250,19 @@ export default function Layout() {
                 <li><Link to="/training" className="text-gray-400 hover:text-white">{t('footer.training')}</Link></li>
                 <li><Link to="/about" className="text-gray-400 hover:text-white">{t('footer.aboutUs')}</Link></li>
                 <li><Link to="/success-stories" className="text-gray-400 hover:text-white">Success Stories</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold mb-4">Industries</h3>
+              <ul className="space-y-2">
+                <li><Link to="/industries/mining" className="text-gray-400 hover:text-white">Mining & Resources</Link></li>
+                <li><Link to="/industries/construction" className="text-gray-400 hover:text-white">Construction</Link></li>
+                <li><Link to="/industries/banking" className="text-gray-400 hover:text-white">Banking & Finance</Link></li>
+                <li><Link to="/industries/health" className="text-gray-400 hover:text-white">Health & Medical</Link></li>
+                <li><Link to="/industries/technology" className="text-gray-400 hover:text-white">IT & Technology</Link></li>
+                <li><Link to="/industries/oil-gas" className="text-gray-400 hover:text-white">Oil & Gas</Link></li>
+                <li><Link to="/industries/government" className="text-gray-400 hover:text-white">Government</Link></li>
+                <li><Link to="/industries/education" className="text-gray-400 hover:text-white">Education</Link></li>
               </ul>
             </div>
             <div>

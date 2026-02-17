@@ -54,6 +54,7 @@ const ReferenceResponse = lazy(() => import('./pages/ReferenceResponse'));
 const SalaryCalculator = lazy(() => import('./pages/SalaryCalculator'));
 const CompareJobs = lazy(() => import('./pages/CompareJobs'));
 const SuccessStories = lazy(() => import('./pages/SuccessStories'));
+const IndustryLanding = lazy(() => import('./pages/IndustryLanding'));
 
 // === Shared dashboard ===
 const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePassword'));
@@ -72,6 +73,7 @@ const FollowedCompanies = lazy(() => import('./pages/dashboard/jobseeker/Followe
 const JobseekerWallet = lazy(() => import('./pages/dashboard/jobseeker/Wallet'));
 const ResumeBuilder = lazy(() => import('./pages/dashboard/jobseeker/ResumeBuilder'));
 const JobseekerInterviews = lazy(() => import('./pages/dashboard/jobseeker/Interviews'));
+const SavedSearches = lazy(() => import('./pages/dashboard/jobseeker/SavedSearches'));
 
 // === Employer dashboard ===
 const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'));
@@ -135,6 +137,7 @@ function App() {
               <Route path="faq" element={<Lazy component={FAQ} />} />
               <Route path="categories" element={<Lazy component={CategoriesPage} />} />
               <Route path="category/:slug" element={<Lazy component={CategoryLanding} />} />
+              <Route path="industries/:slug" element={<Lazy component={IndustryLanding} />} />
               <Route path="companies" element={<Lazy component={CompaniesPage} />} />
               <Route path="companies/:id" element={<Lazy component={CompanyProfilePage} />} />
               <Route path="companies/:id/reviews" element={<Lazy component={CompanyReviews} />} />
@@ -158,6 +161,7 @@ function App() {
                 <Route path="offers/:id" element={<Lazy component={MyOffers} />} />
                 <Route path="saved" element={<Lazy component={SavedJobs} />} />
                 <Route path="job-alerts" element={<Lazy component={JobAlerts} />} />
+                <Route path="saved-searches" element={<Lazy component={SavedSearches} />} />
                 <Route path="recommendations" element={<Lazy component={Recommendations} />} />
                 <Route path="messages" element={<Lazy component={JobseekerMessages} />} />
                 <Route path="profile" element={<Lazy component={JobseekerProfile} />} />
