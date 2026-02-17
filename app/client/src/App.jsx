@@ -70,6 +70,7 @@ const JobseekerSettings = lazy(() => import('./pages/dashboard/jobseeker/Setting
 const FollowedCompanies = lazy(() => import('./pages/dashboard/jobseeker/FollowedCompanies'));
 const JobseekerWallet = lazy(() => import('./pages/dashboard/jobseeker/Wallet'));
 const ResumeBuilder = lazy(() => import('./pages/dashboard/jobseeker/ResumeBuilder'));
+const JobseekerInterviews = lazy(() => import('./pages/dashboard/jobseeker/Interviews'));
 
 // === Employer dashboard ===
 const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'));
@@ -87,6 +88,7 @@ const EmployerOrdersBilling = lazy(() => import('./pages/dashboard/employer/Orde
 const EmployerMessages = lazy(() => import('./pages/dashboard/employer/Messages'));
 const AgencyClients = lazy(() => import('./pages/dashboard/employer/AgencyClients'));
 const EmployerWallet = lazy(() => import('./pages/dashboard/employer/Wallet'));
+const EmployerInterviews = lazy(() => import('./pages/dashboard/employer/Interviews'));
 
 // === Admin dashboard ===
 const AdminOverview = lazy(() => import('./pages/dashboard/admin/Overview'));
@@ -160,6 +162,7 @@ function App() {
                 <Route path="followed-companies" element={<Lazy component={FollowedCompanies} />} />
                 <Route path="wallet" element={<Lazy component={JobseekerWallet} />} />
                 <Route path="resume-builder" element={<Lazy component={ResumeBuilder} />} />
+                <Route path="interviews" element={<Lazy component={JobseekerInterviews} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 
@@ -181,6 +184,7 @@ function App() {
                 <Route path="messages" element={<Lazy component={EmployerMessages} />} />
                 <Route path="clients" element={<Lazy component={AgencyClients} />} />
                 <Route path="wallet" element={<Lazy component={EmployerWallet} />} />
+                <Route path="interviews" element={<Lazy component={EmployerInterviews} />} />
                 <Route path="profile" element={<Lazy component={CompanyProfile} />} />
                 <Route path="onboarding" element={<Lazy component={EmployerOnboarding} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />

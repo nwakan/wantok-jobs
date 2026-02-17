@@ -638,6 +638,7 @@ const api = {
   get: (url) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { headers: getAuthHeader() }).then(handleResponse),
   post: (url, data) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeader() }, body: JSON.stringify(data) }).then(handleResponse),
   put: (url, data) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeader() }, body: JSON.stringify(data) }).then(handleResponse),
+  patch: (url, data) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...getAuthHeader() }, body: JSON.stringify(data) }).then(handleResponse),
   delete: (url) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { method: 'DELETE', headers: getAuthHeader() }).then(handleResponse),
 };
 export default api;
