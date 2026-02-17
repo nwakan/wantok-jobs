@@ -49,6 +49,7 @@ const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const Stats = lazy(() => import('./pages/Stats'));
+const ReferenceResponse = lazy(() => import('./pages/ReferenceResponse'));
 
 // === Shared dashboard ===
 const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePassword'));
@@ -56,6 +57,7 @@ const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePasswor
 // === Jobseeker dashboard ===
 const JobseekerOverview = lazy(() => import('./pages/dashboard/jobseeker/Overview'));
 const MyApplications = lazy(() => import('./pages/dashboard/jobseeker/MyApplications'));
+const MyOffers = lazy(() => import('./pages/dashboard/jobseeker/MyOffers'));
 const SavedJobs = lazy(() => import('./pages/dashboard/jobseeker/SavedJobs'));
 const JobseekerProfile = lazy(() => import('./pages/dashboard/jobseeker/Profile'));
 const JobAlerts = lazy(() => import('./pages/dashboard/jobseeker/JobAlerts'));
@@ -68,6 +70,8 @@ const EmployerOverview = lazy(() => import('./pages/dashboard/employer/Overview'
 const MyJobs = lazy(() => import('./pages/dashboard/employer/MyJobs'));
 const PostJob = lazy(() => import('./pages/dashboard/employer/PostJob'));
 const Applicants = lazy(() => import('./pages/dashboard/employer/Applicants'));
+const CompareApplicants = lazy(() => import('./pages/dashboard/employer/CompareApplicants'));
+const OfferLetters = lazy(() => import('./pages/dashboard/employer/OfferLetters'));
 const CompanyProfile = lazy(() => import('./pages/dashboard/employer/CompanyProfile'));
 const CandidateSearch = lazy(() => import('./pages/dashboard/employer/CandidateSearch'));
 const SavedCandidates = lazy(() => import('./pages/dashboard/employer/SavedCandidates'));
@@ -125,11 +129,14 @@ function App() {
               <Route path="forgot-password" element={<Lazy component={ForgotPassword} />} />
               <Route path="reset-password" element={<Lazy component={ResetPassword} />} />
               <Route path="verify-email" element={<Lazy component={VerifyEmail} />} />
+              <Route path="references/respond/:token" element={<Lazy component={ReferenceResponse} />} />
 
               {/* Jobseeker dashboard */}
               <Route path="dashboard/jobseeker" element={<ProtectedRoute role="jobseeker" />}>
                 <Route index element={<Lazy component={JobseekerOverview} />} />
                 <Route path="applications" element={<Lazy component={MyApplications} />} />
+                <Route path="offers" element={<Lazy component={MyOffers} />} />
+                <Route path="offers/:id" element={<Lazy component={MyOffers} />} />
                 <Route path="saved" element={<Lazy component={SavedJobs} />} />
                 <Route path="job-alerts" element={<Lazy component={JobAlerts} />} />
                 <Route path="recommendations" element={<Lazy component={Recommendations} />} />
@@ -147,6 +154,9 @@ function App() {
                 <Route path="edit-job/:id" element={<Lazy component={PostJob} />} />
                 <Route path="applicants" element={<Lazy component={Applicants} />} />
                 <Route path="applicants/:jobId" element={<Lazy component={Applicants} />} />
+                <Route path="compare-applicants" element={<Lazy component={CompareApplicants} />} />
+                <Route path="offer-letters" element={<Lazy component={OfferLetters} />} />
+                <Route path="offer-letters/:id" element={<Lazy component={OfferLetters} />} />
                 <Route path="candidate-search" element={<Lazy component={CandidateSearch} />} />
                 <Route path="saved-candidates" element={<Lazy component={SavedCandidates} />} />
                 <Route path="analytics" element={<Lazy component={EmployerAnalytics} />} />

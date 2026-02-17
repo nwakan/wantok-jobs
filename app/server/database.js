@@ -98,7 +98,7 @@ function initializeDatabase() {
       jobseeker_id INTEGER NOT NULL,
       cover_letter TEXT,
       cv_url TEXT,
-      status TEXT DEFAULT 'applied' CHECK(status IN ('applied', 'screening', 'shortlisted', 'interview', 'offered', 'rejected', 'withdrawn')),
+      status TEXT DEFAULT 'applied' CHECK(status IN ('applied', 'screening', 'shortlisted', 'interview', 'offered', 'hired', 'rejected', 'withdrawn')),
       ai_score REAL,
       applied_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
@@ -336,11 +336,31 @@ function initializeDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       application_id INTEGER NOT NULL,
       from_status TEXT,
-      to_status TEXT,
+      to_status TEXT NOT NULL,
       changed_by INTEGER,
       notes TEXT,
       ai_generated INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at DATETIME DEFAULT (datetime('now')),
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+      FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS interviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      application_id INTEGER NOT NULL,
+      scheduled_at DATETIME NOT NULL,
+      duration_minutes INTEGER DEFAULT 60,
+      type TEXT DEFAULT 'in-person' CHECK(type IN ('in-person', 'phone', 'video')),
+      location TEXT,
+      video_link TEXT,
+      notes TEXT,
+      status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'completed', 'cancelled', 'no-show')),
+      interviewer_name TEXT,
+      interviewer_email TEXT,
+      feedback TEXT,
+      feedback_rating INTEGER CHECK(feedback_rating >= 1 AND feedback_rating <= 5),
+      created_at DATETIME DEFAULT (datetime('now')),
+      updated_at DATETIME DEFAULT (datetime('now')),
       FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
     );
 
@@ -523,6 +543,9 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_reports_job ON reports(job_id);
     CREATE INDEX IF NOT EXISTS idx_reports_employer ON reports(employer_id);
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_interviews_application ON interviews(application_id);
+    CREATE INDEX IF NOT EXISTS idx_interviews_scheduled ON interviews(scheduled_at);
+    CREATE INDEX IF NOT EXISTS idx_interviews_status ON interviews(status, scheduled_at);
   `);
 
   // Add columns to existing tables (safe ALTER TABLE)

@@ -62,6 +62,11 @@ const NOTIFICATION_TEMPLATES = {
     message: (data) => `${data.newJobs} new jobs match your profile this week. ${data.topMatch ? `Top match: "${data.topMatch}" (${data.topScore}%)` : 'Update your profile to improve matches!'}`,
     icon: '📬'
   },
+  interview_scheduled: {
+    title: 'Interview Scheduled! 🎤',
+    message: (data) => `Your interview for "${data.jobTitle}" is scheduled for ${data.interviewDate} at ${data.interviewTime}. ${data.interviewType === 'video' ? 'Video call link in your email.' : data.interviewType === 'phone' ? 'They will call you.' : 'Check your email for location details.'}`,
+    icon: '🎤'
+  },
 
   // === EMPLOYER NOTIFICATIONS ===
   welcome_employer: {
@@ -367,6 +372,28 @@ const events = {
   // When password is changed
   onPasswordChanged(user) {
     notify(user.id, 'password_changed', {});
+  },
+
+  // When an interview is scheduled
+  onInterviewScheduled(application, interview) {
+    const dateObj = new Date(interview.scheduled_at);
+    const dateStr = dateObj.toLocaleDateString('en-US', { 
+      month: 'short', day: 'numeric', year: 'numeric' 
+    });
+    const timeStr = dateObj.toLocaleTimeString('en-US', { 
+      hour: 'numeric', minute: '2-digit', hour12: true 
+    });
+
+    notify(application.jobseeker_id, 'interview_scheduled', {
+      jobTitle: application.job_title,
+      interviewDate: dateStr,
+      interviewTime: timeStr,
+      interviewType: interview.type,
+      location: interview.location,
+      videoLink: interview.video_link,
+      applicationId: application.id,
+      jobId: application.job_id
+    });
   },
 
   // When a company review is posted

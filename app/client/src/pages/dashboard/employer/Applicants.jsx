@@ -3,6 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { applications, jobs } from '../../../api';
 import ApplicationStatusBadge from '../../../components/ApplicationStatusBadge';
 import { useToast } from '../../../components/Toast';
+import ApplicantsKanban from './ApplicantsKanban';
+import OnboardingChecklist from '../../../components/OnboardingChecklist';
+import ReferenceChecks from '../../../components/ReferenceChecks';
 import { 
   Filter, Download, Mail, Tag, Star, MoreVertical, 
   CheckSquare, Square, ChevronDown, ChevronUp, Search,
@@ -616,84 +619,15 @@ export default function Applicants() {
           )}
         </div>
       ) : (
-        /* Pipeline View */
-        <div className="overflow-x-auto pb-4">
-          <div className="flex gap-4 min-w-max">
-            {pipelineStages.map(stage => {
-              const stageApplicants = applicants.filter(app => app.status === stage.key);
-              const StageIcon = stage.icon;
-              return (
-                <div key={stage.key} className="flex-shrink-0 w-80">
-                  <div className={`${stage.color} rounded-t-lg px-4 py-3 flex items-center gap-2`}>
-                    <StageIcon className="w-5 h-5 text-gray-700" />
-                    <div className="flex-1">
-                      <h3 className="font-bold text-gray-900">{stage.label}</h3>
-                      <p className="text-sm text-gray-600">{stageApplicants.length} applicants</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 rounded-b-lg p-4 space-y-3 min-h-[500px] max-h-[600px] overflow-y-auto">
-                    {stageApplicants.map(app => (
-                      <div
-                        key={app.id}
-                        className={`bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer border ${selectedApplicants.includes(app.id) ? 'border-primary-500' : 'border-transparent'}`}
-                        onClick={() => setSelectedApplicant(app)}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleSelect(app.id); }}
-                          >
-                            {selectedApplicants.includes(app.id) ? (
-                              <CheckSquare className="w-4 h-4 text-primary-600" />
-                            ) : (
-                              <Square className="w-4 h-4 text-gray-400" />
-                            )}
-                          </button>
-                          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-sm">
-                            {app.applicant_name?.charAt(0)?.toUpperCase() || '?'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-sm text-gray-900 truncate">{app.applicant_name}</h4>
-                            <p className="text-xs text-gray-500 truncate">{app.applicant_email}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 mb-2">
-                          {[1, 2, 3, 4, 5].map(star => (
-                            <Star
-                              key={star}
-                              className={`w-3 h-3 ${star <= app.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                            />
-                          ))}
-                        </div>
-                        {app.tags && app.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {app.tags.slice(0, 2).map((tag, idx) => (
-                              <span key={idx} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                                {typeof tag === 'string' ? tag : tag.tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
-                          <span>Match: {app.match_score}%</span>
-                          <span>{new Date(app.applied_at).toLocaleDateString()}</span>
-                        </div>
-                        {app.skills && app.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {app.skills.slice(0, 2).map((skill, idx) => (
-                              <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        /* Kanban Pipeline View with Drag & Drop */
+        <ApplicantsKanban
+          applicants={filteredApplicants}
+          job={job}
+          onStatusChange={handleStatusChange}
+          onRating={handleRating}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+        />
       )}
 
       {/* Applicant Detail Modal */}

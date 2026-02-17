@@ -9,6 +9,125 @@ const { stripHtml, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
 
+// AI Resume Scoring Function
+function calculateMatchScore(jobseeker, job) {
+  let score = 0;
+  let maxScore = 100;
+
+  try {
+    // 1. Skills Match (40 points)
+    if (job.requirements && jobseeker.skills) {
+      const jobSkills = typeof job.requirements === 'string' 
+        ? JSON.parse(job.requirements || '[]') 
+        : (Array.isArray(job.requirements) ? job.requirements : []);
+      const candidateSkills = typeof jobseeker.skills === 'string' 
+        ? JSON.parse(jobseeker.skills || '[]') 
+        : (Array.isArray(jobseeker.skills) ? jobseeker.skills : []);
+
+      if (jobSkills.length > 0) {
+        const jobSkillsLower = jobSkills.map(s => (typeof s === 'string' ? s : s.name || '').toLowerCase());
+        const candidateSkillsLower = candidateSkills.map(s => (typeof s === 'string' ? s : s.name || s.skill || '').toLowerCase());
+        
+        const matchCount = jobSkillsLower.filter(js => 
+          candidateSkillsLower.some(cs => cs.includes(js) || js.includes(cs))
+        ).length;
+        
+        score += Math.min(40, (matchCount / jobSkills.length) * 40);
+      } else {
+        score += 20; // Give partial credit if no specific skills listed
+      }
+    } else {
+      score += 20; // Partial credit if data missing
+    }
+
+    // 2. Experience Level Match (25 points)
+    if (job.experience_level && jobseeker.work_history) {
+      const workHistory = typeof jobseeker.work_history === 'string' 
+        ? JSON.parse(jobseeker.work_history || '[]') 
+        : (Array.isArray(jobseeker.work_history) ? jobseeker.work_history : []);
+
+      const totalYears = workHistory.reduce((sum, exp) => {
+        if (exp.start_date) {
+          const start = new Date(exp.start_date);
+          const end = exp.end_date ? new Date(exp.end_date) : new Date();
+          const years = (end - start) / (1000 * 60 * 60 * 24 * 365);
+          return sum + years;
+        }
+        return sum;
+      }, 0);
+
+      const expLevel = job.experience_level.toLowerCase();
+      if (expLevel.includes('entry') || expLevel.includes('junior')) {
+        score += totalYears >= 0 && totalYears <= 3 ? 25 : (totalYears > 3 ? 20 : 15);
+      } else if (expLevel.includes('mid') || expLevel.includes('intermediate')) {
+        score += totalYears >= 2 && totalYears <= 6 ? 25 : (Math.abs(totalYears - 4) <= 3 ? 15 : 10);
+      } else if (expLevel.includes('senior')) {
+        score += totalYears >= 5 ? 25 : (totalYears >= 3 ? 15 : 5);
+      } else {
+        score += 15; // Default partial credit
+      }
+    } else {
+      score += 15; // Partial credit if data missing
+    }
+
+    // 3. Location Match (15 points)
+    if (job.location && jobseeker.location) {
+      const jobLoc = job.location.toLowerCase();
+      const candidateLoc = jobseeker.location.toLowerCase();
+      
+      if (candidateLoc === jobLoc) {
+        score += 15; // Perfect match
+      } else if (candidateLoc.includes(jobLoc) || jobLoc.includes(candidateLoc)) {
+        score += 10; // Partial match (e.g., city vs province)
+      } else if (job.country && jobseeker.country && job.country.toLowerCase() === jobseeker.country.toLowerCase()) {
+        score += 5; // Same country
+      }
+    } else {
+      score += 5; // Partial credit if data missing
+    }
+
+    // 4. Education Relevance (10 points)
+    if (jobseeker.education) {
+      const education = typeof jobseeker.education === 'string' 
+        ? JSON.parse(jobseeker.education || '[]') 
+        : (Array.isArray(jobseeker.education) ? jobseeker.education : []);
+
+      if (education.length > 0) {
+        const highestDegree = education[0]?.degree?.toLowerCase() || '';
+        if (highestDegree.includes('bachelor') || highestDegree.includes('degree')) {
+          score += 10;
+        } else if (highestDegree.includes('master') || highestDegree.includes('phd')) {
+          score += 10;
+        } else if (highestDegree.includes('diploma') || highestDegree.includes('certificate')) {
+          score += 7;
+        } else {
+          score += 5;
+        }
+      } else {
+        score += 3;
+      }
+    } else {
+      score += 3;
+    }
+
+    // 5. Profile Completeness Bonus (10 points)
+    let completeness = 0;
+    if (jobseeker.bio) completeness += 2;
+    if (jobseeker.skills) completeness += 2;
+    if (jobseeker.work_history) completeness += 2;
+    if (jobseeker.education) completeness += 2;
+    if (jobseeker.cv_url) completeness += 2;
+    score += completeness;
+
+  } catch (error) {
+    console.error('Error calculating match score:', error);
+    return 50; // Default middle score on error
+  }
+
+  return Math.round(Math.min(score, maxScore));
+}
+
+
 // Apply to job (jobseeker only)
 router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
   try {
@@ -50,11 +169,22 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
       finalCvUrl = profile?.cv_url;
     }
 
-    // Create application with new fields
+    // Get jobseeker profile for AI scoring
+    const jobseekerProfile = db.prepare(`
+      SELECT pj.*, u.email, u.name
+      FROM profiles_jobseeker pj
+      JOIN users u ON pj.user_id = u.id
+      WHERE pj.user_id = ?
+    `).get(req.user.id);
+
+    // Calculate AI match score
+    const matchScore = calculateMatchScore(jobseekerProfile || {}, job);
+
+    // Create application with AI score
     const result = db.prepare(`
-      INSERT INTO applications (job_id, jobseeker_id, cover_letter, cv_url)
-      VALUES (?, ?, ?, ?)
-    `).run(job_id, req.user.id, safeCoverLetter, finalCvUrl);
+      INSERT INTO applications (job_id, jobseeker_id, cover_letter, cv_url, ai_score)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(job_id, req.user.id, safeCoverLetter, finalCvUrl, matchScore);
 
     const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(result.lastInsertRowid);
     
@@ -127,9 +257,7 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
     sendApplicationConfirmationEmail({ email: req.user.email, name: applicant?.name }, job, companyProfile?.company_name || employer?.name || 'the employer').catch(() => {});
 
     // Log application event
-    try {
-      db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'applied', ?, 'Initial application')`).run(application.id, req.user.id);
-    } catch(e) { /* table may not exist yet */ }
+    db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'applied', ?, 'Initial application')`).run(application.id, req.user.id);
 
     res.status(201).json(application);
   } catch (error) {
@@ -142,7 +270,13 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
 router.get('/my', authenticateToken, requireRole('jobseeker'), (req, res) => {
   try {
     const applications = db.prepare(`
-      SELECT a.*,
+      SELECT a.id,
+             a.job_id,
+             a.status,
+             a.cover_letter,
+             a.cv_url,
+             a.applied_at,
+             a.updated_at,
              j.title as job_title,
              j.location,
              j.job_type,
@@ -287,7 +421,7 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
       return res.status(400).json({ error: 'Status required' });
     }
 
-    const validStatuses = ['applied', 'screening', 'shortlisted', 'interview', 'offered', 'rejected', 'withdrawn'];
+    const validStatuses = ['applied', 'screening', 'shortlisted', 'interview', 'offered', 'rejected', 'withdrawn', 'hired'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
@@ -309,9 +443,53 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
 
     const oldStatus = application.status;
 
+    // Validate status transition
+    const validTransitions = {
+      'applied': ['screening', 'shortlisted', 'rejected', 'withdrawn'],
+      'screening': ['shortlisted', 'rejected', 'withdrawn'],
+      'shortlisted': ['interview', 'rejected', 'withdrawn'],
+      'interview': ['offered', 'rejected', 'withdrawn'],
+      'offered': ['hired', 'rejected', 'withdrawn'],
+      'hired': [],
+      'rejected': [],
+      'withdrawn': []
+    };
+
+    // Allow jobseeker to withdraw only
+    if (status === 'withdrawn' && req.user.id !== application.jobseeker_id) {
+      return res.status(403).json({ error: 'Only jobseeker can withdraw application' });
+    }
+
+    // Check if transition is valid (skip check for admin)
+    if (req.user.role !== 'admin' && !validTransitions[oldStatus]?.includes(status)) {
+      return res.status(400).json({ 
+        error: `Invalid status transition from '${oldStatus}' to '${status}'`,
+        allowedTransitions: validTransitions[oldStatus] || []
+      });
+    }
+
     db.prepare(`
       UPDATE applications SET status = ?, updated_at = datetime('now') WHERE id = ?
     `).run(status, req.params.id);
+
+    // Auto-generate onboarding checklist when hired
+    if (status === 'hired') {
+      try {
+        const { generateOnboardingChecklist } = require('./onboarding');
+        
+        // Check if checklist already exists
+        const existingChecklist = db.prepare(
+          'SELECT COUNT(*) as count FROM onboarding_checklists WHERE application_id = ?'
+        ).get(req.params.id);
+        
+        if (existingChecklist.count === 0) {
+          generateOnboardingChecklist(req.params.id);
+        }
+      } catch (error) {
+        console.error('Failed to generate onboarding checklist:', error);
+        // Don't fail the status update if checklist generation fails
+      }
+    }
 
     // Rich notification with caring messages per status
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(application.job_id);
@@ -323,9 +501,7 @@ router.put('/:id/status', authenticateToken, requireRole('employer', 'admin'), (
     if (jobseeker) sendApplicationStatusEmail(jobseeker, job?.title || 'a position', status, companyName?.company_name || 'the employer').catch(() => {});
 
     // Log application pipeline event
-    try {
-      db.prepare(`INSERT INTO application_events (application_id, from_status, to_status, changed_by, notes) VALUES (?, ?, ?, ?, ?)`).run(application.id, oldStatus, status, req.user.id, `Status changed by ${req.user.role}`);
-    } catch(e) { /* table may not exist yet */ }
+    db.prepare(`INSERT INTO application_events (application_id, from_status, to_status, changed_by, notes) VALUES (?, ?, ?, ?, ?)`).run(application.id, oldStatus, status, req.user.id, `Status changed by ${req.user.role}`);
 
     const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
 
@@ -494,6 +670,223 @@ router.get('/upcoming-deadlines', authenticateToken, requireRole('jobseeker'), (
   } catch (error) {
     console.error('Upcoming deadlines error:', error);
     res.status(500).json({ error: 'Failed to fetch upcoming deadlines' });
+  }
+});
+
+// GET /api/applications/compare - Compare multiple candidates (employer only)
+router.get('/compare', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    const { ids } = req.query; // e.g., ?ids=1,2,3
+
+    if (!ids) {
+      return res.status(400).json({ error: 'Application IDs required' });
+    }
+
+    const applicationIds = ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+    if (applicationIds.length < 2 || applicationIds.length > 4) {
+      return res.status(400).json({ error: 'Please select 2-4 applications to compare' });
+    }
+
+    // Get applications with full profile data
+    const placeholders = applicationIds.map(() => '?').join(',');
+    const applications = db.prepare(`
+      SELECT a.*,
+             u.name as applicant_name,
+             u.email as applicant_email,
+             pj.phone,
+             pj.location as applicant_location,
+             pj.bio,
+             pj.headline,
+             pj.skills,
+             pj.work_history,
+             pj.education,
+             pj.cv_url as profile_cv_url,
+             j.employer_id,
+             j.title as job_title
+      FROM applications a
+      JOIN users u ON a.jobseeker_id = u.id
+      LEFT JOIN profiles_jobseeker pj ON u.id = pj.user_id
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id IN (${placeholders})
+    `).all(...applicationIds);
+
+    if (applications.length !== applicationIds.length) {
+      return res.status(404).json({ error: 'One or more applications not found' });
+    }
+
+    // Verify all applications belong to employer's jobs
+    const employerId = req.user.id;
+    const unauthorized = applications.some(app => app.employer_id !== employerId && req.user.role !== 'admin');
+
+    if (unauthorized) {
+      return res.status(403).json({ error: 'Not authorized to view one or more applications' });
+    }
+
+    // Get screening answers for each application
+    applications.forEach(app => {
+      const answers = db.prepare(`
+        SELECT sa.*, sq.question, sq.question_type
+        FROM screening_answers sa
+        INNER JOIN screening_questions sq ON sa.question_id = sq.id
+        WHERE sa.application_id = ?
+        ORDER BY sq.sort_order
+      `).all(app.id);
+      app.screening_answers = answers;
+
+      // Parse JSON fields
+      if (app.skills) {
+        try {
+          app.skills = JSON.parse(app.skills);
+        } catch (e) {
+          app.skills = [];
+        }
+      }
+      if (app.work_history) {
+        try {
+          app.work_history = JSON.parse(app.work_history);
+        } catch (e) {
+          app.work_history = [];
+        }
+      }
+      if (app.education) {
+        try {
+          app.education = JSON.parse(app.education);
+        } catch (e) {
+          app.education = [];
+        }
+      }
+      if (app.tags) {
+        try {
+          app.tags = JSON.parse(app.tags);
+        } catch (e) {
+          app.tags = [];
+        }
+      }
+    });
+
+    res.json({ data: applications });
+  } catch (error) {
+    console.error('Compare applications error:', error);
+    res.status(500).json({ error: 'Failed to compare applications' });
+  }
+});
+
+// POST /api/applications/:id/review - Submit review (employer team member)
+router.post('/:id/review', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    const { recommendation, rating, strengths, concerns, notes } = req.body;
+
+    if (!recommendation || !rating) {
+      return res.status(400).json({ error: 'Recommendation and rating required' });
+    }
+
+    if (!['hire', 'maybe', 'no-hire'].includes(recommendation)) {
+      return res.status(400).json({ error: 'Invalid recommendation' });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // Verify application exists and belongs to employer's job
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Check if user already reviewed this application
+    const existing = db.prepare(`
+      SELECT id FROM application_reviews
+      WHERE application_id = ? AND reviewer_id = ?
+    `).get(req.params.id, req.user.id);
+
+    if (existing) {
+      // Update existing review
+      db.prepare(`
+        UPDATE application_reviews
+        SET recommendation = ?,
+            rating = ?,
+            strengths = ?,
+            concerns = ?,
+            notes = ?
+        WHERE id = ?
+      `).run(recommendation, rating, strengths || null, concerns || null, notes || null, existing.id);
+
+      const updated = db.prepare('SELECT * FROM application_reviews WHERE id = ?').get(existing.id);
+      return res.json(updated);
+    }
+
+    // Create new review
+    const result = db.prepare(`
+      INSERT INTO application_reviews
+      (application_id, reviewer_id, recommendation, rating, strengths, concerns, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(req.params.id, req.user.id, recommendation, rating, strengths || null, concerns || null, notes || null);
+
+    const review = db.prepare('SELECT * FROM application_reviews WHERE id = ?').get(result.lastInsertRowid);
+
+    res.status(201).json(review);
+  } catch (error) {
+    console.error('Submit review error:', error);
+    res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+// GET /api/applications/:id/reviews - Get all reviews for an application (employer only)
+router.get('/:id/reviews', authenticateToken, requireRole('employer', 'admin'), (req, res) => {
+  try {
+    // Verify application exists and belongs to employer's job
+    const application = db.prepare(`
+      SELECT a.*, j.employer_id
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.employer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Get all reviews
+    const reviews = db.prepare(`
+      SELECT ar.*,
+             u.name as reviewer_name
+      FROM application_reviews ar
+      JOIN users u ON ar.reviewer_id = u.id
+      WHERE ar.application_id = ?
+      ORDER BY ar.created_at DESC
+    `).all(req.params.id);
+
+    // Calculate summary
+    const summary = {
+      total: reviews.length,
+      average_rating: reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0,
+      recommendations: {
+        hire: reviews.filter(r => r.recommendation === 'hire').length,
+        maybe: reviews.filter(r => r.recommendation === 'maybe').length,
+        'no-hire': reviews.filter(r => r.recommendation === 'no-hire').length
+      }
+    };
+
+    res.json({ reviews, summary });
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
 

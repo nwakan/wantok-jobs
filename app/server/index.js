@@ -174,9 +174,13 @@ app.use('/api/auth', require('./routes/auth'));
 // Core routes
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/applications', require('./routes/applications'));
+app.use('/api/offer-letters', require('./routes/offer-letters'));
+app.use('/api/interviews', require('./routes/interviews'));
 app.use('/api/profile', require('./routes/profiles'));
 app.use('/api/saved-jobs', require('./routes/saved-jobs'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/onboarding', require('./routes/onboarding'));
+app.use('/api/references', require('./routes/references'));
 
 // Feature routes
 app.use('/api/categories', require('./routes/categories'));
@@ -199,6 +203,7 @@ app.use('/api/insights', require('./routes/insights'));
 
 // New routes for analytics, stats, and resume features
 app.use('/api/employer/analytics', require('./routes/employer-analytics'));
+app.use('/api/employer/pipeline-analytics', require('./routes/pipeline-analytics'));
 app.use('/api/stats/public', require('./routes/public-stats'));
 app.use('/api/jobseeker/resume', require('./routes/resume'));
 

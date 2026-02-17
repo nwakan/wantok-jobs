@@ -875,6 +875,101 @@ async function sendNotificationEmail({ to, toName, subject, body, actionUrl, act
   }
 }
 
+// ─── 20. Interview Invitation ────────────────────────────────────────
+
+async function sendInterviewInviteEmail(user, job, companyName, interview) {
+  const dateObj = new Date(interview.scheduled_at);
+  const dateStr = dateObj.toLocaleDateString('en-US', { 
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+  });
+  const timeStr = dateObj.toLocaleTimeString('en-US', { 
+    hour: 'numeric', minute: '2-digit', hour12: true 
+  });
+
+  const typeEmoji = {
+    'in-person': '🏢',
+    'phone': '📞',
+    'video': '🎥'
+  };
+
+  const typeLabel = {
+    'in-person': 'In-Person Interview',
+    'phone': 'Phone Interview',
+    'video': 'Video Interview'
+  };
+
+  // Generate Google Calendar link
+  const calendarTitle = encodeURIComponent(`Interview: ${job.title} at ${companyName}`);
+  const calendarDetails = encodeURIComponent(
+    `Interview for ${job.title}\n\n` +
+    `Type: ${typeLabel[interview.type]}\n` +
+    (interview.location ? `Location: ${interview.location}\n` : '') +
+    (interview.video_link ? `Video Link: ${interview.video_link}\n` : '') +
+    (interview.notes ? `\nNotes:\n${interview.notes}` : '')
+  );
+  const startTime = dateObj.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const endTime = new Date(dateObj.getTime() + interview.duration_minutes * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const gcalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calendarTitle}&dates=${startTime}/${endTime}&details=${calendarDetails}&location=${encodeURIComponent(interview.location || '')}`;
+
+  return sendEmail({
+    to: user.email, toName: user.name, tags: ['interview'],
+    subject: `🎤 Interview Scheduled: ${job.title} at ${companyName}`,
+    html: layout({
+      preheader: `Interview scheduled for ${dateStr} at ${timeStr}`,
+      body: `
+        ${greeting(user.name)}
+        <div style="text-align:center;margin:0 0 24px;">
+          <span style="display:inline-block;background:#7c3aed;color:#ffffff;padding:8px 20px;border-radius:24px;font-size:15px;font-weight:600;">
+            ${typeEmoji[interview.type] || '🎤'} ${typeLabel[interview.type] || 'Interview Scheduled'}
+          </span>
+        </div>
+        <p style="font-size:16px;color:#374151;line-height:1.7;">
+          Great news! You've been invited for an interview for <strong>${job.title}</strong> at <strong>${companyName}</strong>.
+        </p>
+        <div class="card" style="border:2px solid #7c3aed;border-radius:12px;padding:20px;margin:20px 0;background:#faf5ff;">
+          <h3 style="margin:0 0 14px;color:#111827;font-size:17px;">📅 Interview Details</h3>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+            <tr><td style="padding:6px 0;color:#6b7280;width:100px;">Date</td><td style="padding:6px 0;color:#111827;"><strong>${dateStr}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Time</td><td style="padding:6px 0;color:#111827;"><strong>${timeStr}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Duration</td><td style="padding:6px 0;color:#111827;">${interview.duration_minutes} minutes</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Type</td><td style="padding:6px 0;color:#111827;">${typeLabel[interview.type]}</td></tr>
+            ${interview.location ? `<tr><td style="padding:6px 0;color:#6b7280;vertical-align:top;">Location</td><td style="padding:6px 0;color:#111827;">${interview.location}</td></tr>` : ''}
+            ${interview.video_link ? `<tr><td style="padding:6px 0;color:#6b7280;vertical-align:top;">Video Link</td><td style="padding:6px 0;color:#111827;"><a href="${interview.video_link}" style="color:#7c3aed;word-break:break-all;">${interview.video_link}</a></td></tr>` : ''}
+            ${interview.interviewer_name ? `<tr><td style="padding:6px 0;color:#6b7280;">Interviewer</td><td style="padding:6px 0;color:#111827;">${interview.interviewer_name}</td></tr>` : ''}
+          </table>
+          ${interview.notes ? `
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e9d5ff;">
+              <p style="margin:0;font-size:13px;color:#6b7280;"><strong>Notes:</strong></p>
+              <p style="margin:6px 0 0;font-size:14px;color:#374151;line-height:1.6;">${interview.notes}</p>
+            </div>
+          ` : ''}
+        </div>
+        ${button('Add to Google Calendar', gcalLink)}
+        <h3 style="color:#111827;font-size:15px;margin:24px 0 10px;">💡 How to prepare:</h3>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            ✅ Review the job description and company background
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            ✅ Prepare examples of your experience relevant to the role
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            ✅ Have questions ready to ask the interviewer
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            ✅ ${interview.type === 'video' ? 'Test your camera and microphone ahead of time' : interview.type === 'phone' ? 'Make sure you\'re in a quiet place with good reception' : 'Plan your route and arrive 10 minutes early'}
+          </td></tr>
+        </table>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin:20px 0;">
+          <p style="margin:0;font-size:13px;color:#166534;">
+            🌟 <strong>You've got this!</strong> Remember, the interview is also your chance to learn if this role is right for you. Be yourself and ask questions.
+          </p>
+        </div>
+      `,
+    }),
+  });
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -900,4 +995,5 @@ module.exports = {
   sendWelcomeNewsletter,
   sendNewJobAlerts,
   sendNotificationEmail,
+  sendInterviewInviteEmail,
 };
