@@ -24,6 +24,7 @@ export default function JobSearch() {
     salary_max: searchParams.get('salary_max') || '',
     date_posted: searchParams.get('date_posted') || '',
     remote: searchParams.get('remote') || '',
+    country: searchParams.get('country') || '',
     company: searchParams.get('company') || '',
     company_size: searchParams.get('company_size') || '',
   });
@@ -166,6 +167,7 @@ export default function JobSearch() {
       salary_max: '',
       date_posted: '',
       remote: '',
+      country: '',
       company: '',
       company_size: '',
     };
@@ -224,8 +226,8 @@ export default function JobSearch() {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <PageHead
-        title={filters.keyword ? `${filters.keyword} Jobs in PNG` : 'Search Jobs in Papua New Guinea'}
-        description={`Browse ${pagination.total || ''}+ job opportunities in Papua New Guinea. Filter by category, location, salary, and more.`}
+        title={filters.keyword ? `${filters.keyword} Jobs - Pacific Islands` : 'Search Jobs in Papua New Guinea & the Pacific'}
+        description={`Browse ${pagination.total || ''}+ job opportunities across Papua New Guinea, Fiji, and the Pacific Islands. Filter by country, category, location, salary, and more.`}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -457,6 +459,13 @@ export default function JobSearch() {
                       </span>
                     )}
                     
+                    {filters.country && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
+                        🌏 {filters.country}
+                        <button onClick={() => removeFilter('country')} className="ml-1 hover:text-primary-900" aria-label="Remove country filter">×</button>
+                      </span>
+                    )}
+
                     {filters.remote === 'true' && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
                         🌏 Remote

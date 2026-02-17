@@ -212,4 +212,42 @@ router.get('/top-employers', (req, res) => {
   }
 });
 
+// GET /regions - Job counts by Pacific Island region
+router.get('/regions', (req, res) => {
+  try {
+    const png = db.prepare(`
+      SELECT COUNT(*) as count FROM jobs 
+      WHERE status = 'active' AND (country LIKE '%Papua New Guinea%' OR country = 'PG')
+    `).get();
+    const fiji = db.prepare(`
+      SELECT COUNT(*) as count FROM jobs 
+      WHERE status = 'active' AND (country LIKE '%Fiji%' OR country = 'FJ')
+    `).get();
+    const remote = db.prepare(`
+      SELECT COUNT(*) as count FROM jobs 
+      WHERE status = 'active' AND (remote_work = 1 OR location LIKE '%remote%')
+    `).get();
+    const otherPacific = db.prepare(`
+      SELECT COUNT(*) as count FROM jobs 
+      WHERE status = 'active' 
+        AND country NOT LIKE '%Papua New Guinea%' AND country != 'PG'
+        AND country NOT LIKE '%Fiji%' AND country != 'FJ'
+        AND (country IS NOT NULL AND country != '')
+        AND remote_work != 1
+    `).get();
+
+    res.json({
+      data: [
+        { key: 'png', label: 'Papua New Guinea', count: png.count },
+        { key: 'fj', label: 'Fiji', count: fiji.count },
+        { key: 'remote', label: 'Remote', count: remote.count },
+        { key: 'other', label: 'Other Pacific', count: otherPacific.count },
+      ]
+    });
+  } catch (error) {
+    logger.error('Region stats error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch region stats' });
+  }
+});
+
 module.exports = router;

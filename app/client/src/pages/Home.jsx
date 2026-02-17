@@ -127,6 +127,7 @@ export default function Home() {
   const [stats, setStats] = useState({ totalJobs: 0, activeJobs: 0, totalEmployers: 0, totalJobseekers: 0 });
   const [loading, setLoading] = useState(true);
   const [trendingSearches, setTrendingSearches] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [emailAlert, setEmailAlert] = useState('');
   const [alertSubmitted, setAlertSubmitted] = useState(false);
 
@@ -200,6 +201,11 @@ export default function Home() {
       if (trendingResponse?.data?.length > 0) {
         setTrendingSearches(trendingResponse.data.map(s => s.query));
       }
+      // Fetch region stats
+      try {
+        const regionRes = await fetch('/api/stats/regions').then(r => r.json());
+        if (regionRes?.data) setRegions(regionRes.data);
+      } catch (e) {}
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -392,6 +398,36 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Browse by Region */}
+      {regions.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 py-12 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">🌏 Browse by Region</h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400">Jobs across the Pacific Islands</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {regions.map((region) => {
+                const icons = { png: '🇵🇬', fj: '🇫🇯', remote: '🌐', other: '🏝️' };
+                const colors = { png: 'from-red-500 to-yellow-500', fj: '  from-blue-500 to-cyan-500', remote: 'from-green-500 to-teal-500', other: 'from-purple-500 to-pink-500' };
+                const searchParam = region.key === 'remote' ? 'remote=true' : region.key === 'other' ? '' : `country=${encodeURIComponent(region.label)}`;
+                return (
+                  <Link
+                    key={region.key}
+                    to={searchParam ? `/jobs?${searchParam}` : '/jobs'}
+                    className="bg-gradient-to-br bg-gray-50 dark:bg-gray-700 rounded-xl p-6 text-center hover:shadow-lg transition-all hover:-translate-y-1 group border border-gray-100 dark:border-gray-600"
+                  >
+                    <div className="text-4xl mb-3">{icons[region.key] || '🌏'}</div>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1">{region.label}</h3>
+                    <p className="text-primary-600 font-semibold text-lg">{region.count} jobs</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Browse by Category — REAL data */}
       <div className="bg-gray-50 dark:bg-gray-900 py-16">
@@ -611,7 +647,7 @@ export default function Home() {
               { icon: Zap, title: 'AI-Powered Matching', desc: 'Smart algorithms match you with the most relevant opportunities based on your skills and experience' },
               { icon: Clock, title: 'Real-Time Alerts', desc: 'Get notified instantly when jobs matching your profile are posted — via email, SMS, or WhatsApp' },
               { icon: Shield, title: 'Free for Job Seekers', desc: 'Search, apply, build your CV, and track applications — all completely free, forever' },
-              { icon: Globe, title: 'PNG-First Platform', desc: 'Purpose-built for the Papua New Guinean job market with local companies and local opportunities' },
+              { icon: Globe, title: 'Pacific Islands Coverage', desc: 'Jobs across Papua New Guinea, Fiji, Solomon Islands, Vanuatu, Samoa, Tonga, and remote opportunities' },
             ].map((item, idx) => (
               <motion.div
                 key={idx}

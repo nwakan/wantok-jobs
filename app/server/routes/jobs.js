@@ -210,8 +210,26 @@ router.get('/', (req, res) => {
     }
 
     if (remote) {
-      // Filter for remote jobs (location contains 'remote' or job_type indicates remote)
-      query += ` AND (j.location LIKE '%remote%' OR j.location LIKE '%Remote%' OR j.location LIKE '%REMOTE%')`;
+      // Filter for remote jobs via remote_work flag or location containing 'remote'
+      query += ` AND (j.remote_work = 1 OR j.location LIKE '%remote%' OR j.location LIKE '%Remote%' OR j.location LIKE '%REMOTE%')`;
+    }
+
+    if (req.query.country) {
+      const countryVal = req.query.country;
+      // Map short codes to full names for flexible matching
+      const countryMap = {
+        'pg': 'Papua New Guinea', 'png': 'Papua New Guinea',
+        'fj': 'Fiji', 'sb': 'Solomon Islands',
+        'vu': 'Vanuatu', 'ws': 'Samoa', 'to': 'Tonga',
+      };
+      const mapped = countryMap[countryVal.toLowerCase()] || countryVal;
+      if (countryVal.toLowerCase() === 'remote') {
+        query += ` AND (j.remote_work = 1 OR j.location LIKE '%remote%')`;
+      } else {
+        query += ` AND (j.country LIKE ? ESCAPE '\\' OR j.location LIKE ? ESCAPE '\\')`;
+        const countryParam = containsPattern(mapped);
+        params.push(countryParam, countryParam);
+      }
     }
 
     if (company) {

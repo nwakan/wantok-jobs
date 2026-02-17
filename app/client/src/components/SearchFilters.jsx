@@ -8,6 +8,7 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
   const [categories, setCategories] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
     category: true,
+    country: true,
     location: true,
     province: true,
     jobType: true,
@@ -132,6 +133,24 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
             {categories.map(cat => (
               <option key={cat.slug} value={cat.slug}>{cat.name} ({cat.job_count})</option>
             ))}
+          </select>
+        </FilterSection>
+
+        {/* Country / Region Filter */}
+        <FilterSection title="🌏 Country / Region" section="country">
+          <select
+            value={filters.country || ''}
+            onChange={(e) => setFilters({ ...filters, country: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">All Countries</option>
+            <option value="Papua New Guinea">🇵🇬 Papua New Guinea</option>
+            <option value="Fiji">🇫🇯 Fiji</option>
+            <option value="Solomon Islands">🇸🇧 Solomon Islands</option>
+            <option value="Vanuatu">🇻🇺 Vanuatu</option>
+            <option value="Samoa">🇼🇸 Samoa</option>
+            <option value="Tonga">🇹🇴 Tonga</option>
+            <option value="remote">🌐 Remote</option>
           </select>
         </FilterSection>
 
