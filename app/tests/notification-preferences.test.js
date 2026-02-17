@@ -22,7 +22,7 @@ module.exports = async function notificationPreferencesTests() {
     if (!tableExists) return;
     const res = await request('PATCH', '/api/notification-preferences', {
       token: user.token,
-      body: { email_notifications: false, push_notifications: true }
+      body: { email_newsletter: false, push_enabled: true }
     });
     assert(res.status === 200 || res.status === 204, `Expected 200/204, got ${res.status}`);
   });

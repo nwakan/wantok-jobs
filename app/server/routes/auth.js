@@ -208,7 +208,7 @@ router.post('/register', validate(schemas.register), async (req, res) => {
 
     // Create user (with verification token, email_verified = 0)
     const result = db.prepare(
-      'INSERT INTO users (email, password_hash, role, name, verification_token, email_verified, account_type) VALUES (?, ?, ?, ?, ?, 0, ?)'
+      "INSERT INTO users (email, password_hash, password_format, role, name, verification_token, email_verified, account_type) VALUES (?, ?, 'bcrypt', ?, ?, ?, 0, ?)"
     ).run(safeEmail, password_hash, role, safeName, verificationToken, (role === 'employer' && account_type === 'agency') ? 'agency' : 'employer');
 
     const userId = result.lastInsertRowid;

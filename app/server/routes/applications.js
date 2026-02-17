@@ -612,7 +612,7 @@ function handleStatusUpdate(req, res) {
       return res.status(400).json({ error: 'Status required' });
     }
 
-    const validStatuses = ['pending', 'reviewed', 'shortlisted', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'];
+    const validStatuses = ['applied', 'pending', 'screening', 'reviewed', 'shortlisted', 'interview', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status. Valid: ' + validStatuses.join(', ') });
     }
@@ -636,9 +636,12 @@ function handleStatusUpdate(req, res) {
 
     // Validate status transition
     const validTransitions = {
-      'pending': ['reviewed', 'shortlisted', 'rejected', 'withdrawn'],
+      'applied': ['screening', 'reviewed', 'shortlisted', 'rejected', 'withdrawn'],
+      'pending': ['screening', 'reviewed', 'shortlisted', 'rejected', 'withdrawn'],
+      'screening': ['shortlisted', 'rejected', 'withdrawn'],
       'reviewed': ['shortlisted', 'rejected', 'withdrawn'],
-      'shortlisted': ['interviewed', 'rejected', 'withdrawn'],
+      'shortlisted': ['interview', 'interviewed', 'rejected', 'withdrawn'],
+      'interview': ['offered', 'rejected', 'withdrawn'],
       'interviewed': ['offered', 'rejected', 'withdrawn'],
       'offered': ['hired', 'rejected', 'withdrawn'],
       'hired': [],

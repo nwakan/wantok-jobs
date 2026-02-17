@@ -22,7 +22,7 @@ router.get('/', authenticateToken, (req, res) => {
         params.push(`%${s.query}%`, `%${s.query}%`);
       }
       if (s.category) {
-        conditions.push("category = ?");
+        conditions.push("category_slug = ?");
         params.push(s.category);
       }
       if (s.location) {
