@@ -3,10 +3,16 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const _rateLimit = require('express-rate-limit');
+const rateLimitMonitor = require('./lib/rate-limit-monitor');
 // In test mode, effectively disable rate limiting by setting very high max
 const rateLimit = (opts) => _rateLimit({
   ...opts,
   max: process.env.NODE_ENV === 'test' ? 100000 : opts.max,
+  handler: (req, res, next, options) => {
+    rateLimitMonitor.recordBlock(req.ip, req.originalUrl || req.url);
+    if (opts.handler) return opts.handler(req, res, next, options);
+    res.status(429).json(opts.message || { error: 'Too many requests, please try again later.' });
+  },
 });
 const cookieParser = require('cookie-parser');
 const path = require('path');

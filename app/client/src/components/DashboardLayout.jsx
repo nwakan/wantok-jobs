@@ -51,6 +51,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'AI Agents', path: '/dashboard/admin/ai-agents', icon: '🤖' },
     { name: 'Jean AI', path: '/dashboard/admin/jean', icon: '🧠' },
     { name: 'Security', path: '/dashboard/admin/security', icon: '🔐' },
+    { name: 'Rate Limits', path: '/dashboard/admin/rate-limits', icon: '🛡️' },
     { name: 'Wallet Admin', path: '/dashboard/admin/wallet', icon: '💰' },
     { name: 'Settings', path: '/dashboard/admin/settings', icon: '⚙️' },
     { name: 'Change Password', path: '/dashboard/admin/change-password', icon: '🔒' },

@@ -5,11 +5,43 @@ const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
 const cache = require('../lib/cache');
+const rateLimitMonitor = require('../lib/rate-limit-monitor');
 
 const router = express.Router();
 
 // All routes require auth + admin role
 router.use(authenticateToken, requireRole('admin'));
+
+// GET /rate-limits — Rate limit monitoring dashboard data
+router.get('/rate-limits', (req, res) => {
+  try {
+    const summary = rateLimitMonitor.getSummary();
+
+    // Active account lockouts
+    let activeLockouts = [];
+    try {
+      activeLockouts = db.prepare(
+        `SELECT id, name, email, lockout_until FROM users WHERE lockout_until > datetime('now') ORDER BY lockout_until DESC`
+      ).all();
+    } catch (_e) { /* lockout_until column may not exist */ }
+
+    res.json({ ...summary, activeLockouts });
+  } catch (error) {
+    logger.error('Rate limits endpoint error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch rate limit data' });
+  }
+});
+
+// POST /rate-limits/unlock/:userId — Remove account lockout
+router.post('/rate-limits/unlock/:userId', (req, res) => {
+  try {
+    db.prepare(`UPDATE users SET lockout_until = NULL WHERE id = ?`).run(req.params.userId);
+    res.json({ message: 'Account unlocked' });
+  } catch (error) {
+    logger.error('Unlock account error', { error: error.message });
+    res.status(500).json({ error: 'Failed to unlock account' });
+  }
+});
 
 // GET /cache-stats - Cache statistics
 router.get('/cache-stats', (req, res) => {
