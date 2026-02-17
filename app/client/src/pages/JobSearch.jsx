@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { jobs as jobsAPI } from '../api';
 import JobCard from '../components/JobCard';
 import SearchFilters from '../components/SearchFilters';
-import { Flame, Sparkles, Globe } from 'lucide-react';
+import { Flame, Sparkles, Globe, Bell, Briefcase } from 'lucide-react';
 import PageHead from '../components/PageHead';
+import { JobSearchSkeleton } from '../components/SkeletonLoader';
 
 export default function JobSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -190,6 +191,10 @@ export default function JobSearch() {
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 placeholder="🔍 Search by job title, keyword, or company..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                aria-label="Search by job title, keyword, or company"
+                role="combobox"
+                aria-expanded={showSuggestions && suggestions.length > 0}
+                aria-autocomplete="list"
               />
               
               {/* Autocomplete Suggestions */}
@@ -380,25 +385,53 @@ export default function JobSearch() {
 
             {/* Job Listings */}
             {loading ? (
-              <div className="flex justify-center py-16">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading jobs...</p>
-                </div>
-              </div>
+              <JobSearchSkeleton />
             ) : jobs.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs found</h3>
-                <p className="text-gray-600 mb-6">
-                  Try adjusting your filters or search terms
+              <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100" role="status" aria-label="No results found">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Briefcase className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs match your search</h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  {filters.keyword
+                    ? `We couldn't find jobs matching "${filters.keyword}". Try different keywords or broader filters.`
+                    : 'Try adjusting your filters or broadening your search criteria.'}
                 </p>
-                <button
-                  onClick={handleClearFilters}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
-                >
-                  Clear Filters
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={handleClearFilters}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
+                    aria-label="Clear all search filters"
+                  >
+                    Clear All Filters
+                  </button>
+                  <a
+                    href="/dashboard"
+                    className="px-6 py-2 bg-white text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 font-medium inline-flex items-center justify-center gap-2"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Create Job Alert
+                  </a>
+                </div>
+                {filters.keyword && (
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <p className="text-sm text-gray-500 mb-3">Popular searches:</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {['Mining', 'IT', 'Nursing', 'Accounting', 'Teaching', 'Engineering'].map((term) => (
+                        <button
+                          key={term}
+                          onClick={() => {
+                            setFilters({ ...filters, keyword: term });
+                            searchJobs(1, { ...filters, keyword: term });
+                          }}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-primary-50 hover:text-primary-600 transition"
+                        >
+                          {term}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>

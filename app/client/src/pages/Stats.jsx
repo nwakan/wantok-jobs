@@ -31,7 +31,22 @@ export default function Stats() {
   }
 
   if (!stats) {
-    return <div className="text-center py-12">Failed to load statistics</div>;
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <PageHead title="WantokJobs Statistics" description="Platform statistics" />
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-2xl">📊</span>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Statistics</h2>
+        <p className="text-gray-600 mb-6">We're having trouble fetching the latest data. Please try again.</p>
+        <button
+          onClick={() => { setLoading(true); fetchStats(); }}
+          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

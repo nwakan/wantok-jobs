@@ -20,8 +20,18 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+const crypto = require('crypto');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Request ID tracking middleware
+app.use((req, res, next) => {
+  const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+  req.id = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  next();
+});
 
 // Compression (gzip/deflate for all responses)
 try {
@@ -232,7 +242,7 @@ app.get('/health', (req, res) => {
       node: process.version
     });
   } catch (error) {
-    logger.error('Health check error', { error: error.message });
+    logger.error('Health check error', { error: error.message, requestId: req.id });
     res.status(503).json({
       status: 'error',
       timestamp: new Date().toISOString(),
@@ -252,10 +262,10 @@ app.get('/api/stats', (req, res) => {
       totalJobs: db.prepare('SELECT COUNT(*) as count FROM jobs').get().count,
       activeJobs: db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'active'").get().count,
     };
-    res.json(stats);
+    res.json({ success: true, data: stats, ...stats });
   } catch (error) {
-    logger.error('Stats error', { error: error.message });
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    logger.error('Stats error', { error: error.message, requestId: req.id });
+    res.status(500).json({ success: false, error: 'Failed to fetch stats', message: 'Internal server error' });
   }
 });
 
@@ -427,7 +437,20 @@ const server = app.listen(PORT, () => {
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
+let isShuttingDown = false;
+
+// Reject new requests during shutdown
+app.use((req, res, next) => {
+  if (isShuttingDown) {
+    res.setHeader('Connection', 'close');
+    return res.status(503).json({ success: false, error: 'Server is shutting down', message: 'Service unavailable' });
+  }
+  next();
+});
+
 function gracefulShutdown(signal) {
+  if (isShuttingDown) return; // Prevent double shutdown
+  isShuttingDown = true;
   logger.info(`${signal} received — shutting down gracefully`, { signal });
 
   // Stop accepting new connections

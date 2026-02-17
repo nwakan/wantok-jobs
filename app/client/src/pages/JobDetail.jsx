@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
 import JobCard from '../components/JobCard';
 import PageHead from '../components/PageHead';
+import { JobDetailSkeleton } from '../components/SkeletonLoader';
 import { Star, Users, Eye, Flag, Building2, Briefcase, Calendar, TrendingUp, CheckCircle2, ArrowRight, ArrowLeft, FileText, Mail, Phone, MapPin, Upload, AlertCircle, X, Share2, Facebook, Linkedin, Copy, CheckCheck } from 'lucide-react';
 
 export default function JobDetail() {
@@ -509,19 +510,34 @@ export default function JobDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="bg-gray-50 min-h-screen">
+        <PageHead title="Loading job..." description="Loading job details on WantokJobs" />
+        <JobDetailSkeleton />
       </div>
     );
   }
 
   if (!job) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Job not found</h1>
-        <Link to="/jobs" className="text-primary-600 hover:text-primary-700 mt-4 inline-block">
-          Back to jobs
-        </Link>
+      <div className="bg-gray-50 min-h-screen">
+        <PageHead title="Job Not Found — WantokJobs" description="This job listing could not be found." />
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Briefcase className="w-10 h-10 text-gray-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Job Not Found</h1>
+          <p className="text-gray-600 mb-8">
+            This job may have been filled, removed, or the link might be incorrect.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/jobs" className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors">
+              Browse All Jobs
+            </Link>
+            <Link to="/" className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors border border-gray-200">
+              Go Home
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

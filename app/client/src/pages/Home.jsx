@@ -180,6 +180,8 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.2 }}
             onSubmit={handleSearch}
             className="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-4"
+            role="search"
+            aria-label="Search jobs"
           >
             <div className="grid md:grid-cols-3 gap-4 mb-4">
               <div className="relative">
@@ -190,6 +192,7 @@ export default function Home() {
                   value={searchData.keyword}
                   onChange={(e) => setSearchData({ ...searchData, keyword: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  aria-label="Job title or keywords"
                 />
               </div>
               <div className="relative">
@@ -198,6 +201,7 @@ export default function Home() {
                   value={searchData.location}
                   onChange={(e) => setSearchData({ ...searchData, location: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
+                  aria-label="Job location"
                 >
                   {provinces.map((loc) => (
                     <option key={loc} value={loc}>{loc}</option>
@@ -210,6 +214,7 @@ export default function Home() {
                   value={searchData.category}
                   onChange={(e) => setSearchData({ ...searchData, category: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 md:py-3 text-base md:text-sm border-2 md:border border-gray-300 rounded-xl md:rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
+                  aria-label="Job category"
                 >
                   <option value="">All Categories</option>
                   {categories.map((cat) => (
@@ -505,6 +510,7 @@ export default function Home() {
                 placeholder="Enter your email"
                 className="flex-1 px-6 py-3 rounded-lg text-gray-900"
                 required
+                aria-label="Email for job alerts"
               />
               <button
                 type="submit"

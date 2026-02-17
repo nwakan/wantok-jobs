@@ -6,6 +6,7 @@ import {
   Globe, Microscope, Shield, Flame, Sparkles, TrendingDown
 } from 'lucide-react';
 import PageHead from '../components/PageHead';
+import { CategoryGridSkeleton } from '../components/SkeletonLoader';
 
 // Icon mapping for lucide-react icons
 const iconMap = {
@@ -132,9 +133,21 @@ export default function Categories() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
+      <>
+        <PageHead
+          title="Browse Jobs by Category | WantokJobs"
+          description="Explore jobs across all industries in Papua New Guinea."
+        />
+        <div className="min-h-screen bg-gray-50 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <div className="h-10 w-80 bg-gray-200 rounded animate-pulse mx-auto mb-4" />
+              <div className="h-6 w-96 bg-gray-200 rounded animate-pulse mx-auto" />
+            </div>
+            <CategoryGridSkeleton count={12} />
+          </div>
+        </div>
+      </>
     );
   }
 
