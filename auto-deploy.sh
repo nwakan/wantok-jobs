@@ -11,9 +11,30 @@ VPS_DB="$VPS_APP/app/server/data/wantokjobs.db"
 LOCAL_DB="$APP_DIR/server/data/wantokjobs.db"
 SSH_OPTS="-o ConnectTimeout=10 -o StrictHostKeyChecking=no -o BatchMode=yes"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M')
+DB_TIMEOUT=30
 
 log() { echo "[$(date '+%H:%M:%S')] $1"; }
 ssh_cmd() { ssh $SSH_OPTS $VPS "$@"; }
+
+# Run a node command with a timeout to prevent orphaned processes holding DB locks
+node_with_timeout() {
+  timeout "$DB_TIMEOUT" node "$@"
+}
+
+# Kill any orphaned node processes holding the local DB lock (NOT the main app)
+kill_local_db_holders() {
+  if command -v fuser >/dev/null 2>&1 && [ -f "$LOCAL_DB" ]; then
+    fuser -k "$LOCAL_DB" 2>/dev/null || true
+    fuser -k "${LOCAL_DB}-wal" 2>/dev/null || true
+    fuser -k "${LOCAL_DB}-shm" 2>/dev/null || true
+  fi
+}
+
+# Error trap — clean up temp files on any failure
+cleanup() {
+  rm -f /tmp/wantokjobs-deploy.db
+}
+trap cleanup EXIT
 
 # ── Step 0: Check VPS reachability ──
 if ! ssh_cmd "echo ok" >/dev/null 2>&1; then
@@ -28,7 +49,8 @@ CODE_CHANGES=$(git status --porcelain -- . ':!app/server/data/wantokjobs.db*' | 
 # ── Step 2: Check for DB changes (compare row counts) ──
 DB_CHANGED=false
 if [ -f "$LOCAL_DB" ]; then
-  LOCAL_JOBS=$(cd "$APP_DIR" && node -e "
+  kill_local_db_holders
+  LOCAL_JOBS=$(cd "$APP_DIR" && node_with_timeout -e "
     const db = require('./node_modules/better-sqlite3')('$LOCAL_DB', {readonly:true});
     console.log(db.prepare('SELECT COUNT(*) as c FROM jobs WHERE status=?').get('active').c);
     db.close();
@@ -91,7 +113,8 @@ if [ "$DB_CHANGED" = true ]; then
   log "📊 Creating clean DB snapshot..."
   cd "$APP_DIR"
   rm -f /tmp/wantokjobs-deploy.db
-  node -e "
+  kill_local_db_holders
+  node_with_timeout -e "
     const db = require('./node_modules/better-sqlite3')('$LOCAL_DB', {readonly:true});
     db.exec(\"VACUUM INTO '/tmp/wantokjobs-deploy.db'\");
     db.close();
@@ -103,6 +126,10 @@ if [ "$DB_CHANGED" = true ]; then
   ssh_cmd "systemctl stop wantokjobs 2>/dev/null || true"
   sleep 1
   
+  # Kill any orphaned node processes holding the VPS DB
+  ssh_cmd "fuser -k $VPS_DB 2>/dev/null || true; fuser -k ${VPS_DB}-wal 2>/dev/null || true"
+  sleep 1
+  
   # Remove stale WAL/SHM files BEFORE replacing DB
   ssh_cmd "rm -f ${VPS_DB}-wal ${VPS_DB}-shm"
   
@@ -112,9 +139,6 @@ if [ "$DB_CHANGED" = true ]; then
   # Fix ownership
   ssh_cmd "chown wantokjobs:wantokjobs $VPS_DB 2>/dev/null || true"
   
-  # Cleanup
-  rm -f /tmp/wantokjobs-deploy.db
-  
   log "✅ Database synced"
 fi
 
@@ -122,10 +146,10 @@ fi
 log "🔄 Restarting service..."
 ssh_cmd "systemctl reset-failed wantokjobs 2>/dev/null; systemctl start wantokjobs"
 
-# ── Step 10: Health check (wait up to 15s) ──
+# ── Step 10: Health check (wait up to 30s) ──
 log "⏳ Waiting for server..."
 HEALTHY=false
-for i in 1 2 3 4 5; do
+for i in $(seq 1 10); do
   sleep 3
   if ssh_cmd "curl -sf http://127.0.0.1:3001/health" >/dev/null 2>&1; then
     HEALTHY=true
@@ -139,7 +163,12 @@ if [ "$HEALTHY" = true ]; then
   log "✅ Deploy complete — $LIVE_JOBS jobs live"
   log "🚀 $CODE_CHANGES code changes, DB synced=$DB_CHANGED @ $TIMESTAMP"
 else
-  log "❌ Health check FAILED — rolling back..."
+  log "❌ Health check FAILED after 30s — rolling back..."
+  
+  # Kill any orphaned processes on VPS before rollback
+  ssh_cmd "systemctl stop wantokjobs 2>/dev/null || true"
+  ssh_cmd "fuser -k $VPS_DB 2>/dev/null || true"
+  sleep 1
   
   # Rollback DB
   ssh_cmd "rm -f ${VPS_DB}-wal ${VPS_DB}-shm; cp ${VPS_DB}.pre-deploy-backup $VPS_DB 2>/dev/null; chown wantokjobs:wantokjobs $VPS_DB 2>/dev/null || true"
