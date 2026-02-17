@@ -11,6 +11,7 @@ import {
   MapPin, Star, MessageSquare, UserPlus
 } from 'lucide-react';
 import OptimizedImage from '../../../components/OptimizedImage';
+import ReferralSection from '../../../components/ReferralSection';
 
 export default function EmployerOverview() {
   const { user } = useAuth();
@@ -304,7 +305,9 @@ export default function EmployerOverview() {
               Hiring Tips for PNG
             </h3>
             <div className="space-y-3 text-sm">
-              <div>
+              <ReferralSection />
+
+            <div>
                 <p className="font-medium text-gray-900">📱 Include phone contact</p>
                 <p className="text-xs text-gray-600">Many PNG candidates prefer calling over email</p>
               </div>

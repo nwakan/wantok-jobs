@@ -8,6 +8,7 @@ const rateLimit = (opts) => _rateLimit({
   ...opts,
   max: process.env.NODE_ENV === 'test' ? 100000 : opts.max,
 });
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./utils/logger');
@@ -118,6 +119,7 @@ app.use(rateLimit({
 }));
 
 // Request logging
+app.use(cookieParser());
 app.use(requestLogger);
 
 // Stricter per-route rate limiters
@@ -337,6 +339,7 @@ app.use('/api/training', require('./routes/training'));
 app.use('/api/agency', require('./routes/agency'));
 app.use('/api/claims', require('./routes/claims'));
 app.use('/api/wallet', require('./routes/wallet'));
+app.use('/api/referrals', require('./routes/referrals'));
 
 // New routes for analytics, stats, and resume features
 app.use('/api/employer/analytics', require('./routes/employer-analytics'));
@@ -344,6 +347,7 @@ app.use('/api/employer/pipeline-analytics', require('./routes/pipeline-analytics
 app.use('/api/stats/public', require('./routes/public-stats'));
 app.use('/api', require('./routes/salary'));
 app.use('/api/jobseeker/resume', require('./routes/resume'));
+app.use('/api/badges', require('./routes/badges'));
 
 // New metadata and stats routes
 app.use('/api', require('./routes/metadata')); // Provides /api/locations and /api/industries
@@ -360,6 +364,7 @@ app.use('/api/whatsapp', require('./routes/whatsapp-webhook'));
 
 // Admin routes (protected by auth middleware)
 const { authenticateToken } = require('./middleware/auth');
+app.use('/api/testimonials', require('./routes/testimonials'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 
 // Sitemap routes (SEO)

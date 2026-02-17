@@ -30,6 +30,7 @@ router.post('/:employerId', authenticateToken, (req, res) => {
       throw err;
     }
 
+    try { require('./badges').checkAndAwardBadges(req.user.id); } catch {}
     res.status(201).json({ message: 'Now following company', following: true });
   } catch (error) {
     logger.error('Follow company error', { error: error.message });

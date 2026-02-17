@@ -36,6 +36,7 @@ router.post('/', authenticateToken, validate(schemas.message), (req, res) => {
     `).run(from_user_id, to_user_id, safeSubject, safeBody);
 
     const message = db.prepare('SELECT * FROM admin_messages WHERE id = ?').get(result.lastInsertRowid);
+    try { require('./badges').checkAndAwardBadges(req.user.id); } catch {}
     res.status(201).json({ message });
   } catch (error) {
     logger.error('Error sending message', { error: error.message });

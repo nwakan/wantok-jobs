@@ -616,6 +616,22 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_job_clicks_job ON job_clicks(job_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_job_clicks_created ON job_clicks(created_at DESC);
 
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'Jobseeker',
+      company TEXT,
+      quote TEXT NOT NULL,
+      photo_url TEXT,
+      rating INTEGER DEFAULT 5 CHECK(rating BETWEEN 1 AND 5),
+      featured INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_testimonials_status ON testimonials(status, featured DESC);
+
     -- Additional indexes for new tables
     CREATE INDEX IF NOT EXISTS idx_company_follows_user ON company_follows(user_id);
     CREATE INDEX IF NOT EXISTS idx_company_follows_employer ON company_follows(employer_id);

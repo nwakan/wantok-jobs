@@ -249,6 +249,7 @@ export default function Layout() {
                 <li><Link to="/companies" className="text-gray-400 hover:text-white">{t('footer.companies')}</Link></li>
                 <li><Link to="/training" className="text-gray-400 hover:text-white">{t('footer.training')}</Link></li>
                 <li><Link to="/about" className="text-gray-400 hover:text-white">{t('footer.aboutUs')}</Link></li>
+                <li><Link to="/success-stories" className="text-gray-400 hover:text-white">Success Stories</Link></li>
               </ul>
             </div>
             <div>

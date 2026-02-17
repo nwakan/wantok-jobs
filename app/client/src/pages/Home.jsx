@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Briefcase, TrendingUp, Users, Building2, CheckCircle, Zap,
-  Bell, Award, Star, ChevronRight, ArrowRight, Clock, Shield, Globe,
+  Bell, Award, Star, ChevronLeft, ChevronRight, ArrowRight, Clock, Shield, Globe,
   Cpu, Heart, GraduationCap, Code, DollarSign, Hammer, ShoppingBag, Coffee,
   Droplet, Pickaxe, Scale, Landmark, Megaphone, Cog, Leaf, Truck, Wrench
 } from 'lucide-react';
@@ -14,6 +14,62 @@ import { jobs as jobsAPI } from '../api';
 import ActivityToast from '../components/ActivityToast';
 import ActivityFeed from '../components/ActivityFeed';
 import { useLanguage } from '../context/LanguageContext';
+import api from '../api';
+
+function TestimonialsCarousel() {
+  const [testimonials, setTestimonials] = useState([]);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    api.get('/testimonials?limit=4')
+      .then(data => setTestimonials((data.testimonials || []).filter(t => t.featured).slice(0, 4)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (testimonials.length <= 1) return;
+    const timer = setInterval(() => setCurrent(c => (c + 1) % testimonials.length), 5000);
+    return () => clearInterval(timer);
+  }, [testimonials.length]);
+
+  if (testimonials.length === 0) return null;
+  const t = testimonials[current];
+
+  return (
+    <div className="bg-gray-50 py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">What People Say</h2>
+        <p className="text-gray-500 mb-10">Real stories from our community</p>
+        <div className="relative">
+          <div className="bg-white rounded-2xl shadow-sm border p-8 md:p-10 mx-auto max-w-2xl min-h-[200px] flex flex-col items-center justify-center">
+            <div className="flex gap-0.5 mb-4">
+              {[1,2,3,4,5].map(i => (
+                <Star key={i} className={`w-5 h-5 ${i <= t.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+              ))}
+            </div>
+            <blockquote className="text-lg md:text-xl text-gray-700 italic mb-6 leading-relaxed">
+              "{t.quote}"
+            </blockquote>
+            <div>
+              <p className="font-bold text-gray-900">{t.name}</p>
+              <p className="text-sm text-gray-500">{t.role}{t.company ? ` at ${t.company}` : ''}</p>
+            </div>
+          </div>
+          {testimonials.length > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {testimonials.map((_, i) => (
+                <button key={i} onClick={() => setCurrent(i)} className={`w-2.5 h-2.5 rounded-full transition ${i === current ? 'bg-primary-600' : 'bg-gray-300'}`} />
+              ))}
+            </div>
+          )}
+        </div>
+        <Link to="/success-stories" className="inline-block mt-8 text-primary-600 font-semibold hover:underline">
+          Read all success stories →
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 // Icon map for categories
 const categoryIcons = {
@@ -494,6 +550,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Testimonials Carousel */}
+      <TestimonialsCarousel />
 
       {/* Job Alert CTA */}
       <div className="bg-gradient-to-br from-primary-600 to-primary-800 py-16">

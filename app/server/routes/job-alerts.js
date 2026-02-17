@@ -40,6 +40,7 @@ router.post('/', authenticateToken, validate(schemas.jobAlert), (req, res) => {
     `).run(user_id, keywords, category_id, location, job_type, salary_min, frequency || 'daily', channel || 'email');
 
     const alert = db.prepare('SELECT * FROM job_alerts WHERE id = ?').get(result.lastInsertRowid);
+    try { require('./badges').checkAndAwardBadges(req.user.id); } catch {}
     res.status(201).json({ alert });
   } catch (error) {
     logger.error('Error creating job alert', { error: error.message });

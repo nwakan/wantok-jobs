@@ -645,6 +645,28 @@ export const conversations = {
     }).then(handleResponse),
 };
 
+export const referrals = {
+  getMyCode: () =>
+    fetch(`${API_URL}/referrals/my-code`, { headers: getAuthHeader() }).then(handleResponse),
+  getStats: () =>
+    fetch(`${API_URL}/referrals/stats`, { headers: getAuthHeader() }).then(handleResponse),
+  track: (code) =>
+    fetch(`${API_URL}/referrals/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    }).then(handleResponse),
+};
+
+export const badges = {
+  getMy: () =>
+    fetch(`${API_URL}/badges/my`, { headers: getAuthHeader() }).then(handleResponse),
+  check: () =>
+    fetch(`${API_URL}/badges/check`, { headers: getAuthHeader() }).then(handleResponse),
+  getForUser: (userId) =>
+    fetch(`${API_URL}/badges/user/${userId}`).then(handleResponse),
+};
+
 // Default export for convenience
 const api = {
   get: (url) => fetch(`${API_URL}${url.startsWith('/') ? url.replace('/api','') : '/' + url}`, { headers: getAuthHeader() }).then(handleResponse),

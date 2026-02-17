@@ -9,6 +9,7 @@ const { validate, schemas } = require('../middleware/validate');
 const { events: notifEvents } = require('../lib/notifications');
 const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../lib/email');
 const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
+const { processReferral } = require('./referrals');
 
 const router = express.Router();
 
@@ -230,6 +231,13 @@ router.post('/register', validate(schemas.register), async (req, res) => {
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(userId, 'register', 'user', userId, JSON.stringify({ role })); } catch(e) {}
+
+    // Process referral if present (cookie or query param)
+    const refCode = req.cookies?.ref_code || req.body.referral_code || null;
+    if (refCode) {
+      processReferral(userId, safeEmail, refCode);
+      res.clearCookie('ref_code');
+    }
 
     res.status(201).json({
       token,

@@ -174,6 +174,8 @@ router.put('/', authenticateToken, (req, res) => {
       );
 
       const updated = db.prepare('SELECT * FROM profiles_jobseeker WHERE user_id = ?').get(req.user.id);
+      // Check badges after profile update
+      try { require('./badges').checkAndAwardBadges(req.user.id); } catch {}
       res.json(updated);
 
     } else if (user.role === 'employer') {

@@ -11,6 +11,9 @@ import {
   CheckCircle2, Users, DollarSign, TrendingDown, Lightbulb,
   FileText, Search, ExternalLink, Star
 } from 'lucide-react';
+import ReferralSection from '../../../components/ReferralSection';
+import BadgeGrid from '../../../components/BadgeGrid';
+import { useBadgeCheck } from '../../../hooks/useBadgeCheck';
 
 export default function JobseekerOverview() {
   const { user } = useAuth();
@@ -777,6 +780,9 @@ export default function JobseekerOverview() {
               </Link>
             </div>
           </div>
+
+          {/* Referral Section */}
+          <ReferralSection />
 
           {/* Skills Assessment Prompt */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-sm p-5 border border-blue-200">

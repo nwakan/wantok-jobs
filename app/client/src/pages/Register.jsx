@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../api';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { auth, referrals } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Check, X, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const { showToast } = useToast();
   const [formData, setFormData] = useState({

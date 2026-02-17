@@ -302,6 +302,9 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
     // Log application event
     db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'pending', ?, 'Initial application')`).run(application.id, req.user.id);
 
+    // Check badges after application submit
+    try { require('./badges').checkAndAwardBadges(req.user.id); } catch {}
+
     res.status(201).json(application);
   } catch (error) {
     logger.error('Apply error', { error: error.message });
