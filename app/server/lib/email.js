@@ -24,74 +24,31 @@ const EMAIL_MODE = process.env.EMAIL_MODE || 'test';
 const TEST_EMAIL = process.env.TEST_EMAIL || 'nick.wakan@gmail.com';
 const EMAIL_AUTO_SEND = process.env.EMAIL_AUTO_SEND === 'true'; // explicit opt-in for auto emails
 
-// ─── Shared HTML Layout ──────────────────────────────────────────────
+// ─── Shared HTML Layout (from email-templates.js) ────────────────────
+const { emailLayout: sharedLayout, button: sharedButton, greeting: sharedGreeting, divider: sharedDivider, COLORS } = require('./email-templates');
 
+/**
+ * Adapter: maps the old layout({ preheader, body, footerExtra }) signature
+ * to the shared emailLayout from email-templates.js so all emails use one branded wrapper.
+ */
 function layout({ preheader, body, footerExtra }) {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light">
-  <meta name="supported-color-schemes" content="light">
-  ${preheader ? `<span style="display:none!important;font-size:0;line-height:0;max-height:0;mso-hide:all;overflow:hidden">${preheader}</span>` : ''}
-  <style>
-    body { margin: 0; padding: 0; background: #f3f4f6; }
-    .btn { background: #16a34a; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px; }
-    .btn:hover { background: #15803d; }
-    .btn-outline { background: transparent; color: #16a34a !important; border: 2px solid #16a34a; padding: 12px 26px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 14px; }
-    a { color: #16a34a; }
-    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px; margin-bottom: 14px; background: #ffffff; }
-  </style>
-</head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;">
-    <tr><td align="center" style="padding:24px 12px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-        <!-- Header -->
-        <tr><td style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);padding:28px 32px;text-align:center;">
-          <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:700;letter-spacing:-0.5px;">WantokJobs</h1>
-          <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:13px;">Papua New Guinea's Smart Job Platform</p>
-        </td></tr>
-        <!-- Body -->
-        <tr><td style="padding:32px 32px 24px;">
-          ${body}
-        </td></tr>
-        <!-- Footer -->
-        <tr><td style="background:#f9fafb;padding:24px 32px;border-top:1px solid #e5e7eb;">
-          ${footerExtra || ''}
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="text-align:center;padding-top:12px;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;">
-                <a href="${BASE_URL}" style="color:#6b7280;text-decoration:none;">WantokJobs</a> · 
-                <a href="${BASE_URL}/jobs" style="color:#6b7280;text-decoration:none;">Browse Jobs</a> · 
-                <a href="${BASE_URL}/contact" style="color:#6b7280;text-decoration:none;">Contact Us</a>
-              </p>
-              <p style="margin:8px 0 0;font-size:11px;color:#d1d5db;">
-                WantokJobs — Connecting Papua New Guinea's talent with opportunity.<br>
-                You're receiving this because you have an account at wantokjobs.com.
-              </p>
-            </td></tr>
-          </table>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  return sharedLayout({
+    preheader,
+    body: `${body}${footerExtra ? `<div style="margin-top:24px;">${footerExtra}</div>` : ''}`,
+    footerText: "You're receiving this because you have an account at wantokjobs.com.",
+  });
 }
 
 function button(text, url, outline = false) {
-  return `<p style="text-align:center;margin:28px 0 8px;"><a href="${url}" class="${outline ? 'btn-outline' : 'btn'}" style="${outline ? `background:transparent;color:#16a34a;border:2px solid #16a34a;padding:12px 26px;` : `background:#16a34a;color:#ffffff;padding:14px 28px;`}text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:${outline ? '14' : '15'}px;">${text}</a></p>`;
+  return sharedButton(text, url, { variant: outline ? 'secondary' : 'primary' });
 }
 
 function greeting(name) {
-  return `<p style="font-size:16px;color:#111827;margin:0 0 16px;">Hi ${name || 'there'},</p>`;
+  return sharedGreeting(name);
 }
 
 function divider() {
-  return `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">`;
+  return sharedDivider();
 }
 
 // ─── Core Send Function ──────────────────────────────────────────────

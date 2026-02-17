@@ -90,6 +90,9 @@ function emailLayout({ preheader, body, footerText, showUnsubscribe = false, uns
             "Wantok" — friend, connection, together. 🇵🇬
           </p>
           
+          <p style="margin:8px 0 0;font-size:12px;color:#9CA3AF;text-align:center;font-weight:600;">
+            WantokJobs — Papua New Guinea's #1 Job Board
+          </p>
           <p style="margin:8px 0 0;font-size:11px;color:#D1D5DB;text-align:center;">
             © ${new Date().getFullYear()} WantokJobs. Connecting PNG's talent with opportunity.
           </p>
