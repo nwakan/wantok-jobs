@@ -20,6 +20,7 @@ export default function Login() {
   const [rateLimited, setRateLimited] = useState(false);
   const [rateLimitTime, setRateLimitTime] = useState(0);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [forceReset, setForceReset] = useState(false);
   const [oauthProviders, setOauthProviders] = useState([]);
   
   // Check for session expired flag
@@ -98,6 +99,14 @@ export default function Login() {
 
     try {
       const response = await auth.login({ email: formData.email, password: formData.password });
+      
+      // Handle force password reset for legacy users
+      if (response.forceReset) {
+        setForceReset(true);
+        setError(response.message || 'Your account needs a password reset.');
+        setLoading(false);
+        return;
+      }
       
       // Handle remember me
       if (formData.rememberMe) {
@@ -295,7 +304,23 @@ export default function Login() {
         )}
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
+          {forceReset && (
+            <div className="border px-4 py-3 rounded bg-amber-50 border-amber-400 text-amber-800">
+              <AlertCircle className="w-5 h-5 inline mr-2" />
+              <strong>Password Reset Required</strong>
+              <p className="mt-2 text-sm">
+                Your account was imported from our previous system and needs a password reset for security.
+              </p>
+              <Link
+                to="/forgot-password"
+                className="mt-3 inline-block w-full text-center py-2 px-4 bg-amber-600 text-white rounded-md hover:bg-amber-700 font-medium text-sm"
+              >
+                Reset Your Password
+              </Link>
+            </div>
+          )}
+          
+          {error && !forceReset && (
             <div className={`border px-4 py-3 rounded flex items-start gap-2 ${
               sessionExpired ? 'bg-blue-100 border-blue-400 text-blue-700' :
               rateLimited ? 'bg-orange-100 border-orange-400 text-orange-700' : 

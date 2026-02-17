@@ -277,6 +277,14 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       }
     }
 
+    // Force password reset for legacy users (non-bcrypt password format)
+    if (!user.password_format || user.password_format !== 'bcrypt') {
+      return res.status(200).json({
+        forceReset: true,
+        message: 'Your account needs a password reset. Please use Forgot Password to set a new password.'
+      });
+    }
+
     let valid = false;
     let needsRehash = false;
 
@@ -316,7 +324,7 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     // Migrate legacy password to bcrypt
     if (needsRehash) {
       const newHash = await bcrypt.hash(password, 10);
-      db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?")
+      db.prepare("UPDATE users SET password_hash = ?, password_format = 'bcrypt', updated_at = datetime('now') WHERE id = ?")
         .run(newHash, user.id);
       logger.info('log', { detail: `✅ Migrated legacy password for user: ${email}` });
     }
@@ -518,7 +526,7 @@ router.post('/reset-password', validate(schemas.resetPassword), async (req, res)
     if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
 
     const password_hash = await bcrypt.hash(password, 10);
-    db.prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, password_changed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(password_hash, user.id);
+    db.prepare("UPDATE users SET password_hash = ?, password_format = 'bcrypt', reset_token = NULL, reset_token_expires = NULL, password_changed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(password_hash, user.id);
 
     notifEvents.onPasswordChanged(user);
 
@@ -563,7 +571,7 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
     if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    db.prepare("UPDATE users SET password_hash = ?, force_password_reset = 0, password_changed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(newHash, user.id);
+    db.prepare("UPDATE users SET password_hash = ?, password_format = 'bcrypt', force_password_reset = 0, password_changed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(newHash, user.id);
 
     notifEvents.onPasswordChanged(user);
     sendPasswordChangedEmail(user).catch(() => {});
