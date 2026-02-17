@@ -194,6 +194,7 @@ function App() {
                 <Route path="interviews" element={<Lazy component={EmployerInterviews} />} />
                 <Route path="profile" element={<Lazy component={CompanyProfile} />} />
                 <Route path="onboarding" element={<Lazy component={EmployerOnboarding} />} />
+                <Route path="settings" element={<Lazy component={EmployerSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 
