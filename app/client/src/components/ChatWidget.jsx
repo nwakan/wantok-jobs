@@ -24,7 +24,8 @@ export default function ChatWidget() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [hasGreeted, setHasGreeted] = useState(false);
+  const [hasGreeted, setHasGreeted] = useState(() => !!localStorage.getItem('jean_session'));
+  const [showHint, setShowHint] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -36,8 +37,15 @@ export default function ChatWidget() {
   useEffect(() => {
     fetch(`${API_URL}/chat/settings`)
       .then(r => r.json())
-      .then(s => setSettings(s))
-      .catch(() => {});
+      .then(s => {
+        setSettings(s);
+        // Show proactive hint after delay for new visitors
+        if (s?.proactive && !localStorage.getItem('jean_session')) {
+          const timer = setTimeout(() => setShowHint(true), 3000);
+          return () => clearTimeout(timer);
+        }
+      })
+      .catch(() => setSettings({ enabled: true, proactive: false, voiceEnabled: false }));
   }, []);
 
   // Load history when opened
@@ -288,14 +296,14 @@ export default function ChatWidget() {
       {!isOpen && (
         <div className="fixed bottom-4 right-4 z-50 flex items-end gap-3">
           {/* Proactive hint (shows briefly for new visitors) */}
-          {!hasGreeted && settings?.proactive && (
+          {showHint && !hasGreeted && settings?.proactive && (
             <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm px-4 py-2.5 rounded-2xl rounded-br-md shadow-lg max-w-[220px] animate-fade-in cursor-pointer border dark:border-gray-700"
-                 onClick={() => setIsOpen(true)}>
+                 onClick={() => { setShowHint(false); setIsOpen(true); }}>
               Hi! 👋 I'm Jean. Need help finding a job or posting one?
             </div>
           )}
           <button
-            onClick={() => setIsOpen(true)}
+            onClick={() => { setShowHint(false); setIsOpen(true); }}
             className="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-4 shadow-xl transition-all hover:scale-110 active:scale-95 relative"
             aria-label="Chat with Jean"
           >

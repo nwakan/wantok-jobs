@@ -203,6 +203,8 @@ class Jean {
           `Bye${name ? ' ' + name : ''}! Don't hesitate to come back — I'm always here. 😊`,
           `Lukim yu${name ? ', ' + name : ''}! All the best. 🙌`,
           `Take care! Remember, your dream job might be just one application away. 💪`,
+          `Orait${name ? ' ' + name : ''}, go well! Mi stap hia sapos yu nidim help. 😊`,
+          `Catch you later${name ? ', ' + name : ''}! Wishing you gutpela taim. 🌟`,
         ];
         return { message: farewells[Math.floor(Math.random() * farewells.length)], intent };
       }
@@ -276,7 +278,11 @@ class Jean {
 
       case 'job_alerts':
         if (!user) return { message: getResponse('needs_login', 'default'), intent };
-        return { message: "You can manage your job alerts in your [dashboard](/dashboard/jobseeker/alerts).\n\nOr tell me what kind of jobs you want alerts for and I'll set it up!", intent };
+        return {
+          message: personality.humanize("You can manage your job alerts in your [dashboard](/dashboard/jobseeker/alerts).\n\nOr tell me what kind of jobs you want alerts for and I'll set it up! Bai mi mekim sure yu no misim wanpela gutpela wok. 😊"),
+          quickReplies: ['Set Up Alert', 'My Alerts', 'Search Jobs'],
+          intent,
+        };
 
       case 'browse_categories':
         return this.handleCategories();
@@ -285,13 +291,13 @@ class Jean {
         return this.handleCompanies();
 
       case 'pricing':
-        return { message: getResponse('pricing', 'info'), intent };
+        return { message: personality.humanize(getResponse('pricing', 'info')), quickReplies: ['Register Free', 'Post a Job', 'Contact Sales'], intent };
 
       case 'help_register':
-        return { message: getResponse('register', 'guide'), intent };
+        return { message: personality.humanize(getResponse('register', 'guide')), quickReplies: ['I\'m a Jobseeker', 'I\'m an Employer'], intent };
 
       case 'help_login':
-        return { message: getResponse('login', 'guide'), intent };
+        return { message: personality.humanize(getResponse('login', 'guide')), quickReplies: ['Reset Password', 'Register Instead'], intent };
 
       case 'check_messages':
         if (!user) return { message: getResponse('needs_login', 'default'), intent };
@@ -307,7 +313,11 @@ class Jean {
 
       case 'check_offers':
         if (!user) return { message: getResponse('needs_login', 'default'), intent };
-        return { message: "Check your [offer letters](/dashboard/jobseeker/offers) in the dashboard.", intent };
+        return {
+          message: personality.humanize("Check your [offer letters](/dashboard/jobseeker/offers) in the dashboard. 📬\n\nIf you've received an offer — congratulations! Em gutpela tru! 🎉"),
+          quickReplies: ['My Applications', 'My Interviews', 'Search More Jobs'],
+          intent,
+        };
 
       case 'check_credits':
         if (!user) return { message: getResponse('needs_login', 'default'), intent };
@@ -315,7 +325,11 @@ class Jean {
 
       case 'employer_analytics':
         if (!user) return { message: getResponse('needs_login', 'default'), intent };
-        return { message: "View your [analytics dashboard](/dashboard/employer/analytics) for detailed stats on views, applications, and performance.", intent };
+        return {
+          message: personality.humanize("View your [analytics dashboard](/dashboard/employer/analytics) for detailed stats on views, applications, and performance. 📊\n\nWant me to give you a quick summary of how your jobs are doing?"),
+          quickReplies: ['Quick Summary', 'My Jobs', 'Post a Job'],
+          intent,
+        };
 
       case 'celebration': {
         const celebs = [
@@ -342,7 +356,11 @@ class Jean {
         return this.startFlow(session, 'contact-support', user);
 
       case 'faq':
-        return { message: "Check our [FAQ page](/faq) for common questions, or ask me directly — I might know the answer! 😊", intent };
+        return {
+          message: personality.humanize("Check our [FAQ page](/faq) for common questions, or ask me directly — I might know the answer! 😊\n\nMi save planti samting bilong WantokJobs, so just askim!"),
+          quickReplies: ['How Does It Work?', 'Is It Free?', 'Contact Support'],
+          intent,
+        };
 
       case 'confirm':
         // Context-dependent confirm (e.g., draft approval)
@@ -424,20 +442,17 @@ class Jean {
 
   handleJobDetails(params) {
     if (!params.job_id) {
-      return { message: "Which job would you like details on? Give me a job number or tell me what you're looking for.", intent: 'job_details' };
+      return { message: personality.humanize("Which job would you like details on? Give me a job number or tell me what you're looking for."), intent: 'job_details' };
     }
     const job = actions.getJob(db, params.job_id);
-    if (!job) return { message: "I couldn't find that job. It may have been removed.", intent: 'job_details' };
+    if (!job) return { message: personality.humanize("I couldn't find that job — em i lus pinis. It may have been removed or the listing closed."), intent: 'job_details' };
 
-    const parts = [`**${job.title}**`, `🏢 ${job.company_name || 'Company'}`];
-    if (job.location) parts.push(`📍 ${job.location}`);
-    if (job.job_type) parts.push(`💼 ${job.job_type}`);
-    if (job.salary_min) parts.push(`💰 K${job.salary_min}${job.salary_max ? '-' + job.salary_max : '+'}`);
-    if (job.description) parts.push(`\n${job.description.substring(0, 500)}...`);
-    parts.push(`\n➡️ [View Full Job](/jobs/${job.id})`);
+    const card = personality.formatJobCard(job, 1);
+    const desc = job.description ? `\n\n${job.description.substring(0, 500)}...` : '';
+    const msg = `Here are the details:\n\n${card}${desc}\n\n➡️ [View Full Job](/jobs/${job.id})`;
 
     return {
-      message: parts.join('\n'),
+      message: personality.humanize(msg),
       quickReplies: ['Apply Now', 'Save Job', 'Similar Jobs'],
       intent: 'job_details',
     };
@@ -527,13 +542,27 @@ class Jean {
   handleCheckApplications(user) {
     const apps = actions.getMyApplications(db, user.id);
     if (!apps.length) {
-      return { message: "You haven't applied to any jobs yet. Want me to help you find some?", quickReplies: ['Search Jobs'], intent: 'check_applications' };
+      return {
+        message: personality.humanize("You haven't applied to any jobs yet — but no worries, let's change that! Mi ken helpim yu painim gutpela wok. 💪"),
+        quickReplies: ['Search Jobs', 'Browse Categories', 'Build My CV'],
+        intent: 'check_applications',
+      };
     }
     const list = apps.slice(0, 10).map((a, i) => {
       const status = { pending: '⏳', reviewed: '👀', shortlisted: '⭐', rejected: '❌', hired: '✅' }[a.status] || '📋';
       return `${i + 1}. ${status} **${a.title}** — ${a.company_name || 'Company'}\n   Status: ${a.status} | Applied: ${new Date(a.applied_at).toLocaleDateString()}`;
     }).join('\n\n');
-    return { message: `📨 Your applications (${apps.length}):\n\n${list}`, intent: 'check_applications' };
+
+    const shortlisted = apps.filter(a => a.status === 'shortlisted').length;
+    const extra = shortlisted > 0 ? `\n\n🌟 ${personality.naturalCount(shortlisted, 'application')} shortlisted — gutpela tru!` : '';
+
+    const suggestion = personality.suggestNext(user, 'search');
+
+    return {
+      message: personality.humanize(`📨 Your applications (${personality.naturalCount(apps.length, 'application')}):\n\n${list}${extra}${suggestion ? '\n\n💡 ' + suggestion : ''}`),
+      quickReplies: ['Search More Jobs', 'Update Profile', 'Set Up Auto-Apply'],
+      intent: 'check_applications',
+    };
   }
 
   handleManageJobs(user) {

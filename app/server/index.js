@@ -387,6 +387,57 @@ try {
 // Global error handler (MUST be last middleware)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+// ─── Graceful Shutdown ─────────────────────────────────────────────
+const server = app.listen(PORT, () => {
   logger.info(`WantokJobs server running on port ${PORT}`, { port: PORT, env: process.env.NODE_ENV || 'development' });
 });
+
+// Keep-alive timeout should exceed reverse proxy timeout (default 5s is too low)
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
+function gracefulShutdown(signal) {
+  logger.info(`${signal} received — shutting down gracefully`, { signal });
+
+  // Stop accepting new connections
+  server.close(() => {
+    logger.info('HTTP server closed');
+
+    // Close database connection
+    try {
+      const db = require('./database');
+      if (db && typeof db.close === 'function') {
+        db.close();
+        logger.info('Database connection closed');
+      }
+    } catch (e) {
+      logger.error('Error closing database', { error: e.message });
+    }
+
+    process.exit(0);
+  });
+
+  // Force exit after 15s if connections won't drain
+  setTimeout(() => {
+    logger.error('Forced shutdown — connections did not drain in 15s');
+    process.exit(1);
+  }, 15000).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Catch unhandled rejections and uncaught exceptions
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Promise Rejection', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+  });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception — shutting down', { error: error.message, stack: error.stack });
+  gracefulShutdown('uncaughtException');
+});
+
+module.exports = app; // For testing
