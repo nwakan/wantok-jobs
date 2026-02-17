@@ -67,7 +67,7 @@ function validatePasswordStrength(password) {
 
 // Security: Maximum failed attempts before lockout
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 15;
+const LOCKOUT_DURATION_MINUTES = 30;
 
 /**
  * GET /api/auth/captcha
@@ -301,13 +301,30 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     if (!valid) {
       // Security: Increment failed attempts
       const newFailedAttempts = (user.failed_attempts || 0) + 1;
+      const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
       
+      // Audit log: failed login attempt with IP
+      logger.warn('Failed login attempt', {
+        email: user.email,
+        userId: user.id,
+        ip: clientIp,
+        attempt: newFailedAttempts,
+        userAgent: req.headers['user-agent'],
+      });
+
       if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
         // Lock account
         const lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000).toISOString();
         db.prepare("UPDATE users SET failed_attempts = ?, lockout_until = ? WHERE id = ?")
           .run(newFailedAttempts, lockoutUntil, user.id);
         
+        logger.warn('Account locked due to failed attempts', {
+          email: user.email,
+          userId: user.id,
+          ip: clientIp,
+          lockoutUntil,
+        });
+
         return res.status(429).json({ 
           error: `Too many failed login attempts. Account locked for ${LOCKOUT_DURATION_MINUTES} minutes.` 
         });

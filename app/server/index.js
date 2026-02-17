@@ -50,9 +50,21 @@ const apiCache = require('./middleware/cache');
 
 // Security headers (enhanced CSRF protection)
 app.use(helmet({
-  contentSecurityPolicy: false, // Allow inline scripts for SPA
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // SPA needs inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "https://accounts.google.com", "https://www.googleapis.com"],
+      frameSrc: ["'self'", "https://accounts.google.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+    },
+  },
   crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow Vite's crossorigin script/link tags
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // Additional CSRF protection header
@@ -110,27 +122,27 @@ app.use(requestLogger);
 
 // Stricter per-route rate limiters
 const loginLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many login attempts. Please wait a minute.', code: 'RATE_LIMIT' },
+  message: { error: 'Too many login attempts. Please wait 15 minutes.', code: 'RATE_LIMIT' },
 });
 
 const registerLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many registration attempts. Please wait a minute.', code: 'RATE_LIMIT' },
+  message: { error: 'Too many registration attempts. Please try again later.', code: 'RATE_LIMIT' },
 });
 
 const forgotPasswordLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many password reset attempts. Please wait a minute.', code: 'RATE_LIMIT' },
+  message: { error: 'Too many password reset attempts. Please try again later.', code: 'RATE_LIMIT' },
 });
 
 const authLimiter = rateLimit({
@@ -141,16 +153,16 @@ const authLimiter = rateLimit({
   message: { error: 'Too many authentication attempts. Please wait a minute.', code: 'RATE_LIMIT' },
 });
 
-// Contact form rate limit: 5/min
+// Contact form rate limit: 5/hour
 const contactLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
-  message: { error: 'Too many submissions. Please wait a minute.', code: 'RATE_LIMIT' },
+  message: { error: 'Too many submissions. Please try again later.', code: 'RATE_LIMIT' },
 });
 
-// Application rate limit: 10/min per user (keyed by auth user)
+// Application rate limit: 10/hour per user (keyed by auth user)
 const applicationLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
