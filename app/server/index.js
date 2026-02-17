@@ -42,6 +42,7 @@ const apiCache = require('./middleware/cache');
 app.use(helmet({
   contentSecurityPolicy: false, // Allow inline scripts for SPA
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow Vite's crossorigin script/link tags
 }));
 
 // Additional CSRF protection header
@@ -60,18 +61,24 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
 
 // Default production origins if CORS_ORIGIN not set
 if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
-  allowedOrigins.push('https://wantokjobs.com', 'https://www.wantokjobs.com');
+  allowedOrigins.push('https://wantokjobs.com', 'https://www.wantokjobs.com', 'https://tolarai.com', 'https://www.tolarai.com');
   logger.warn('No CORS_ORIGIN set in production. Using default: wantokjobs.com');
 }
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // Allow requests with no origin (mobile apps, Postman, same-origin etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // Allow same-host requests (different port/protocol)
+      try {
+        const url = new URL(origin);
+        const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
+        if (isLocalhost) return callback(null, true);
+      } catch {}
       logger.warn('CORS blocked', { origin, allowed: allowedOrigins });
       callback(new Error('Not allowed by CORS'));
     }
