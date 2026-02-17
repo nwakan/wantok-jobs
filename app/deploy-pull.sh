@@ -27,8 +27,12 @@ fi
 chown -R wantokjobs:wantokjobs "$REPO_DIR"
 
 # Stop service before migrations (avoid SQLITE_CORRUPT)
-echo "Stopping service for migrations..."
-sudo systemctl stop wantokjobs
+echo "Stopping service..."
+systemctl stop wantokjobs
+sleep 1
+
+# Clean WAL/SHM files
+rm -f "$APP_DIR/server/data/wantokjobs.db-wal" "$APP_DIR/server/data/wantokjobs.db-shm"
 
 # Run migrations
 echo "Running migrations..."
@@ -38,7 +42,7 @@ cd "$REPO_DIR"
 
 # Start service
 echo "Starting service..."
-sudo systemctl start wantokjobs
+systemctl start wantokjobs
 sleep 2
 
 # Health check
