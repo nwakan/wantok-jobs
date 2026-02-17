@@ -90,6 +90,7 @@ fi
 if [ "$DB_CHANGED" = true ]; then
   log "📊 Creating clean DB snapshot..."
   cd "$APP_DIR"
+  rm -f /tmp/wantokjobs-deploy.db
   node -e "
     const db = require('./node_modules/better-sqlite3')('$LOCAL_DB', {readonly:true});
     db.exec(\"VACUUM INTO '/tmp/wantokjobs-deploy.db'\");
