@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { toast } from '../components/Toast';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { useToast } from '../components/Toast';
+const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
 const statusColors = {
   submitted: 'bg-gray-100 text-gray-800',
@@ -35,6 +33,7 @@ const categoryLabels = {
 };
 
 export default function Features() {
+  const toast = useToast();
   const { user, token } = useAuth();
   const [features, setFeatures] = useState([]);
   const [stats, setStats] = useState({ total: 0, planned: 0, inProgress: 0, completed: 0, yourVotes: 0 });
@@ -67,8 +66,9 @@ export default function Features() {
       params.append('sort', sortBy);
 
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(`${API_URL}/api/features?${params}`, { headers });
-      setFeatures(response.data);
+      const res = await fetch(`${API_URL}/api/features?${params}`, { headers });
+      if (!res.ok) throw new Error('Failed');
+      setFeatures(await res.json());
     } catch (error) {
       console.error('Failed to load features:', error);
       toast.error('Failed to load feature requests');
@@ -80,8 +80,8 @@ export default function Features() {
   const loadStats = async () => {
     try {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(`${API_URL}/api/features/stats`, { headers });
-      setStats(response.data);
+      const res = await fetch(`${API_URL}/api/features/stats`, { headers });
+      if (res.ok) setStats(await res.json());
     } catch (error) {
       console.error('Failed to load stats:', error);
     }
@@ -94,12 +94,12 @@ export default function Features() {
     }
 
     try {
-      const response = await axios.post(
-        `${API_URL}/api/features/${featureId}/vote`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(response.data.message);
+      const res = await fetch(`${API_URL}/api/features/${featureId}/vote`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw { response: { data } };
+      toast.success(data.message);
       loadFeatures();
       loadStats();
     } catch (error) {
@@ -115,11 +115,11 @@ export default function Features() {
     }
 
     try {
-      await axios.post(
-        `${API_URL}/api/features`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await fetch(`${API_URL}/api/features`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (!res.ok) { const d = await res.json(); throw { response: { data: d } }; }
       toast.success('Feature request submitted!');
       setShowSubmitForm(false);
       setFormData({ title: '', description: '', category: 'general' });
@@ -132,8 +132,8 @@ export default function Features() {
 
   const loadComments = async (featureId) => {
     try {
-      const response = await axios.get(`${API_URL}/api/features/${featureId}/comments`);
-      setComments(response.data);
+      const res = await fetch(`${API_URL}/api/features/${featureId}/comments`);
+      if (res.ok) setComments(await res.json());
     } catch (error) {
       console.error('Failed to load comments:', error);
     }
@@ -147,11 +147,11 @@ export default function Features() {
     }
 
     try {
-      await axios.post(
-        `${API_URL}/api/features/${selectedFeature.id}/comment`,
-        { comment: newComment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await fetch(`${API_URL}/api/features/${selectedFeature.id}/comment`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: newComment })
+      });
+      if (!res.ok) { const d = await res.json(); throw { response: { data: d } }; }
       toast.success('Comment added!');
       setNewComment('');
       loadComments(selectedFeature.id);

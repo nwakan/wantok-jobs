@@ -88,7 +88,7 @@ export default function About() {
               {
                 icon: CheckCircle,
                 title: 'Transparency Scoring',
-                desc: 'Employers get a score (0-100) based on how transparent their hiring is. Public data shows who's complying.'
+                desc: 'Employers get a score (0-100) based on how transparent their hiring is. Public data shows who is complying.'
               }
             ].map((item, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
