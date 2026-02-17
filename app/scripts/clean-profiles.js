@@ -188,25 +188,33 @@ function removeSpamJobseekers() {
   // These are clearly automated registrations
   const KNOWN_SPAM_NAMES = ['3 No', '3 Yes', '2 Yes', '1 Yes', '2 No', '1 No'];
   
-  const spamUsers = db.prepare(`
-    SELECT u.id, u.name, u.email
+  // Phase 1: Known spam name patterns (bot registrations)
+  const spamByName = db.prepare(`
+    SELECT u.id, u.name
     FROM users u
-    LEFT JOIN profiles_jobseeker p ON u.id = p.user_id
     WHERE u.role = 'jobseeker'
-    AND (
-      u.name IN (${KNOWN_SPAM_NAMES.map(() => '?').join(',')})
-      OR (
-        u.name IN (
-          SELECT name FROM users WHERE role = 'jobseeker' GROUP BY name HAVING COUNT(*) > 10
-        )
-        AND (p.phone IS NULL OR p.phone = '')
-        AND (p.bio IS NULL OR p.bio = '')
-        AND (p.skills IS NULL OR p.skills = '' OR p.skills = '[]')
-        AND (p.work_history IS NULL OR p.work_history = '' OR p.work_history = '[]')
-        AND (p.education IS NULL OR p.education = '' OR p.education = '[]')
-      )
-    )
+    AND u.name IN (${KNOWN_SPAM_NAMES.map(() => '?').join(',')})
   `).all(...KNOWN_SPAM_NAMES);
+
+  // Phase 2: Other repeated names (>10x) with completely empty profiles
+  const spamByPattern = db.prepare(`
+    SELECT u.id, u.name
+    FROM users u
+    JOIN profiles_jobseeker p ON u.id = p.user_id
+    WHERE u.role = 'jobseeker'
+    AND u.name NOT IN (${KNOWN_SPAM_NAMES.map(() => '?').join(',')})
+    AND u.name IN (
+      SELECT name FROM users WHERE role = 'jobseeker' GROUP BY name HAVING COUNT(*) > 10
+    )
+    AND (p.phone IS NULL OR p.phone = '')
+    AND (p.bio IS NULL OR p.bio = '')
+    AND (p.skills IS NULL OR p.skills = '' OR p.skills = '[]')
+    AND (p.work_history IS NULL OR p.work_history = '' OR p.work_history = '[]')
+    AND (p.education IS NULL OR p.education = '' OR p.education = '[]')
+  `).all(...KNOWN_SPAM_NAMES);
+
+  const spamUsers = [...spamByName, ...spamByPattern];
+  console.log(`  Known spam names: ${spamByName.length}, Pattern-based: ${spamByPattern.length}`);
 
   console.log(`\n  Found ${spamUsers.length} likely spam accounts (repeated names + empty profiles)`);
 
