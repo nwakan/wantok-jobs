@@ -69,12 +69,11 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   // Respond immediately, deploy in background
   res.json({ status: 'deploying', pusher, commits });
 
-  const deployScript = path.join(REPO_DIR, 'deploy-pull.sh');
-  const logFile = path.join(REPO_DIR, 'deploy.log');
-  // Fully detach: nohup + redirect so deploy survives service restart
-  const child = exec(`nohup bash ${deployScript} > ${logFile} 2>&1 &`, { cwd: REPO_DIR });
-  child.unref();
-  logger.info('Deploy process spawned (detached)');
+  // Trigger systemd deploy service (runs independently of this process)
+  exec('sudo systemctl start wantokjobs-deploy', (err) => {
+    if (err) logger.error('Failed to trigger deploy service', { error: err.message });
+    else logger.info('Deploy service triggered');
+  });
 });
 
 module.exports = router;
