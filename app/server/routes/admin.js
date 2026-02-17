@@ -9,6 +9,65 @@ const router = express.Router();
 // All routes require auth + admin role
 router.use(authenticateToken, requireRole('admin'));
 
+// Dashboard stats — single endpoint for admin overview
+router.get("/dashboard-stats", (req, res) => {
+  try {
+    // --- Quick stats (this week) ---
+    const weeklyJobs = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE created_at > datetime('now', '-7 days')").get().c;
+    const weeklyApplications = db.prepare("SELECT COUNT(*) as c FROM applications WHERE applied_at > datetime('now', '-7 days')").get().c;
+    const weeklyUsers = db.prepare("SELECT COUNT(*) as c FROM users WHERE created_at > datetime('now', '-7 days')").get().c;
+    const weeklyRevenue = db.prepare("SELECT COALESCE(SUM(amount), 0) as c FROM orders WHERE status = 'completed' AND completed_at > datetime('now', '-7 days')").get().c;
+
+    // --- System health ---
+    const activeJobs = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE status = 'active'").get().c;
+    const expiredJobs = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE status = 'closed'").get().c;
+    const totalUsers = db.prepare("SELECT COUNT(*) as c FROM users").get().c;
+    const totalJobs = db.prepare("SELECT COUNT(*) as c FROM jobs").get().c;
+
+    // --- Pending items ---
+    const pendingReports = db.prepare("SELECT COUNT(*) as c FROM reports WHERE status = 'pending'").get().c;
+    let pendingClaims = 0;
+    try { pendingClaims = db.prepare("SELECT COUNT(*) as c FROM claims WHERE status = 'pending'").get().c; } catch(e) {}
+    const pendingOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get().c;
+
+    // --- Recent activity (last 10) ---
+    // Union registrations, job posts, and applications
+    const recentActivity = db.prepare(`
+      SELECT * FROM (
+        SELECT 'registration' as type, u.name as actor, u.role as detail, u.created_at as time
+        FROM users u ORDER BY u.created_at DESC LIMIT 10
+      )
+      UNION ALL
+      SELECT * FROM (
+        SELECT 'job_posted' as type, COALESCE(pe.company_name, u.name) as actor, j.title as detail, j.created_at as time
+        FROM jobs j
+        JOIN users u ON j.employer_id = u.id
+        LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+        ORDER BY j.created_at DESC LIMIT 10
+      )
+      UNION ALL
+      SELECT * FROM (
+        SELECT 'application' as type, u.name as actor, j.title as detail, a.applied_at as time
+        FROM applications a
+        JOIN users u ON a.jobseeker_id = u.id
+        JOIN jobs j ON a.job_id = j.id
+        ORDER BY a.applied_at DESC LIMIT 10
+      )
+      ORDER BY time DESC LIMIT 10
+    `).all();
+
+    res.json({
+      weekly: { jobs: weeklyJobs, applications: weeklyApplications, users: weeklyUsers, revenue: weeklyRevenue },
+      health: { activeJobs, expiredJobs, totalUsers, totalJobs },
+      pending: { reports: pendingReports, claims: pendingClaims, refunds: pendingOrders },
+      recentActivity,
+    });
+  } catch (error) {
+    logger.error('Dashboard stats error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+  }
+});
+
 // Get platform stats
 router.get("/stats", (req, res) => {
   try {

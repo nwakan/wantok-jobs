@@ -190,6 +190,11 @@ export const admin = {
       headers: getAuthHeader(),
     }).then(handleResponse),
 
+  getDashboardStats: () =>
+    fetch(`${API_URL}/admin/dashboard-stats`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse),
+
   getUsers: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return fetch(`${API_URL}/admin/users?${queryString}`, {
