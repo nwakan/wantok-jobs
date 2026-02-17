@@ -11,47 +11,53 @@ router.get('/feed', (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
 
-    // Recent job postings (last 7 days)
+    // Recent job postings (latest by ID, not date — dates are unreliable for imports)
     const recentJobs = db.prepare(`
       SELECT j.title, j.company_name, j.created_at, j.location,
              u.name as employer_name
       FROM jobs j
       LEFT JOIN users u ON j.employer_id = u.id
-      WHERE j.status = 'active' 
-        AND j.created_at > datetime('now', '-7 days')
-      ORDER BY j.created_at DESC
+      WHERE j.status = 'active'
+      ORDER BY j.id DESC
       LIMIT ?
     `).all(limit);
 
-    // Recent signups (last 7 days, non-spam)
+    // Recent signups (latest by ID, non-spam)
     const recentSignups = db.prepare(`
       SELECT name, role, created_at
       FROM users
       WHERE COALESCE(account_status, 'active') != 'spam'
-        AND created_at > datetime('now', '-7 days')
-      ORDER BY created_at DESC
+        AND role IN ('jobseeker', 'employer')
+      ORDER BY id DESC
       LIMIT ?
     `).all(limit);
 
-    // Recent applications (last 7 days)
+    // Recent applications
     const recentApplications = db.prepare(`
-      SELECT j.title as job_title, j.company_name, a.created_at
+      SELECT j.title as job_title, j.company_name, a.applied_at as created_at
       FROM applications a
       JOIN jobs j ON a.job_id = j.id
-      WHERE a.created_at > datetime('now', '-7 days')
-        AND a.status != 'withdrawn'
-      ORDER BY a.created_at DESC
+      WHERE a.status != 'withdrawn'
+      ORDER BY a.id DESC
       LIMIT ?
     `).all(limit);
 
-    // Today's stats
-    const todayStats = db.prepare(`
-      SELECT 
-        (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND created_at > datetime('now', '-24 hours')) as jobs_today,
-        (SELECT COUNT(*) FROM users WHERE COALESCE(account_status,'active') != 'spam' AND created_at > datetime('now', '-24 hours')) as signups_today,
-        (SELECT COUNT(*) FROM applications WHERE created_at > datetime('now', '-24 hours') AND status != 'withdrawn') as applications_today,
-        (SELECT COUNT(*) FROM job_views WHERE viewed_at > datetime('now', '-24 hours')) as views_today
-    `).get();
+    // Today's stats — only count views (reliable timestamps)
+    const todayStats = {
+      jobs_today: 0,
+      signups_today: 0,
+      applications_today: 0,
+      views_today: 0,
+    };
+    try {
+      const views = db.prepare("SELECT COUNT(*) as c FROM job_views WHERE viewed_at > datetime('now', '-24 hours')").get();
+      todayStats.views_today = views.c || 0;
+    } catch {}
+    // Count jobs posted in last 24h (only scraped recently, not legacy)
+    try {
+      const recent = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE status = 'active' AND created_at > datetime('now', '-24 hours') AND id > 8000").get();
+      todayStats.jobs_today = recent.c || 0;
+    } catch {}
 
     // Build unified event feed
     const events = [];
