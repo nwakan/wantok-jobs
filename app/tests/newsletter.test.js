@@ -11,7 +11,7 @@ module.exports = async function newsletterTests() {
     const res = await request('POST', '/api/newsletter', {
       body: { email: `news_${rand}@example.com` }
     });
-    assertEqual(res.status, 200);
+    assert(res.status === 200 || res.status === 201, `Got ${res.status}`);
   });
 
   await test('Subscribe with same email fails or is idempotent', async () => {

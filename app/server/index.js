@@ -149,6 +149,37 @@ const applicationLimiter = rateLimit({
   message: { error: 'Too many applications. Please wait a minute.', code: 'RATE_LIMIT' },
 });
 
+// Upload rate limit: 20/min per user
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  validate: false,
+  message: { error: 'Too many uploads. Please wait a minute.', code: 'RATE_LIMIT' },
+});
+
+// Search rate limit: 60/min per IP (generous but prevents scraping)
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many search requests. Please slow down.', code: 'RATE_LIMIT' },
+});
+
+// Chat/AI rate limit: 15/min per user
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
+  validate: false,
+  message: { error: 'Too many chat messages. Please wait a minute.', code: 'RATE_LIMIT' },
+});
+
 // GitHub webhook — must be before express.json() to get raw body for HMAC
 app.use('/api/webhook', require('./routes/webhook'));
 
@@ -263,7 +294,7 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/companies', require('./routes/companies'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/activity', require('./routes/activity-feed'));
-app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/uploads', uploadLimiter, require('./routes/uploads'));
 app.use('/api/blog', require('./routes/blog'));
 app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api', require('./routes/reviews')); // Note: reviews uses /api directly
@@ -284,8 +315,8 @@ app.use('/api/stats', require('./routes/stats')); // Provides /api/stats/dashboa
 // Contact with rate limiting
 app.use('/api/contact', contactLimiter, require('./routes/contact'));
 
-// Jean AI Chat routes
-app.use('/api/chat', require('./routes/chat'));
+// Jean AI Chat routes (with stricter rate limiting)
+app.use('/api/chat', chatLimiter, require('./routes/chat'));
 
 // Admin routes (protected by auth middleware)
 const { authenticateToken } = require('./middleware/auth');

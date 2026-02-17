@@ -55,6 +55,18 @@ class UnauthorizedError extends AppError {
   }
 }
 
+class PaymentRequiredError extends AppError {
+  constructor(message = 'Payment required') {
+    super(message, 402, 'PAYMENT_REQUIRED');
+  }
+}
+
+class ServiceUnavailableError extends AppError {
+  constructor(message = 'Service temporarily unavailable') {
+    super(message, 503, 'SERVICE_UNAVAILABLE');
+  }
+}
+
 module.exports = {
   AppError,
   NotFoundError,
@@ -63,4 +75,6 @@ module.exports = {
   ConflictError,
   RateLimitError,
   UnauthorizedError,
+  PaymentRequiredError,
+  ServiceUnavailableError,
 };

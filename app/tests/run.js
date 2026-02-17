@@ -13,6 +13,18 @@ const testSuites = [
   { name: 'Profiles', fn: require('./profiles.test.js') },
   { name: 'Admin', fn: require('./admin.test.js') },
   { name: 'Security', fn: require('./security.test.js') },
+  { name: 'Categories', fn: require('./categories.test.js') },
+  { name: 'Notifications', fn: require('./notifications.test.js') },
+  { name: 'Newsletter', fn: require('./newsletter.test.js') },
+  { name: 'Chat', fn: require('./chat.test.js') },
+  { name: 'Stats', fn: require('./stats.test.js') },
+  { name: 'SavedJobs', fn: require('./saved-jobs.test.js') },
+  { name: 'Companies', fn: require('./companies.test.js') },
+  { name: 'EmployerAnalytics', fn: require('./employer-analytics.test.js') },
+  { name: 'JobAlerts', fn: require('./job-alerts.test.js') },
+  { name: 'Reviews', fn: require('./reviews.test.js') },
+  { name: 'Performance', fn: require('./performance.test.js') },
+  { name: 'EdgeCases', fn: require('./edge-cases.test.js') },
 ];
 
 async function main() {

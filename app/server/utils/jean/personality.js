@@ -129,13 +129,13 @@ function suggestNext(user, lastAction) {
  */
 function empathize(situation) {
   const responses = {
-    frustrated: "I understand that can be frustrating. Let me see what I can do to help.",
-    confused: "No worries — let me explain that more clearly.",
-    excited: "That's great to hear! 😊",
-    rejected: "Sorry to hear that. Don't let it get you down — the right opportunity is out there. Want me to find more jobs for you?",
-    struggling: "Job hunting can be tough, but you're doing the right thing by being proactive. Let's keep at it together.",
-    new_user: "Welcome to WantokJobs! I'll walk you through everything step by step — it's really easy.",
-    impatient: "I'll be quick! Let me pull that up for you right now.",
+    frustrated: "Mi harim yu — that can be really frustrating. Let me see what I can do to help. 🙏",
+    confused: "No worries — em i orait! Let me explain that more clearly.",
+    excited: "That's great to hear! Amamas tru! 😊",
+    rejected: "Sori tru to hear that. Don't let it get you down — the right opportunity is out there. Yu no ken givap! Want me to find more jobs for you?",
+    struggling: "Job hunting can be tough, but you're doing the right thing by being proactive. Yumi wok bung — let's keep at it together. 💪",
+    new_user: "Welcome to WantokJobs! Welkam tru! I'll walk you through everything step by step — em i isi tasol. 😊",
+    impatient: "I'll be quick! Hariap — let me pull that up for you right now. ⚡",
   };
   return responses[situation] || '';
 }

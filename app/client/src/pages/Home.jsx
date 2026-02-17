@@ -130,6 +130,19 @@ export default function Home() {
       <PageHead
         title="Find Jobs in Papua New Guinea"
         description={`Leading job platform for Papua New Guinea and the Pacific. ${stats.activeJobs}+ active jobs from ${stats.totalEmployers}+ employers. Connect with top employers, search jobs, and advance your career.`}
+        keywords="jobs PNG, Papua New Guinea jobs, Port Moresby jobs, Lae jobs, careers PNG, employment PNG"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "WantokJobs",
+          "url": "https://wantokjobs.com",
+          "description": "Leading job platform for Papua New Guinea and the Pacific Islands.",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://wantokjobs.com/jobs?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }}
       />
 
       {/* Hero Section */}

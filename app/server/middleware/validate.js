@@ -10,7 +10,9 @@ function validate(schema) {
     if (!result.success) {
       const errors = result.error?.errors || [];
       return res.status(400).json({
+        success: false,
         error: errors[0]?.message || 'Validation failed',
+        code: 'VALIDATION_ERROR',
         details: errors.map(e => ({
           field: e.path.join('.'),
           message: e.message,

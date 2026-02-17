@@ -333,17 +333,19 @@ class Jean {
 
       case 'celebration': {
         const celebs = [
-          "That's AMAZING news! 🎉🎊 Congratulations!! I'm so happy for you! All that effort paid off. You deserve it!",
-          "CONGRATULATIONS!! 🎉 That's wonderful — I knew you'd find the right fit! Best of luck in your new role! 🌟",
-          "Yes!! 🙌🎉 That's what I love to hear! You did it! Wishing you all the best in your new position!",
+          "That's AMAZING news! 🎉🎊 Congratulations!! I'm so happy for you! All that effort paid off. Yu mekim gutpela wok! You deserve it!",
+          "CONGRATULATIONS!! 🎉 That's wonderful — I knew you'd find the right fit! Amamas tru! Best of luck in your new role! 🌟",
+          "Yes!! 🙌🎉 Em nau! That's what I love to hear! You did it! Wishing you all the best in your new position!",
+          "WOW! 🎊🎉 This is what WantokJobs is all about — connecting the right people with the right opportunities. So proud of you! Gutpela tru!",
         ];
         return { message: celebs[Math.floor(Math.random() * celebs.length)], intent };
       }
 
       case 'struggling': {
         const encouragements = [
-          "I hear you — job searching can be really tough, especially when it takes longer than expected. But you're doing the right thing. 💪\n\nLet me help make it easier. I can:\n• Search for jobs matching your skills\n• Set up auto-apply so I apply for you automatically\n• Help polish your profile to stand out\n\nWhat sounds good?",
-          "Don't give up — the right opportunity is out there. Let me help you find it. 💪\n\nWant me to:\n• Search for new openings right now?\n• Set up alerts so you don't miss anything?\n• Review your profile to make sure it stands out?\n\nWe'll get through this together!",
+          "I hear you — job searching can be really tough, especially when it takes longer than expected. But you're doing the right thing by keeping at it. 💪 Yu no ken givap!\n\nLet me help make it easier. I can:\n• Search for jobs matching your skills\n• Set up auto-apply so I apply for you automatically\n• Help polish your profile to stand out\n\nWhat sounds good?",
+          "Don't give up — the right opportunity is out there. Bai em i kam! Let me help you find it. 💪\n\nWant me to:\n• Search for new openings right now?\n• Set up alerts so you don't miss anything?\n• Review your profile to make sure it stands out?\n\nYumi wok bung — we'll get through this together!",
+          "Mi harim yu — it's not easy, but plenty of people have been where you are and found their breakthrough. Let's make sure you're doing everything right. 💪\n\n• Is your profile complete and up to date?\n• Have you tried auto-apply?\n• Want me to search different categories for you?\n\nLet's try a fresh approach!",
         ];
         return {
           message: encouragements[Math.floor(Math.random() * encouragements.length)],
@@ -367,10 +369,17 @@ class Jean {
         return this.handleConfirmOutOfFlow(session, user);
 
       default: {
+        const name = user?.name?.split(' ')[0] || 'there';
         const fallback = user
-          ? `I'm not quite sure what you need, ${user.name?.split(' ')[0] || 'there'}. But I can help with:\n\n🔍 Finding jobs — just tell me what you're looking for\n👤 Your profile — I'll update it for you through chat\n📄 Your CV — I'll build it from scratch\n📨 Applying — I can apply to jobs for you\n💰 Pricing — I'll explain how it works\n\nJust tell me in your own words what you need!`
-          : "I didn't quite catch that — but no worries! Here's what I can do:\n\n🔍 **Find jobs** — tell me what you're looking for\n📂 **Browse by category** — mining, health, IT, and more\n💰 **Pricing** — it's free for job seekers!\n📝 **Sign up** — I'll walk you through it\n\nWhat would you like to do?";
-        return { message: fallback, intent };
+          ? `Sori ${name}, mi no klia long dispela. But no worries — I can help with:\n\n🔍 Finding jobs — just tell me what you're looking for\n👤 Your profile — I'll update it for you through chat\n📄 Your CV — I'll build it from scratch\n📨 Applying — I can apply to jobs for you\n💰 Pricing — I'll explain how it works\n\nJust tell me in your own words what you need — tokim mi tasol!`
+          : "Hmm, mi no klia long dispela — but no worries! Here's what I can do:\n\n🔍 **Find jobs** — tell me what you're looking for\n📂 **Browse by category** — mining, health, IT, and more\n💰 **Pricing** — it's free for job seekers!\n📝 **Sign up** — I'll walk you through it\n\nWhat would you like to do?";
+        return {
+          message: personality.humanize(fallback),
+          quickReplies: user
+            ? ['Search Jobs', 'My Profile', 'My Applications', 'Help']
+            : ['Search Jobs', 'Browse Categories', 'Register', 'Pricing'],
+          intent,
+        };
       }
     }
   }
@@ -530,8 +539,13 @@ class Jean {
     }
 
     if (result.success) {
+      const suggestion = personality.suggestNext(user, 'applied');
       return {
-        message: getResponse('apply', 'success', { title: job.title, company: job.company_name || 'the employer' }),
+        message: personality.humanize(
+          getResponse('apply', 'success', { title: job.title, company: job.company_name || 'the employer' }),
+          { justApplied: true }
+        ) + (suggestion ? '\n\n💡 ' + suggestion : ''),
+        quickReplies: ['Search Similar Jobs', 'My Applications', 'Set Up Auto-Apply'],
         intent: 'apply_job',
       };
     }
@@ -569,59 +583,102 @@ class Jean {
     if (user.role !== 'employer') return { message: getResponse('needs_role', 'employer'), intent: 'manage_jobs' };
     const jobs = actions.getEmployerJobs(db, user.id);
     if (!jobs.length) {
-      return { message: "You haven't posted any jobs yet. Want to create one?", quickReplies: ['Post a Job'], intent: 'manage_jobs' };
+      return {
+        message: personality.humanize("You haven't posted any jobs yet — let's get your first one up! Em i isi tasol. 😊"),
+        quickReplies: ['Post a Job', 'Upload Job Document'],
+        intent: 'manage_jobs',
+      };
     }
+    const activeCount = jobs.filter(j => j.status === 'active').length;
+    const totalApplicants = jobs.reduce((sum, j) => sum + (j.applicant_count || 0), 0);
     const list = jobs.slice(0, 10).map((j, i) => {
       const status = { active: '🟢', closed: '🔴', draft: '📝' }[j.status] || '⚪';
-      return `${i + 1}. ${status} **${j.title}** — ${j.applicant_count} applicants\n   📍 ${j.location || 'PNG'} | Status: ${j.status}`;
+      return `${i + 1}. ${status} **${j.title}** — ${personality.naturalCount(j.applicant_count || 0, 'applicant')}\n   📍 ${j.location || 'PNG'} | Status: ${j.status}`;
     }).join('\n\n');
-    return { message: `📋 Your job listings (${jobs.length}):\n\n${list}`, intent: 'manage_jobs' };
+
+    return {
+      message: personality.humanize(`📋 Your job listings (${personality.naturalCount(jobs.length, 'job')}, ${activeCount} active, ${personality.naturalCount(totalApplicants, 'applicant')} total):\n\n${list}\n\nTell me a job number to manage it, or say "post a job" to create a new one.`),
+      quickReplies: ['Post a Job', 'View Applicants', 'Analytics'],
+      intent: 'manage_jobs',
+    };
   }
 
   handleViewApplicants(user, params) {
     if (user.role !== 'employer') return { message: getResponse('needs_role', 'employer'), intent: 'view_applicants' };
     if (!params.job_id) {
-      // Show all jobs with applicant counts
       const jobs = actions.getEmployerJobs(db, user.id).filter(j => j.applicant_count > 0);
-      if (!jobs.length) return { message: "No applications yet. Share your job listings to get more visibility!", intent: 'view_applicants' };
-      const list = jobs.map((j, i) => `${i + 1}. **${j.title}** — ${j.applicant_count} applicants`).join('\n');
-      return { message: `Which job's applicants would you like to see?\n\n${list}`, intent: 'view_applicants' };
+      if (!jobs.length) return {
+        message: personality.humanize("No applications yet — but don't worry! Share your job listings to get more visibility. Spredem tok! 📢"),
+        quickReplies: ['My Jobs', 'Post a Job'],
+        intent: 'view_applicants',
+      };
+      const list = jobs.map((j, i) => `${i + 1}. **${j.title}** — ${personality.naturalCount(j.applicant_count, 'applicant')}`).join('\n');
+      return {
+        message: personality.humanize(`Which job's applicants would you like to review?\n\n${list}`),
+        quickReplies: jobs.slice(0, 3).map((j, i) => `#${i + 1} ${j.title.substring(0, 20)}`),
+        intent: 'view_applicants',
+      };
     }
     const result = actions.getJobApplicants(db, user.id, params.job_id);
-    if (result.error) return { message: "I couldn't access those applicants.", intent: 'view_applicants' };
-    if (!result.applicants.length) return { message: `No applicants yet for "${result.job.title}".`, intent: 'view_applicants' };
+    if (result.error) return { message: personality.humanize("I couldn't access those applicants — sori tru. Try again or check your dashboard."), intent: 'view_applicants' };
+    if (!result.applicants.length) return {
+      message: personality.humanize(`No applicants yet for "${result.job.title}". Give it some time — ol manmeri bai lukim! 🙏`),
+      quickReplies: ['Share Job', 'My Jobs'],
+      intent: 'view_applicants',
+    };
     const list = result.applicants.map((a, i) => {
       const status = { pending: '⏳', shortlisted: '⭐', rejected: '❌' }[a.status] || '📋';
       return `${i + 1}. ${status} **${a.name}** — ${a.headline || 'Jobseeker'}\n   📍 ${a.location || '?'} | Skills: ${(a.skills || '').substring(0, 80)}`;
     }).join('\n\n');
-    return { message: `Applicants for **${result.job.title}** (${result.applicants.length}):\n\n${list}\n\nSay "shortlist #1" or "reject #2" to update status.`, intent: 'view_applicants' };
+    return {
+      message: personality.humanize(`Applicants for **${result.job.title}** (${personality.naturalCount(result.applicants.length, 'person')}):\n\n${list}\n\nSay "shortlist #1" or "reject #2" to update status.`),
+      quickReplies: ['Shortlist #1', 'View Profile #1', 'Message #1'],
+      intent: 'view_applicants',
+    };
   }
 
   handleSaveJob(user, params, pageContext) {
     const jobId = params.job_id || pageContext?.jobId;
-    if (!jobId) return { message: "Which job would you like to save? Give me the job number.", intent: 'save_job' };
+    if (!jobId) return { message: personality.humanize("Which job would you like to save? Give me the job number."), intent: 'save_job' };
     const result = actions.saveJob(db, user.id, jobId);
-    if (result.success) return { message: "✅ Job saved! View your [saved jobs](/dashboard/jobseeker/saved-jobs).", intent: 'save_job' };
-    return { message: "Couldn't save that job. It may already be in your saved list.", intent: 'save_job' };
+    if (result.success) return {
+      message: personality.humanize("✅ Job saved! View your [saved jobs](/dashboard/jobseeker/saved-jobs). Gutpela — you can come back to it anytime!"),
+      quickReplies: ['Search More Jobs', 'My Saved Jobs', 'Apply Now'],
+      intent: 'save_job',
+    };
+    return { message: personality.humanize("Looks like that job is already in your saved list! Em i stap pinis. 😊"), intent: 'save_job' };
   }
 
   handleSavedJobs(user) {
     const jobs = actions.getSavedJobs(db, user.id);
-    if (!jobs.length) return { message: "No saved jobs yet. Find something you like and say 'save job #123'!", intent: 'saved_jobs' };
-    const list = jobs.map((j, i) => `${i + 1}. **${j.title}** — ${j.company_name || 'Company'}\n   📍 ${j.location || 'PNG'}`).join('\n\n');
-    return { message: `📌 Your saved jobs (${jobs.length}):\n\n${list}`, intent: 'saved_jobs' };
+    if (!jobs.length) return {
+      message: personality.humanize("No saved jobs yet — when you spot something you like, say 'save job' and I'll keep it for you! 📌"),
+      quickReplies: ['Search Jobs', 'Browse Categories'],
+      intent: 'saved_jobs',
+    };
+    const list = jobs.map((j, i) => personality.formatJobCard(j, i + 1)).join('\n\n');
+    return {
+      message: personality.humanize(`📌 Your saved jobs (${personality.naturalCount(jobs.length, 'job')}):\n\n${list}\n\nReady to apply to any of these?`),
+      quickReplies: ['Apply to #1', 'Search More Jobs', 'Remove #1'],
+      intent: 'saved_jobs',
+    };
   }
 
   handleCategories() {
     const cats = actions.getCategories(db);
-    const list = cats.map(c => `• **${c.name}** (${c.job_count} jobs)`).join('\n');
-    return { message: getResponse('categories', 'list', { list }), intent: 'browse_categories' };
+    const list = cats.map(c => `• **${c.name}** (${personality.naturalCount(c.job_count, 'job')})`).join('\n');
+    return {
+      message: personality.humanize(getResponse('categories', 'list', { list })),
+      quickReplies: cats.slice(0, 4).map(c => c.name),
+      intent: 'browse_categories',
+    };
   }
 
   handleCompanies() {
     const stats = actions.getPublicStats(db);
     return {
-      message: `We have ${stats.employers} employers on WantokJobs. Browse them at [Companies](/companies).\n\nLooking for a specific company? Tell me the name!`,
+      message: personality.humanize(`We have ${stats.employers} employers on WantokJobs — from big companies to local businesses across PNG. 🏢\n\nBrowse them at [Companies](/companies), or tell me a company name and I'll look them up!`),
+      quickReplies: ['Browse Companies', 'Who\'s Hiring?', 'Search Jobs'],
       intent: 'browse_companies',
     };
   }
@@ -629,40 +686,69 @@ class Jean {
   handleMessages(user) {
     const msgs = actions.getMessages(db, user.id);
     const unread = msgs.filter(m => !m.is_read).length;
-    if (!msgs.length) return { message: "No messages yet. Messages from employers will appear here.", intent: 'check_messages' };
+    if (!msgs.length) return {
+      message: personality.humanize("No messages yet — when employers or jobseekers reach out, you'll see them here. 📬"),
+      quickReplies: ['Search Jobs', 'My Profile'],
+      intent: 'check_messages',
+    };
     const list = msgs.slice(0, 5).map(m => {
       const read = m.is_read ? '' : '🔴 ';
       return `${read}**${m.sender_name}**: ${m.content.substring(0, 80)}...`;
     }).join('\n');
-    return { message: `📬 Messages (${unread} unread):\n\n${list}\n\n[View all messages](/dashboard/${user.role}/messages)`, intent: 'check_messages' };
+    const urgency = unread > 3 ? ' You\'ve got a few to catch up on!' : '';
+    return {
+      message: personality.humanize(`📬 Messages (${personality.naturalCount(unread, 'unread message')}):\n\n${list}${urgency}\n\n[View all messages](/dashboard/${user.role}/messages)`),
+      quickReplies: ['View All Messages', 'My Applications'],
+      intent: 'check_messages',
+    };
   }
 
   handleNotifications(user) {
     const count = actions.getUnreadCount(db, user.id);
     const notifs = actions.getNotifications(db, user.id, 5);
-    if (!notifs.length) return { message: "No notifications. You're all caught up! ✨", intent: 'check_notifications' };
+    if (!notifs.length) return {
+      message: personality.humanize("No notifications — you're all caught up! Isi tasol. ✨"),
+      intent: 'check_notifications',
+    };
     const list = notifs.map(n => {
       const read = n.is_read ? '' : '🔴 ';
       return `${read}${n.title}: ${n.message}`;
     }).join('\n');
-    return { message: `🔔 Notifications (${count} unread):\n\n${list}`, intent: 'check_notifications' };
+    return {
+      message: personality.humanize(`🔔 Notifications (${personality.naturalCount(count, 'unread')}):\n\n${list}`),
+      quickReplies: ['Mark All Read', 'My Applications', 'Search Jobs'],
+      intent: 'check_notifications',
+    };
   }
 
   handleInterviews(user) {
     const interviews = actions.getMyInterviews(db, user.id, user.role);
-    if (!interviews.length) return { message: "No interviews scheduled.", intent: 'check_interviews' };
+    if (!interviews.length) return {
+      message: personality.humanize("No interviews scheduled yet. Keep applying — em bai kam! 💪"),
+      quickReplies: ['My Applications', 'Search Jobs'],
+      intent: 'check_interviews',
+    };
     const list = interviews.slice(0, 5).map(i => {
       const date = new Date(i.scheduled_at).toLocaleString();
       return `📅 **${i.title || 'Interview'}** ${i.company_name ? `at ${i.company_name}` : ''}\n   ${date} | ${i.location || i.meeting_url || 'TBD'}`;
     }).join('\n\n');
-    return { message: `Your upcoming interviews:\n\n${list}`, intent: 'check_interviews' };
+    return {
+      message: personality.humanize(`Your upcoming interviews — gutpela tru! 🎉\n\n${list}\n\nGood luck! Prepare well and be yourself. Yu ken mekim!`),
+      quickReplies: ['My Applications', 'Update Profile'],
+      intent: 'check_interviews',
+    };
   }
 
   handleCredits(user) {
     const credits = actions.getCreditStatus(db, user.id);
-    if (!credits.balance) return { message: "No credit balance found. Check [Pricing](/pricing) for available packages.", intent: 'check_credits' };
+    if (!credits.balance) return {
+      message: personality.humanize("No credit balance found. Check [Pricing](/pricing) for available packages — we've got options for every budget! 💰"),
+      quickReplies: ['View Pricing', 'Contact Sales'],
+      intent: 'check_credits',
+    };
     return {
-      message: `💰 Credit Balance:\n\n• Job Posts: ${credits.balance.job_posts || 0}\n• AI Features: ${credits.balance.ai_features || 0}\n\n[View details](/dashboard/${user.role}/billing)`,
+      message: personality.humanize(`💰 Credit Balance:\n\n• Job Posts: ${credits.balance.job_posts || 0}\n• AI Features: ${credits.balance.ai_features || 0}\n\n[View details](/dashboard/${user.role}/billing)`),
+      quickReplies: ['Buy More Credits', 'Post a Job', 'My Jobs'],
       intent: 'check_credits',
     };
   }
@@ -678,12 +764,14 @@ class Jean {
             const profileData = linkedin.toEmployerProfile(data);
             actions.updateEmployerProfile(db, user.id, profileData);
             this.clearFlow(session.id);
-            return { message: "✅ Company profile updated from LinkedIn!", intent: 'confirm' };
+            const suggestion = personality.suggestNext(user, 'profile-updated');
+            return { message: personality.humanize("✅ Company profile updated from LinkedIn! Nau em i lukim gutpela. 🎉") + (suggestion ? '\n\n💡 ' + suggestion : ''), quickReplies: ['Post a Job', 'My Jobs'], intent: 'confirm' };
           } else if (data.type === 'person') {
             const profileData = linkedin.toJobseekerProfile(data);
             actions.updateJobseekerProfile(db, user.id, profileData);
             this.clearFlow(session.id);
-            return { message: "✅ Profile updated from LinkedIn! Want me to build your CV from it?", quickReplies: ['Build CV', 'No thanks'], intent: 'confirm' };
+            const suggestion = personality.suggestNext(user, 'profile-updated');
+            return { message: personality.humanize("✅ Profile updated from LinkedIn! Em i gutpela tru. 🎉\n\nWant me to build your CV from it?"), quickReplies: ['Build CV', 'Search Jobs', 'No thanks'], intent: 'confirm' };
           }
         }
       } catch (e) {}
@@ -710,7 +798,7 @@ class Jean {
    */
   async handleFileUpload(session, file, user) {
     if (!user || user.role !== 'employer') {
-      return { message: "Document upload for job creation is available for employers. Please [log in](/login) as an employer." };
+      return { message: personality.humanize("Document upload for job creation is available for employers. Please [log in](/login) as an employer.") };
     }
     if (!actions.isFeatureEnabled(db, 'document_parse_enabled')) {
       return { message: getResponse('feature_disabled', 'document_parse') };

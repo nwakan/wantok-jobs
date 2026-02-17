@@ -168,12 +168,12 @@ export default function SwipeableJobCard({
                 {job.created_at && timeAgo(job.created_at)}
               </span>
               <div className="flex items-center gap-3">
-                {job.views_count > 0 && (
+                {job.views_count > 0 ? (
                   <span>👁️ {job.views_count}</span>
-                )}
-                {job.applications_count > 0 && (
+                ) : null}
+                {job.applications_count > 0 ? (
                   <span>📝 {job.applications_count} {t('jobs.applicants')}</span>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

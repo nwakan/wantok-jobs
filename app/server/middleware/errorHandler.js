@@ -38,7 +38,7 @@ function errorHandler(err, req, res, next) {
   // 1. Handle our custom AppError hierarchy
   if (err instanceof AppError) {
     logger.warn(`${err.code}: ${err.message}`, logData);
-    const response = { error: err.message, code: err.code };
+    const response = { success: false, error: err.message, code: err.code };
     if (err.details) response.details = err.details;
     return res.status(err.statusCode).json(response);
   }
@@ -47,13 +47,14 @@ function errorHandler(err, req, res, next) {
   if (err.code && err.code.startsWith('SQLITE_')) {
     const mapped = SQLITE_ERRORS[err.code] || { status: 500, message: 'Database error', code: 'DB_ERROR' };
     logger.error(`SQLite ${err.code}: ${err.message}`, logData);
-    return res.status(mapped.status).json({ error: mapped.message, code: mapped.code });
+    return res.status(mapped.status).json({ success: false, error: mapped.message, code: mapped.code });
   }
 
   // 3. Handle Zod validation errors (from validate middleware bypass)
   if (err.name === 'ZodError') {
     logger.warn('Zod validation error', { ...logData, issues: err.issues?.length });
     return res.status(400).json({
+      success: false,
       error: err.issues?.[0]?.message || 'Validation failed',
       code: 'VALIDATION_ERROR',
     });
@@ -62,20 +63,20 @@ function errorHandler(err, req, res, next) {
   // 4. Handle JWT errors
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     logger.warn(`JWT error: ${err.message}`, logData);
-    return res.status(401).json({ error: 'Invalid or expired token', code: 'AUTH_ERROR' });
+    return res.status(401).json({ success: false, error: 'Invalid or expired token', code: 'AUTH_ERROR' });
   }
 
   // 5. Handle multer errors
   if (err.name === 'MulterError') {
     logger.warn(`Upload error: ${err.message}`, logData);
     const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
-    return res.status(status).json({ error: err.message, code: 'UPLOAD_ERROR' });
+    return res.status(status).json({ success: false, error: err.message, code: 'UPLOAD_ERROR' });
   }
 
   // 6. CORS errors
   if (err.message === 'Not allowed by CORS') {
     logger.warn('CORS blocked', logData);
-    return res.status(403).json({ error: 'Not allowed by CORS', code: 'CORS_ERROR' });
+    return res.status(403).json({ success: false, error: 'Not allowed by CORS', code: 'CORS_ERROR' });
   }
 
   // 7. Unknown / unhandled errors
@@ -86,6 +87,7 @@ function errorHandler(err, req, res, next) {
   });
 
   res.status(500).json({
+    success: false,
     error: isProduction ? 'Internal server error' : err.message,
     code: 'INTERNAL_ERROR',
   });

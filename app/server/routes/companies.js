@@ -6,7 +6,7 @@ const db = require('../database');
 // GET / - Public company directory with pagination and job counts
 router.get('/', (req, res) => {
   try {
-    const { limit = 20, offset = 0, industry, country, featured } = req.query;
+    const { limit = 20, offset = 0, industry, country, featured, search, location } = req.query;
 
     let query = `
       SELECT u.id, u.name, pe.company_name, pe.industry, pe.company_size, 
@@ -15,14 +15,24 @@ router.get('/', (req, res) => {
              (SELECT COUNT(*) FROM jobs WHERE employer_id = u.id) as total_jobs_count
       FROM users u
       INNER JOIN profiles_employer pe ON u.id = pe.user_id
-      WHERE u.role = 'employer'
+      WHERE u.role = 'employer' AND u.id NOT IN (1, 11)
     `;
 
     const params = [];
 
+    if (search) {
+      query += ' AND (pe.company_name LIKE ? OR u.name LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
     if (industry) {
       query += ' AND pe.industry = ?';
       params.push(industry);
+    }
+
+    if (location) {
+      query += ' AND pe.location LIKE ?';
+      params.push(`%${location}%`);
     }
 
     if (country) {

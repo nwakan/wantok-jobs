@@ -30,23 +30,24 @@ const RESPONSES = {
   // ─── Auth prompts ─────────────────────────────────────
   needs_login: {
     default: [
-      "You'll need to log in first for that. You can [log in here](/login) or [create an account](/register) — it only takes a minute!",
-      "I'd love to help with that! Just need you to [sign in](/login) first. Don't have an account? [Register here](/register) — it's free!",
+      "You'll need to log in first for that. You can [log in here](/login) or [create an account](/register) — it only takes a minute! Em i isi tasol. 😊",
+      "I'd love to help with that! Just need you to [sign in](/login) first. Don't have an account? [Register here](/register) — it's free for job seekers!",
+      "To do that, you'll need an account — [log in](/login) or [sign up](/register) (takes 30 seconds, no tricks!). Then I can really help you out. 💪",
     ],
   },
   needs_role: {
-    jobseeker: "That feature is for jobseekers. You're currently logged in as an employer. Would you like help with employer features instead?",
-    employer: "That's an employer feature. You're logged in as a jobseeker. Looking for something else I can help with?",
+    jobseeker: "That feature is for jobseekers. You're currently logged in as an employer. Want me to help with employer features instead — like posting jobs or reviewing applicants?",
+    employer: "That's an employer feature. You're logged in as a jobseeker. No worries — want me to help you find jobs or update your profile instead?",
   },
 
   // ─── Feature disabled ─────────────────────────────────
   feature_disabled: {
-    auto_apply: "Auto-apply is currently turned off by the admin. You can still apply to jobs manually — want me to help you find some?",
-    auto_post: "Automatic job posting from documents is currently disabled. I can still help you post jobs step by step!",
-    linkedin_import: "LinkedIn import is currently unavailable. No worries — I can help you fill in your profile through our chat!",
-    document_parse: "Document upload for job creation is temporarily disabled. I can help you create job listings by walking through the details.",
-    jean_disabled: "I'm currently offline for maintenance. Please try again later or contact support@wantokjobs.com",
-    voice: "Voice input is currently disabled. Please type your message instead.",
+    auto_apply: "Auto-apply is currently turned off by the admin. Sori! You can still apply to jobs manually — want me to help you find some? 🔍",
+    auto_post: "Automatic job posting from documents is currently disabled. No worries — I can still help you post jobs step by step! Em i isi tasol.",
+    linkedin_import: "LinkedIn import is currently unavailable. No worries — I can help you fill in your profile through our chat! Just as good. 😊",
+    document_parse: "Document upload for job creation is temporarily disabled. Sori tru! I can help you create job listings by walking through the details — just tell me about the role.",
+    jean_disabled: "Mi sori — I'm currently offline for maintenance. Please try again later or contact support@wantokjobs.com 🙏",
+    voice: "Voice input is currently disabled. Please type your message instead — mi stap hia yet! 😊",
   },
 
   // ─── Profile flows ────────────────────────────────────
@@ -80,17 +81,17 @@ const RESPONSES = {
   // ─── Job Search ────────────────────────────────────────
   search: {
     results: "Found {count} jobs matching your search:\n\n{jobs}\n\nWant more details on any of these? Or say 'more' for the next page.",
-    no_results: "No jobs found for that search. 😕 Try:\n• Broader keywords\n• Different location\n• Fewer filters\n\nOr tell me what kind of work you're looking for and I'll search for you.",
-    suggestions: "Here are some popular searches:\n• Mining jobs in PNG\n• IT jobs in Port Moresby\n• Construction jobs in Lae\n• Healthcare positions\n\nWhat interests you?",
+    no_results: "Hmm, nothing came up for that search — sori! 😕 Try:\n• Broader keywords (e.g. 'driver' instead of 'heavy vehicle operator')\n• Different location\n• Fewer filters\n\nOr just tell me what kind of wok you want and I'll dig deeper!",
+    suggestions: "Here are some popular searches across PNG:\n• ⛏️ Mining jobs — Lihir, Porgera, Ok Tedi\n• 💻 IT jobs in Port Moresby\n• 🏗️ Construction jobs in Lae\n• 🏥 Healthcare positions\n• 🚛 Driving & logistics\n• 📊 Finance & accounting\n\nWhat interests you? Tokim mi!",
   },
 
   // ─── Applications ──────────────────────────────────────
   apply: {
     confirm: "Ready to apply for **{title}** at **{company}**?\n\nI'll use your profile as your application{cv_note}.\n\n[Apply Now] [View Job First]",
-    screening: "This job has {count} screening question(s) I need to answer:\n\n{questions}\n\nPlease answer each one.",
-    success: "✅ Application submitted for **{title}** at **{company}**!\n\nI'll notify you when the employer responds. You can check your applications anytime by asking me.",
-    already_applied: "You've already applied for this position! Want to check your application status?",
-    no_profile: "Before applying, let's make sure your profile is complete. Employers see your profile when you apply.\n\nWant me to help you update it first?",
+    screening: "This job has {count} screening question(s) I need to answer:\n\n{questions}\n\nPlease answer each one — bekim olgeta askim. 📝",
+    success: "✅ Application submitted for **{title}** at **{company}**! Gutpela wok! 🎉\n\nI'll let you know when the employer responds. You can check your applications anytime — just ask me!",
+    already_applied: "You've already applied for this one! Em i go pinis. 😊 Want to check your application status or find similar jobs?",
+    no_profile: "Before applying, let's make sure your profile is looking sharp — employers see it when you apply. First impressions matter!\n\nWant me to help you update it? Em i kwik tasol.",
   },
 
   // ─── Auto-Apply ────────────────────────────────────────
@@ -142,19 +143,19 @@ const RESPONSES = {
 
   // ─── Generic ───────────────────────────────────────────
   categories: {
-    list: "Here are all job categories:\n\n{list}\n\nWhich category interests you?",
+    list: "Here are all job categories across PNG:\n\n{list}\n\nWhich category interests you? Tokim mi na bai mi painim wok bilong yu!",
   },
   companies: {
     list: "Here are some employers on WantokJobs:\n\n{list}\n\nWant details on any of them?",
   },
   pricing: {
-    info: "WantokJobs uses a credit-based system:\n\n**Jobseekers** — Free to search and apply!\n\n**Employers:**\n• Free: 1 active job listing\n• Starter (K500): 5 job posts + 3 AI features\n• Pro (K1,800): 20 job posts + 15 AI features\n• Enterprise (K7,500): 100 posts + unlimited AI\n\nMore details at [Pricing](/pricing). Questions?",
+    info: "WantokJobs uses a simple credit-based system:\n\n**Jobseekers** — 100% free! Painim wok, apply, build CV — olgeta fri. 🆓\n\n**Employers:**\n• Free: 1 active job listing (try us out!)\n• Starter (K500): 5 job posts + 3 AI features\n• Pro (K1,800): 20 job posts + 15 AI features\n• Enterprise (K7,500): 100 posts + unlimited AI\n\nMore details at [Pricing](/pricing). Any questions? Mi stap hia!",
   },
   register: {
-    guide: "Signing up is free and takes 30 seconds:\n\n1. Go to [Register](/register)\n2. Choose: **Jobseeker** (looking for work) or **Employer** (hiring)\n3. Enter name, email, password\n4. Solve the quick math puzzle\n5. Done! ✅\n\nOr I can walk you through it right here. Which are you — jobseeker or employer?",
+    guide: "Signing up is free and takes 30 seconds — em i isi tru:\n\n1. Go to [Register](/register)\n2. Choose: **Jobseeker** (looking for wok) or **Employer** (hiring)\n3. Enter name, email, password\n4. Solve the quick math puzzle (easy one! 😄)\n5. Done! ✅ Nau yu redi!\n\nOr I can walk you through it right here. Which are you — jobseeker or employer?",
   },
   login: {
-    guide: "To log in, go to [Login](/login) and enter your email and password.\n\nForgot your password? [Reset it here](/forgot-password). I can also help if you're having trouble.",
+    guide: "To log in, go to [Login](/login) and enter your email and password.\n\nForgot your password? No stress — [reset it here](/forgot-password). Em i kwik tasol. I can also help if you're having trouble.",
   },
   contact: {
     prompt: "I'll help you reach our team. What's your message about?\n\n[Technical Issue] [Billing Question] [Report a Problem] [General Inquiry]",
@@ -164,8 +165,8 @@ const RESPONSES = {
   // ─── Fallback ──────────────────────────────────────────
   unknown: {
     default: [
-      "I'm not sure I understand. I can help with:\n\n🔍 **Job search** — Find jobs by keyword, location, category\n👤 **Profile** — Update your profile or import from LinkedIn\n📄 **CV/Resume** — Build or download your CV\n📨 **Apply** — Apply to jobs or set up auto-apply\n📋 **Post jobs** — Create listings or upload JDs\n💰 **Pricing** — Plans and credits info\n\nWhat would you like to do?",
-      "Sorry, I didn't catch that. Could you rephrase? Or pick from:\n• Search for jobs\n• Update my profile\n• Post a job\n• Check my applications\n• Pricing info",
+      "Sori, mi no klia long dispela. But I can definitely help with:\n\n🔍 **Job search** — Find wok by keyword, location, category\n👤 **Profile** — Update your profile or import from LinkedIn\n📄 **CV/Resume** — Build or download your CV\n📨 **Apply** — Apply to jobs or set up auto-apply\n📋 **Post jobs** — Create listings or upload JDs\n💰 **Pricing** — Plans and credits info\n\nWhat would you like to do? Tokim mi tasol!",
+      "Hmm, I didn't quite catch that — no worries! Could you rephrase? Or pick from:\n• Search for jobs\n• Update my profile\n• Post a job\n• Check my applications\n• Pricing info\n\nMi stap redi long helpim yu! 😊",
     ],
   },
 
@@ -177,8 +178,8 @@ const RESPONSES = {
 
   // ─── Flow control ──────────────────────────────────────
   flow: {
-    cancelled: "No problem, cancelled! What else can I help with?",
-    skipped: "Skipped. ➡️",
+    cancelled: "No problem, cancelled! Em i orait. What else can I help with? 😊",
+    skipped: "Skipped — movin' on! ➡️",
   },
 };
 

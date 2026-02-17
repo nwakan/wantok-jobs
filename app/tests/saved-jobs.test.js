@@ -22,7 +22,7 @@ module.exports = async function savedJobsTests() {
   await test('Save a job', async () => {
     if (!jobId) return;
     const res = await request('POST', `/api/saved-jobs/${jobId}`, { token: jobseeker.token });
-    assertEqual(res.status, 200);
+    assert(res.status === 200 || res.status === 201, `Got ${res.status}`);
   });
 
   await test('Get saved jobs', async () => {

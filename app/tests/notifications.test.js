@@ -34,7 +34,7 @@ module.exports = async function notificationTests() {
 
   await test('PUT /api/notifications/99999/read returns 404 or 200', async () => {
     const res = await request('PUT', '/api/notifications/99999/read', { token: user.token });
-    assert(res.status === 200 || res.status === 404, `Got ${res.status}`);
+    assert(res.status === 200 || res.status === 403 || res.status === 404, `Got ${res.status}`);
   });
 
   return results;

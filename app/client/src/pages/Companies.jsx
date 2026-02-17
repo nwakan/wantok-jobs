@@ -30,7 +30,7 @@ export default function Companies() {
       if (filters.location) params.append('location', filters.location);
       
       const response = await api.get(`/companies?${params.toString()}`);
-      setCompanies(response.data.companies || []);
+      setCompanies(response.data.data || response.data.companies || []);
     } catch (error) {
       console.error('Failed to fetch companies:', error);
       // Fallback to mock data if API fails
