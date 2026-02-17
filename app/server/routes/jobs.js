@@ -271,8 +271,10 @@ router.get('/', (req, res) => {
     const total = countResult ? countResult.total : 0;
 
     // Sorting - Task 3: Featured jobs always first (if featured_until > now)
-    let orderBy = 'j.created_at DESC';
-    if (sort === 'salary') {
+    let orderBy = 'j.quality_score DESC, j.created_at DESC';
+    if (sort === 'date') {
+      orderBy = 'j.created_at DESC';
+    } else if (sort === 'salary') {
       orderBy = 'j.salary_max DESC, j.created_at DESC';
     } else if (sort === 'relevance' && keyword) {
       orderBy = 'j.views_count DESC, j.created_at DESC';
