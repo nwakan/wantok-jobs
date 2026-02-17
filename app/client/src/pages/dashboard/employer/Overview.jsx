@@ -137,8 +137,29 @@ export default function EmployerOverview() {
         </div>
       </div>
 
+      {/* Onboarding Banner for very incomplete profiles */}
+      {completeness < 50 && (
+        <div className="mb-6 bg-primary-50 border-l-4 border-primary-500 rounded-lg p-5">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-6 h-6 text-primary-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-primary-900 mb-1">Complete your company profile to attract better candidates</h3>
+              <p className="text-sm text-primary-800 mb-3">
+                Your profile is only {completeness}% complete. Our guided setup takes just a few minutes and helps you stand out.
+              </p>
+              <Link
+                to="/dashboard/employer/onboarding"
+                className="inline-flex items-center gap-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition"
+              >
+                Start guided setup <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Profile Completeness Alert */}
-      {completeness < 80 && (
+      {completeness >= 50 && completeness < 80 && (
         <div className="mb-6 bg-amber-50 border-l-4 border-amber-400 rounded-lg p-5">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />

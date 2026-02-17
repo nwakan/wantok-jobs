@@ -240,6 +240,25 @@ router.get('/', (req, res) => {
     // Add pagination headers
     addPaginationHeaders(res, total, parseInt(page), limitNum, `${req.protocol}://${req.get('host')}${req.path}`);
 
+    // Log search analytics (async, non-blocking)
+    if (keyword || category || location) {
+      try {
+        const userId = req.headers.authorization ? (() => {
+          try {
+            const jwt = require('jsonwebtoken');
+            const token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wantokjobs-secret-key-2024');
+            return decoded.id;
+          } catch { return null; }
+        })() : null;
+        db.prepare(
+          'INSERT INTO search_analytics (query, category, location, results_count, user_id, ip_address) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(keyword || null, category || null, location || null, total, userId, req.ip);
+      } catch (e) {
+        logger.error('Search analytics logging error', { error: e.message });
+      }
+    }
+
     res.json({
       data: jobs,
       total,
@@ -763,6 +782,28 @@ router.get('/:id/skills-match', authenticateToken, (req, res) => {
   } catch (error) {
     logger.error('Get skills match error', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch skills match' });
+  }
+});
+
+// POST /:id/click - Track job click-through
+router.post('/:id/click', (req, res) => {
+  try {
+    const jobId = parseInt(req.params.id);
+    const source = req.body.source || 'search';
+    let userId = null;
+    if (req.headers.authorization) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wantokjobs-secret-key-2024');
+        userId = decoded.id;
+      } catch {}
+    }
+    db.prepare('INSERT INTO job_clicks (job_id, user_id, source, ip_address) VALUES (?, ?, ?, ?)').run(jobId, userId, source, req.ip);
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Click tracking error', { error: error.message });
+    res.json({ success: false });
   }
 });
 

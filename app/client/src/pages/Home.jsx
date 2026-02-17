@@ -64,6 +64,7 @@ export default function Home() {
   const [topEmployers, setTopEmployers] = useState([]);
   const [stats, setStats] = useState({ totalJobs: 0, activeJobs: 0, totalEmployers: 0, totalJobseekers: 0 });
   const [loading, setLoading] = useState(true);
+  const [trendingSearches, setTrendingSearches] = useState([]);
   const [emailAlert, setEmailAlert] = useState('');
   const [alertSubmitted, setAlertSubmitted] = useState(false);
 
@@ -71,11 +72,12 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const [jobsResponse, statsResponse, catResponse, employerResponse] = await Promise.all([
+      const [jobsResponse, statsResponse, catResponse, employerResponse, trendingResponse] = await Promise.all([
         jobsAPI.getAll({ limit: 6 }),
         fetch('/api/stats').then(r => r.json()).catch(() => null),
         fetch('/api/stats/categories').then(r => r.json()).catch(() => null),
         fetch('/api/stats/top-employers').then(r => r.json()).catch(() => null),
+        fetch('/api/analytics/popular-searches').then(r => r.json()).catch(() => null),
       ]);
       setFeaturedJobs(jobsResponse?.data || jobsResponse || []);
       if (statsResponse) {
@@ -91,6 +93,9 @@ export default function Home() {
       }
       if (employerResponse?.data) {
         setTopEmployers(employerResponse.data.filter(e => e.company_name && e.company_name !== 'Various Employers'));
+      }
+      if (trendingResponse?.data?.length > 0) {
+        setTrendingSearches(trendingResponse.data.map(s => s.query));
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -239,9 +244,12 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-center mt-6"
           >
-            <p className="text-primary-100 mb-2">Popular searches:</p>
+            <p className="text-primary-100 mb-2">
+              <TrendingUp className="inline w-4 h-4 mr-1" />
+              {trendingSearches.length > 0 ? 'Trending searches:' : 'Popular searches:'}
+            </p>
             <div className="flex flex-wrap justify-center gap-2">
-              {['Mining', 'IT', 'Nursing', 'Engineering', 'Accounting', 'Teaching', 'Driver'].map((term) => (
+              {(trendingSearches.length > 0 ? trendingSearches.slice(0, 7) : ['Mining', 'IT', 'Nursing', 'Engineering', 'Accounting', 'Teaching', 'Driver']).map((term) => (
                 <button
                   key={term}
                   onClick={() => navigate(`/jobs?q=${term}`)}

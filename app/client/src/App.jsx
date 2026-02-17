@@ -78,6 +78,7 @@ const OfferLetters = lazy(() => import('./pages/dashboard/employer/OfferLetters'
 const CompanyProfile = lazy(() => import('./pages/dashboard/employer/CompanyProfile'));
 const CandidateSearch = lazy(() => import('./pages/dashboard/employer/CandidateSearch'));
 const SavedCandidates = lazy(() => import('./pages/dashboard/employer/SavedCandidates'));
+const EmployerOnboarding = lazy(() => import('./pages/dashboard/employer/Onboarding'));
 const EmployerAnalytics = lazy(() => import('./pages/dashboard/employer/Analytics'));
 const EmployerOrdersBilling = lazy(() => import('./pages/dashboard/employer/OrdersBilling'));
 const EmployerMessages = lazy(() => import('./pages/dashboard/employer/Messages'));
@@ -175,6 +176,7 @@ function App() {
                 <Route path="clients" element={<Lazy component={AgencyClients} />} />
                 <Route path="wallet" element={<Lazy component={EmployerWallet} />} />
                 <Route path="profile" element={<Lazy component={CompanyProfile} />} />
+                <Route path="onboarding" element={<Lazy component={EmployerOnboarding} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
 

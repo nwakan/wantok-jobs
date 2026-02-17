@@ -580,6 +580,37 @@ function initializeDatabase() {
       FOREIGN KEY (provider_id) REFERENCES training_providers(id) ON DELETE CASCADE
     );
 
+    -- Search analytics: track what users search for
+    CREATE TABLE IF NOT EXISTS search_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query TEXT,
+      category TEXT,
+      location TEXT,
+      results_count INTEGER DEFAULT 0,
+      user_id INTEGER,
+      ip_address TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_search_analytics_created ON search_analytics(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_search_analytics_query ON search_analytics(query, created_at DESC);
+
+    -- Job click tracking
+    CREATE TABLE IF NOT EXISTS job_clicks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL,
+      user_id INTEGER,
+      source TEXT DEFAULT 'search',
+      ip_address TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_job_clicks_job ON job_clicks(job_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_job_clicks_created ON job_clicks(created_at DESC);
+
     -- Additional indexes for new tables
     CREATE INDEX IF NOT EXISTS idx_company_follows_user ON company_follows(user_id);
     CREATE INDEX IF NOT EXISTS idx_company_follows_employer ON company_follows(employer_id);

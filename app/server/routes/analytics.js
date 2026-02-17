@@ -5,6 +5,28 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
+// GET /popular-searches - Top 10 searches in last 7 days (public)
+router.get('/popular-searches', (req, res) => {
+  try {
+    const searches = db.prepare(`
+      SELECT query, COUNT(*) as search_count, 
+             MAX(results_count) as avg_results
+      FROM search_analytics
+      WHERE query IS NOT NULL 
+        AND query != ''
+        AND created_at >= datetime('now', '-7 days')
+      GROUP BY LOWER(TRIM(query))
+      ORDER BY search_count DESC
+      LIMIT 10
+    `).all();
+
+    res.json({ data: searches });
+  } catch (error) {
+    logger.error('Error fetching popular searches', { error: error.message });
+    res.json({ data: [] });
+  }
+});
+
 // GET /employer/overview - Employer's job stats
 router.get('/employer/overview', authenticateToken, requireRole('employer'), (req, res) => {
   try {
