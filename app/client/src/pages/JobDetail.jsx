@@ -597,7 +597,45 @@ export default function JobDetail() {
   const hasHTML = containsHTML(job.description);
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen pb-20 lg:pb-0">
+      {/* Sticky Apply Button - Mobile */}
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 bg-white border-t border-gray-200 p-3 shadow-lg safe-area-bottom">
+        <div className="flex gap-2">
+          {user?.role === 'jobseeker' && (
+            <button
+              onClick={handleApplyClick}
+              className="flex-1 px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors min-h-[48px]"
+            >
+              Apply Now
+            </button>
+          )}
+          {!user && (
+            <>
+              <Link
+                to="/login"
+                className="flex-1 text-center px-4 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors min-h-[48px]"
+              >
+                Login to Apply
+              </Link>
+              <button
+                onClick={() => setShowQuickApply(!showQuickApply)}
+                className="px-4 py-3 bg-white border-2 border-primary-600 text-primary-600 font-semibold rounded-lg hover:bg-primary-50 transition-colors min-h-[48px] text-sm"
+              >
+                ⚡ Quick
+              </button>
+            </>
+          )}
+          {user && (
+            <button
+              onClick={handleSaveJob}
+              className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors min-h-[48px]"
+            >
+              {saved ? '❤️' : '🤍'}
+            </button>
+          )}
+        </div>
+      </div>
+
       {job && (
         <PageHead
           title={`${job.title}${job.company_name ? ` at ${job.company_name}` : ''} — ${job.location || 'PNG'}`}

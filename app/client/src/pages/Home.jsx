@@ -154,18 +154,18 @@ export default function Home() {
           }} />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-24 relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            <h1 className="text-3xl md:text-6xl font-bold mb-4 md:mb-6">
               Find Your Dream Job in<br />
               <span className="text-secondary-400">Papua New Guinea</span>
             </h1>
-            <p className="text-xl md:text-2xl text-primary-100 mb-2">
+            <p className="text-lg md:text-2xl text-primary-100 mb-2">
               Join <strong>{stats.totalJobseekers.toLocaleString()}+</strong> job seekers and <strong>{stats.totalEmployers.toLocaleString()}+</strong> employers
             </p>
             <p className="text-lg text-primary-200">

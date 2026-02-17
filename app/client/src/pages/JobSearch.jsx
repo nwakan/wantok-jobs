@@ -479,10 +479,30 @@ export default function JobSearch() {
                   ))}
                 </div>
 
-                {/* Pagination */}
+                {/* Load More (Mobile) */}
+                {pagination.totalPages > 1 && pagination.page < pagination.totalPages && (
+                  <div className="lg:hidden mb-4">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="w-full px-6 py-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors min-h-[48px] flex items-center justify-center gap-2"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                          Loading...
+                        </>
+                      ) : (
+                        `Load More Jobs (${pagination.total - jobs.length} remaining)`
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Pagination (Desktop) */}
                 {pagination.totalPages > 1 && (
-                  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="hidden lg:block bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                    <div className="flex items-center justify-between gap-4">
                       <div className="text-sm text-gray-600">
                         Page {pagination.page} of {pagination.totalPages}
                       </div>
@@ -496,7 +516,7 @@ export default function JobSearch() {
                           ← Previous
                         </button>
                         
-                        <div className="hidden sm:flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                           {(() => {
                             const { page, totalPages } = pagination;
                             const pages = new Set([1, totalPages, page - 1, page, page + 1]);
