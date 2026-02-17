@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline — WantokJobs</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    .card {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e5e7eb;
+      padding: 2.5rem 2rem;
+      max-width: 28rem;
+      width: 100%;
+      text-align: center;
+    }
+    .emoji { font-size: 4rem; margin-bottom: 1rem; }
+    .brand { color: #2563eb; font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .tok { color: #6b7280; font-size: 1.1rem; margin-bottom: 1rem; }
+    p { color: #6b7280; line-height: 1.6; margin-bottom: 1.5rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: #2563eb; color: white; border: none;
+      padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .tips { text-align: left; background: #f3f4f6; border-radius: 0.5rem; padding: 1rem 1.25rem; margin-top: 1.5rem; }
+    .tips h3 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .tips ul { padding-left: 1.25rem; color: #6b7280; font-size: 0.875rem; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji">📡</div>
+    <div class="brand">WantokJobs</div>
+    <h1>You're Offline</h1>
+    <div class="tok">Yu no gat internet</div>
+    <p>It looks like you've lost your internet connection. Don't worry — any jobs you've already viewed may still be available.</p>
+    <button class="btn" onclick="window.location.reload()">
+      🔄 Try Again
+    </button>
+    <div class="tips">
+      <h3>Things to try:</h3>
+      <ul>
+        <li>Check your WiFi or mobile data</li>
+        <li>Move to an area with better signal</li>
+        <li>Try again in a few moments</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
