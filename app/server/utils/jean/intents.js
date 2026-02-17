@@ -262,6 +262,22 @@ const INTENTS = {
   },
 
   // ─── Contact / Help ────────────────────────────────────
+  celebration: {
+    patterns: [
+      /\b(got|received|accepted|landed)\b.*\b(job|offer|hired|position)\b/i,
+      /\b(hired|employed|start(ing|ed)?)\b.*\bnew\s*(job|role|position)\b/i,
+      /\byay|woohoo|amazing|awesome|thank you so much\b/i,
+    ],
+    priority: 6,
+  },
+  struggling: {
+    patterns: [
+      /\b(months?|weeks?|long time)\b.*\b(no luck|searching|looking|nothing)\b/i,
+      /\b(struggling|hard|difficult|giving up|hopeless)\b.*\b(job|work|find)\b/i,
+      /\bno\s*(luck|response|call\s*back)\b/i,
+    ],
+    priority: 6,
+  },
   contact_support: {
     patterns: [
       /\b(contact|support|help|complaint|issue|problem|report)\b/i,

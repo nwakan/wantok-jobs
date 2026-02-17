@@ -317,6 +317,27 @@ class Jean {
         if (!user) return { message: getResponse('needs_login', 'default'), intent };
         return { message: "View your [analytics dashboard](/dashboard/employer/analytics) for detailed stats on views, applications, and performance.", intent };
 
+      case 'celebration': {
+        const celebs = [
+          "That's AMAZING news! 🎉🎊 Congratulations!! I'm so happy for you! All that effort paid off. You deserve it!",
+          "CONGRATULATIONS!! 🎉 That's wonderful — I knew you'd find the right fit! Best of luck in your new role! 🌟",
+          "Yes!! 🙌🎉 That's what I love to hear! You did it! Wishing you all the best in your new position!",
+        ];
+        return { message: celebs[Math.floor(Math.random() * celebs.length)], intent };
+      }
+
+      case 'struggling': {
+        const encouragements = [
+          "I hear you — job searching can be really tough, especially when it takes longer than expected. But you're doing the right thing. 💪\n\nLet me help make it easier. I can:\n• Search for jobs matching your skills\n• Set up auto-apply so I apply for you automatically\n• Help polish your profile to stand out\n\nWhat sounds good?",
+          "Don't give up — the right opportunity is out there. Let me help you find it. 💪\n\nWant me to:\n• Search for new openings right now?\n• Set up alerts so you don't miss anything?\n• Review your profile to make sure it stands out?\n\nWe'll get through this together!",
+        ];
+        return {
+          message: encouragements[Math.floor(Math.random() * encouragements.length)],
+          quickReplies: ['Search Jobs', 'Set Up Auto-Apply', 'Update My Profile'],
+          intent,
+        };
+      }
+
       case 'contact_support':
         return this.startFlow(session, 'contact-support', user);
 
