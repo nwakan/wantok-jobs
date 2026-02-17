@@ -69,6 +69,29 @@ export default function NotFound() {
             </button>
           </div>
 
+          {/* Popular categories */}
+          <div className="mb-6">
+            <p className="text-sm font-medium text-gray-500 mb-3">Popular categories:</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {[
+                { label: '🏗️ Construction', slug: 'construction' },
+                { label: '💼 Accounting', slug: 'accounting-finance' },
+                { label: '👨‍🏫 Teaching', slug: 'education-training' },
+                { label: '⛏️ Mining', slug: 'mining-resources' },
+                { label: '🏥 Health', slug: 'healthcare' },
+                { label: '💻 IT', slug: 'information-technology' },
+              ].map(({ label, slug }) => (
+                <Link
+                  key={slug}
+                  to={`/category/${slug}`}
+                  className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:border-primary-300 hover:text-primary-600 transition-colors"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
           {/* Quick search */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <p className="text-sm font-medium text-gray-700 mb-3">

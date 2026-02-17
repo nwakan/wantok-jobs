@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { jobs as jobsAPI } from '../api';
 import JobCard from '../components/JobCard';
 import SearchFilters from '../components/SearchFilters';
-import { Flame, Sparkles, Globe, Bell, Briefcase } from 'lucide-react';
+import { Flame, Sparkles, Globe, Bell, Briefcase, SlidersHorizontal, X } from 'lucide-react';
 import PageHead from '../components/PageHead';
 import { JobSearchSkeleton } from '../components/SkeletonLoader';
 
@@ -28,6 +28,8 @@ export default function JobSearch() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const suggestionsRef = useRef(null);
 
   useEffect(() => {
@@ -109,6 +111,25 @@ export default function JobSearch() {
   const handlePageChange = (newPage) => {
     searchJobs(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLoadMore = async () => {
+    if (pagination.page >= pagination.totalPages || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = pagination.page + 1;
+      const params = { ...filters, page: nextPage, limit: 20 };
+      if (sortBy === 'date') { params.sort = 'created_at'; params.order = 'desc'; }
+      else if (sortBy === 'salary') { params.sort = 'salary_max'; params.order = 'desc'; }
+      Object.keys(params).forEach(key => { if (!params[key]) delete params[key]; });
+      const response = await jobsAPI.getAll(params);
+      setJobs(prev => [...prev, ...response.data]);
+      setPagination({ page: response.page, totalPages: response.totalPages, total: response.total });
+    } catch (error) {
+      console.error('Load more failed:', error);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const handleSortChange = (newSort) => {
@@ -260,15 +281,31 @@ export default function JobSearch() {
           </button>
         </div>
 
+        {/* Mobile Filter Toggle */}
+        <div className="lg:hidden mb-4">
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors min-h-[48px]"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+            {showMobileFilters ? 'Hide Filters' : 'Show Filters'}
+            {Object.values(filters).filter(v => v).length > 0 && (
+              <span className="ml-1 px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-bold">
+                {Object.values(filters).filter(v => v).length}
+              </span>
+            )}
+          </button>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Filters Sidebar */}
-          <div className="lg:w-72 flex-shrink-0">
+          {/* Filters Sidebar — hidden on mobile unless toggled */}
+          <div className={`lg:w-72 flex-shrink-0 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="lg:sticky lg:top-6">
               <SearchFilters
                 filters={filters}
                 setFilters={setFilters}
-                onSearch={handleFiltersApply}
-                onClear={handleClearFilters}
+                onSearch={() => { handleFiltersApply(); setShowMobileFilters(false); }}
+                onClear={() => { handleClearFilters(); setShowMobileFilters(false); }}
               />
             </div>
           </div>

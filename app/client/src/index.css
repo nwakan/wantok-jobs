@@ -193,6 +193,25 @@ img {
   }
 }
 
+/* Touch-friendly improvements */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  button,
+  a.inline-flex,
+  a.flex,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* WhatsApp button styling */
 .whatsapp-button {
   background-color: #25D366;

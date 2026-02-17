@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/offline.html',
 ];
 
 // Maximum cache sizes (for low-storage devices)
@@ -177,29 +178,9 @@ self.addEventListener('fetch', (event) => {
         });
         return response;
       }).catch(() => {
-        // For HTML requests, return a basic offline page
+        // For HTML requests, return the cached offline page
         if (request.headers.get('Accept').includes('text/html')) {
-          return new Response(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>Offline - WantokJobs</title>
-                <style>
-                  body { font-family: system-ui; padding: 2rem; text-align: center; }
-                  h1 { color: #dc2626; }
-                </style>
-              </head>
-              <body>
-                <h1>📡 Yu stap offlain</h1>
-                <p>You are offline. Please check your internet connection.</p>
-                <p>Plis sekim intanet bilong yu.</p>
-              </body>
-            </html>
-          `, {
-            headers: { 'Content-Type': 'text/html' }
-          });
+          return caches.match('/offline.html');
         }
         return new Response('Offline', { status: 503 });
       });
