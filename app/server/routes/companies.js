@@ -86,7 +86,7 @@ router.get('/:id', (req, res) => {
       WHERE u.id = ? AND u.role = 'employer'
     `).get(id);
 
-    if (!company || [1, 11].includes(company.id)) {
+    if (!company || [1, 11].includes(parseInt(id))) {
       return res.status(404).json({ error: 'Company not found' });
     }
 
