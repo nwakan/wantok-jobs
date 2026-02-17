@@ -154,7 +154,7 @@ function validateCaptcha(captchaId, captchaAnswer) {
 // Register
 router.post('/register', validate(schemas.register), async (req, res) => {
   try {
-    const { email, password, role, name, captcha_id, captcha_answer } = req.body;
+    const { email, password, role, name, captcha_id, captcha_answer, account_type } = req.body;
 
     // Validate CAPTCHA first
     const captchaValidation = validateCaptcha(captcha_id, captcha_answer);
@@ -207,8 +207,8 @@ router.post('/register', validate(schemas.register), async (req, res) => {
 
     // Create user (with verification token, email_verified = 0)
     const result = db.prepare(
-      'INSERT INTO users (email, password_hash, role, name, verification_token, email_verified) VALUES (?, ?, ?, ?, ?, 0)'
-    ).run(safeEmail, password_hash, role, safeName, verificationToken);
+      'INSERT INTO users (email, password_hash, role, name, verification_token, email_verified, account_type) VALUES (?, ?, ?, ?, ?, 0, ?)'
+    ).run(safeEmail, password_hash, role, safeName, verificationToken, (role === 'employer' && account_type === 'agency') ? 'agency' : 'employer');
 
     const userId = result.lastInsertRowid;
 
@@ -233,7 +233,7 @@ router.post('/register', validate(schemas.register), async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { id: userId, email: safeEmail, role, name: safeName, email_verified: false },
+      user: { id: userId, email: safeEmail, role, name: safeName, email_verified: false, account_type: (role === 'employer' && account_type === 'agency') ? 'agency' : 'employer' },
       message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {
@@ -345,7 +345,8 @@ router.post('/login', validate(schemas.login), async (req, res) => {
         id: user.id,
         email: user.email,
         role: user.role,
-        name: user.name
+        name: user.name,
+        account_type: user.account_type || 'employer'
       }
     };
 
@@ -577,7 +578,7 @@ router.post('/change-password', authenticateToken, validate(schemas.changePasswo
 // Get current user
 router.get('/me', authenticateToken, (req, res) => {
   try {
-    const user = db.prepare('SELECT id, email, role, name, email_verified, created_at FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, email, role, name, email_verified, account_type, created_at FROM users WHERE id = ?').get(req.user.id);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

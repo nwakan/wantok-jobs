@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardLayout({ role, children }) {
   const location = useLocation();
+  const { user } = useAuth();
 
   const jobseekerNav = [
     { name: 'Overview', path: '/dashboard/jobseeker', icon: '📊' },
@@ -20,6 +22,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'Overview', path: '/dashboard/employer', icon: '📊' },
     { name: 'My Jobs', path: '/dashboard/employer/jobs', icon: '💼' },
     { name: 'Post a Job', path: '/dashboard/employer/post-job', icon: '➕' },
+    ...(user?.account_type === 'agency' ? [{ name: 'Clients', path: '/dashboard/employer/clients', icon: '🏢' }] : []),
     { name: 'Applicants', path: '/dashboard/employer/applicants', icon: '📋' },
     { name: 'Candidate Search', path: '/dashboard/employer/candidate-search', icon: '🔍' },
     { name: 'Saved Candidates', path: '/dashboard/employer/saved-candidates', icon: '⭐' },

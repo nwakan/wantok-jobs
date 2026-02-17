@@ -49,6 +49,34 @@ router.get('/', (req, res) => {
 
     const companies = db.prepare(query).all(...params);
 
+    // Also include agency-managed clients
+    let agencyQuery = `
+      SELECT ac.id as id, NULL as name, ac.company_name, ac.industry, NULL as company_size,
+             ac.location, NULL as country, ac.logo_url, 0 as verified, 0 as featured,
+             (SELECT COUNT(*) FROM jobs WHERE client_id = ac.id AND status = 'active') as active_jobs_count,
+             (SELECT COUNT(*) FROM jobs WHERE client_id = ac.id) as total_jobs_count,
+             1 as is_agency_managed,
+             (SELECT u.name FROM users u WHERE u.id = ac.agency_id) as managed_by_agency
+      FROM agency_clients ac
+      WHERE ac.deleted_at IS NULL
+    `;
+    const agencyParams = [];
+    if (search) {
+      agencyQuery += ' AND ac.company_name LIKE ?';
+      agencyParams.push(`%${search}%`);
+    }
+    if (industry) {
+      agencyQuery += ' AND ac.industry = ?';
+      agencyParams.push(industry);
+    }
+    if (location) {
+      agencyQuery += ' AND ac.location LIKE ?';
+      agencyParams.push(`%${location}%`);
+    }
+    agencyQuery += ' LIMIT 20';
+    const agencyCompanies = db.prepare(agencyQuery).all(...agencyParams);
+    companies.push(...agencyCompanies.map(c => ({ ...c, is_agency_managed: true })));
+
     // Get total count
     let countQuery = 'SELECT COUNT(*) as count FROM users u INNER JOIN profiles_employer pe ON u.id = pe.user_id WHERE u.role = ?';
     const countParams = ['employer'];
@@ -70,6 +98,30 @@ router.get('/', (req, res) => {
   } catch (error) {
     logger.error('Error fetching companies', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch companies' });
+  }
+});
+
+// GET /agency-client/:id - Public agency client profile
+router.get('/agency-client/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = db.prepare(`
+      SELECT ac.*, u.name as agency_name
+      FROM agency_clients ac
+      JOIN users u ON ac.agency_id = u.id
+      WHERE ac.id = ? AND ac.deleted_at IS NULL
+    `).get(id);
+    if (!client) return res.status(404).json({ error: 'Company not found' });
+
+    const jobs = db.prepare(`
+      SELECT id, title, location, job_type, salary_min, salary_max, salary_currency, created_at, status
+      FROM jobs WHERE client_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 20
+    `).all(id);
+
+    res.json({ company: { ...client, is_agency_managed: true }, jobs, stats: { active_jobs: jobs.length } });
+  } catch (error) {
+    logger.error('Error fetching agency client profile', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch company' });
   }
 });
 

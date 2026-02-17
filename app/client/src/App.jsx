@@ -80,6 +80,7 @@ const SavedCandidates = lazy(() => import('./pages/dashboard/employer/SavedCandi
 const EmployerAnalytics = lazy(() => import('./pages/dashboard/employer/Analytics'));
 const EmployerOrdersBilling = lazy(() => import('./pages/dashboard/employer/OrdersBilling'));
 const EmployerMessages = lazy(() => import('./pages/dashboard/employer/Messages'));
+const AgencyClients = lazy(() => import('./pages/dashboard/employer/AgencyClients'));
 
 // === Admin dashboard ===
 const AdminOverview = lazy(() => import('./pages/dashboard/admin/Overview'));
@@ -167,6 +168,7 @@ function App() {
                 <Route path="analytics" element={<Lazy component={EmployerAnalytics} />} />
                 <Route path="orders-billing" element={<Lazy component={EmployerOrdersBilling} />} />
                 <Route path="messages" element={<Lazy component={EmployerMessages} />} />
+                <Route path="clients" element={<Lazy component={AgencyClients} />} />
                 <Route path="profile" element={<Lazy component={CompanyProfile} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>

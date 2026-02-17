@@ -139,6 +139,7 @@ export default function Register() {
         role: formData.role,
         captcha_id: captcha?.id,
         captcha_answer: formData.captcha_answer,
+        ...(formData.role === 'employer' && formData.isAgency ? { account_type: 'agency' } : {}),
       });
       
       login(response.token, response.user);
@@ -339,6 +340,23 @@ export default function Register() {
                   <option value="employer">Employer</option>
                 </select>
               </div>
+
+              {/* Agency toggle - only for employers */}
+              {formData.role === 'employer' && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <input
+                    type="checkbox"
+                    id="isAgency"
+                    checked={formData.isAgency || false}
+                    onChange={(e) => setFormData({ ...formData, isAgency: e.target.checked })}
+                    className="w-4 h-4 text-primary-600 rounded"
+                  />
+                  <label htmlFor="isAgency" className="text-sm">
+                    <span className="font-medium text-gray-900">Are you a recruitment agency?</span>
+                    <span className="block text-xs text-gray-500">Enables client management — post jobs on behalf of multiple companies</span>
+                  </label>
+                </div>
+              )}
 
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">

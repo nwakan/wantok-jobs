@@ -26,6 +26,9 @@ export default function CompanyProfile() {
   const [reviewSort, setReviewSort] = useState('newest');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimEvidence, setClaimEvidence] = useState('');
+  const [claimSubmitting, setClaimSubmitting] = useState(false);
 
   useEffect(() => {
     fetchCompanyData();
@@ -167,8 +170,24 @@ export default function CompanyProfile() {
                           Verified
                         </div>
                       )}
+                      {company.is_agency_managed && company.managed_by_agency && (
+                        <div className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                          <Users className="w-4 h-4" />
+                          Managed by {company.managed_by_agency}
+                        </div>
+                      )}
                     </div>
                     <p className="text-lg text-gray-600 mb-2">{company.industry}</p>
+                    
+                    {/* Claim button for agency-managed profiles */}
+                    {company.is_agency_managed && (
+                      <button
+                        onClick={() => setShowClaimModal(true)}
+                        className="mt-2 text-sm text-primary-600 hover:text-primary-800 underline"
+                      >
+                        Is this your company? Claim it →
+                      </button>
+                    )}
                     
                     {/* Rating Summary */}
                     {reviewStats && reviewStats.total_reviews > 0 && (
@@ -392,6 +411,56 @@ export default function CompanyProfile() {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Claim Company Modal */}
+      {showClaimModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Claim This Company</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              If you own or represent <strong>{company?.company_name || company?.name}</strong>, submit a claim and our team will verify your ownership.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Evidence / Notes</label>
+              <textarea
+                rows={4}
+                value={claimEvidence}
+                onChange={e => setClaimEvidence(e.target.value)}
+                placeholder="Describe your relationship to this company. Attach business registration details, company email, etc."
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">You must be logged in as an employer to submit a claim.</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowClaimModal(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+              <button
+                disabled={claimSubmitting}
+                onClick={async () => {
+                  setClaimSubmitting(true);
+                  try {
+                    const token = localStorage.getItem('token');
+                    if (!token) { alert('Please log in first'); return; }
+                    const res = await fetch((import.meta.env.PROD ? '' : 'http://localhost:3001') + '/api/claims', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ client_profile_id: Number(id), evidence: claimEvidence }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error);
+                    alert('Claim submitted! Our team will review it and get back to you.');
+                    setShowClaimModal(false);
+                    setClaimEvidence('');
+                  } catch (e) { alert(e.message || 'Failed to submit claim'); }
+                  finally { setClaimSubmitting(false); }
+                }}
+                className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              >
+                {claimSubmitting ? 'Submitting...' : 'Submit Claim'}
+              </button>
+            </div>
           </div>
         </div>
       )}

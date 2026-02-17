@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { jobs as jobsAPI } from '../../../api';
+import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../components/Toast';
 import { 
   Sparkles, AlertCircle, Check, X, Plus, Info, 
   Globe, Mail, ExternalLink, HelpCircle 
 } from 'lucide-react';
+
+const CLIENT_API = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
 
 export default function PostJob() {
   const navigate = useNavigate();
@@ -51,6 +54,12 @@ export default function PostJob() {
   const [newRequirement, setNewRequirement] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [newQuestion, setNewQuestion] = useState('');
+  
+  // Agency client selection
+  const { user } = useAuth();
+  const isAgency = user?.account_type === 'agency';
+  const [agencyClients, setAgencyClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState(null);
 
   const countries = ['Papua New Guinea', 'Fiji', 'Solomon Islands', 'Vanuatu', 'Samoa', 'Tonga'];
   const pngCities = ['Port Moresby', 'Lae', 'Mount Hagen', 'Goroka', 'Madang', 'Wewak'];
@@ -82,6 +91,10 @@ export default function PostJob() {
     loadCategories();
     if (isEdit) {
       loadJob();
+    }
+    if (isAgency) {
+      fetch(`${CLIENT_API}/agency/clients`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        .then(r => r.json()).then(d => setAgencyClients(d.data || [])).catch(() => {});
     }
   }, [id]);
 
@@ -178,6 +191,7 @@ export default function PostJob() {
         requirements: JSON.stringify(formData.requirements),
         skills: JSON.stringify(formData.skills),
         screening_questions: JSON.stringify(formData.screening_questions),
+        ...(isAgency && selectedClientId ? { client_id: selectedClientId } : {}),
       };
 
       let result;
@@ -449,6 +463,24 @@ export default function PostJob() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Basic Information</h2>
             
+            {/* Agency: Posting for dropdown */}
+            {isAgency && (
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Posting For</label>
+                <select
+                  value={selectedClientId || ''}
+                  onChange={e => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">My Company</option>
+                  {agencyClients.map(c => (
+                    <option key={c.id} value={c.id}>{c.company_name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Select which company this job is for, or post under your own agency name.</p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
                 Job Title <span className="text-red-500">*</span>

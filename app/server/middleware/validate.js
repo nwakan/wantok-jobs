@@ -77,6 +77,7 @@ const postJobSchema = z.object({
   requirements: z.string().max(5000).optional(), // JSON array
   screening_questions: z.string().max(5000).optional(), // JSON array
   status: z.enum(['draft', 'active', 'closed']).optional().default('active'),
+  client_id: z.number().int().positive().optional().nullable(),
   category_id: z.number().int().positive().optional(),
   benefits: z.string().max(5000).optional(),
   expires_at: z.string().optional(),

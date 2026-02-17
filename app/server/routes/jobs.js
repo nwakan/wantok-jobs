@@ -61,11 +61,13 @@ router.get('/featured', (req, res) => {
       SELECT j.*, 
              u.name as employer_name,
              u.is_verified as employer_verified,
-             COALESCE(j.company_display_name, pe.company_name) as company_name,
-             COALESCE(j.logo_url, pe.logo_url) as logo_url
+             COALESCE(ac.company_name, j.company_display_name, pe.company_name) as company_name,
+             COALESCE(ac.logo_url, j.logo_url, pe.logo_url) as logo_url,
+             CASE WHEN j.client_id IS NOT NULL THEN u.name END as managed_by_agency
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+      LEFT JOIN agency_clients ac ON j.client_id = ac.id
       WHERE j.status = 'active'
       ORDER BY 
         CASE WHEN (j.is_featured = 1 AND (j.featured_until IS NULL OR j.featured_until > datetime('now'))) THEN 0 ELSE 1 END,
@@ -518,14 +520,27 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
     }
     const category_id = category.id;
 
+    // Handle client_id for agency users
+    const clientId = req.body.client_id || null;
+    if (clientId) {
+      const user = db.prepare('SELECT account_type FROM users WHERE id = ?').get(req.user.id);
+      if (!user || user.account_type !== 'agency') {
+        return res.status(403).json({ error: 'Only agency accounts can post for clients' });
+      }
+      const client = db.prepare('SELECT id FROM agency_clients WHERE id = ? AND agency_id = ? AND deleted_at IS NULL').get(clientId, req.user.id);
+      if (!client) {
+        return res.status(400).json({ error: 'Invalid client' });
+      }
+    }
+
     const result = db.prepare(`
       INSERT INTO jobs (
         employer_id, title, description, requirements, location, country,
         job_type, experience_level, industry, category_slug, category_id, 
         skills, remote_work, salary_min, salary_max, salary_currency, 
         application_deadline, application_method, application_url, 
-        application_email, screening_questions, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        application_email, screening_questions, status, client_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.user.id,
       safeTitle,
@@ -548,7 +563,8 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
       application_url || null,
       safeApplicationEmail,
       safeScreeningQuestions,
-      status
+      status,
+      clientId
     );
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
