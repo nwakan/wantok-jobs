@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { jobs, applications, savedJobs } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
+import { getFlag } from '../utils/countryFlags';
 import { timeAgo, containsHTML, sanitizeHTML, copyToClipboard } from '../utils/helpers';
 import { formatJobSource } from '../utils/pngHelpers';
 import JobCard from '../components/JobCard';
@@ -818,8 +819,8 @@ export default function JobDetail() {
               <div className="flex flex-wrap gap-3 mb-6 pb-6 border-b border-gray-100">
                 {job.location && (
                   <div className="flex items-center gap-2 text-gray-700">
-                    <span className="text-lg">📍</span>
-                    <span className="font-medium">{job.location}, {job.country}</span>
+                    <span className="text-lg">{getFlag(job)}</span>
+                    <span className="font-medium">{job.location}{job.country ? `, ${job.country}` : ''}</span>
                   </div>
                 )}
                 {job.job_type && (
@@ -1395,10 +1396,10 @@ export default function JobDetail() {
                   ) : null}
                   {job.location && (
                     <div className="flex items-start gap-2">
-                      <span className="text-gray-500 min-w-[24px]">📍</span>
+                      <span className="text-gray-500 min-w-[24px]">{getFlag(job)}</span>
                       <div>
                         <div className="text-gray-600">Location</div>
-                        <div className="font-medium text-gray-900">{job.location}, {job.country}</div>
+                        <div className="font-medium text-gray-900">{job.location}{job.country ? `, ${job.country}` : ''}</div>
                       </div>
                     </div>
                   )}

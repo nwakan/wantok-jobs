@@ -6,6 +6,7 @@ import {
   Copy, MessageCircle, Award, Clock, DollarSign, Home
 } from 'lucide-react';
 import PageHead from '../components/PageHead';
+import { getFlag } from '../utils/countryFlags';
 import JobCard from '../components/JobCard';
 import OptimizedImage from '../components/OptimizedImage';
 import api from '../api';
@@ -245,7 +246,7 @@ export default function CompanyProfile() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                   {company.location && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                      <span className="flex-shrink-0">{getFlag(company)}</span>
                       <span className="text-sm truncate">{company.location}{company.country && `, ${company.country}`}</span>
                     </div>
                   )}

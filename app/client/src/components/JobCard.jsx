@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, GitCompareArrows } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 import { getDisplayCompanyName, formatJobSource } from '../utils/pngHelpers';
+import { getFlag } from '../utils/countryFlags';
 import OptimizedImage from './OptimizedImage';
 
 function getCompareIds() {
@@ -160,7 +161,7 @@ export default function JobCard({ job, compact = false }) {
           <div className="flex flex-wrap gap-2 mb-3">
             {job.location && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-                📍 {job.location}
+                {getFlag(job)} {job.location}
               </span>
             )}
             {job.job_type && (
