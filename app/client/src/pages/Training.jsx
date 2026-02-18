@@ -61,15 +61,15 @@ export default function Training() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <PageHead
-        title="Training & Courses in PNG"
-        description="Discover training programs and courses in Papua New Guinea. Upskill with top providers and boost your career prospects."
+        title="Training & Courses — PNG & the Pacific Islands"
+        description="Discover training programs and courses across PNG and the Pacific Islands. Upskill with top providers and boost your career prospects."
       />
       {/* Hero */}
       <div className="bg-gradient-to-br from-primary-600 to-teal-600 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl font-bold mb-4">Training & Courses</h1>
           <p className="text-xl text-primary-100 mb-8">
-            Upskill with training providers across Papua New Guinea
+            Upskill with training providers across PNG and the Pacific Islands
           </p>
           <div className="max-w-xl mx-auto flex gap-2">
             <input
@@ -124,7 +124,7 @@ export default function Training() {
               <div className="text-6xl mb-4">📚</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses available yet</h3>
               <p className="text-gray-600 mb-6">
-                We're working on partnering with training providers across PNG.
+                We're working on partnering with training providers across PNG and the Pacific.
                 Check back soon or contact us to suggest a provider.
               </p>
               <Link to="/contact" className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
@@ -189,7 +189,7 @@ export default function Training() {
               <div className="text-6xl mb-4">🏫</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No training providers listed yet</h3>
               <p className="text-gray-600 mb-6">
-                Are you a training provider in PNG? List your institution for free!
+                Are you a training provider in PNG or the Pacific? List your institution for free!
               </p>
               <Link to="/contact" className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
                 Register as Provider

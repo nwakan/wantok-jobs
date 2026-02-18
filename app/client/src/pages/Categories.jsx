@@ -135,8 +135,8 @@ export default function Categories() {
     return (
       <>
         <PageHead
-          title="Job Categories in PNG"
-          description="Explore jobs across all industries in Papua New Guinea."
+          title="Job Categories — PNG & the Pacific Islands"
+          description="Explore jobs across all industries in PNG and the Pacific Islands."
         />
         <div className="min-h-screen bg-gray-50 py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -154,8 +154,8 @@ export default function Categories() {
   return (
     <>
       <PageHead
-        title="Job Categories in PNG"
-        description="Explore jobs across all industries in Papua New Guinea. Find opportunities in mining, healthcare, IT, education, and more. Start your career search today."
+        title="Job Categories — PNG & the Pacific Islands"
+        description="Explore jobs across all industries in PNG and the Pacific Islands. Find opportunities in mining, healthcare, IT, education, and more. Start your career search today."
       />
       
       <div className="min-h-screen bg-gray-50 py-12">

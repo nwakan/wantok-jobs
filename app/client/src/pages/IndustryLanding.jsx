@@ -124,7 +124,7 @@ export default function IndustryLanding() {
             <span className="text-5xl">{industry.icon}</span>
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                {industry.name} Jobs in PNG
+                {industry.name} Jobs — Pacific Islands
               </h1>
               <p className="mt-3 text-lg text-gray-700 dark:text-gray-300 max-w-3xl">
                 {industry.description}
@@ -239,7 +239,7 @@ export default function IndustryLanding() {
               <section className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                   <Lightbulb className="w-5 h-5 text-yellow-500" />
-                  Tips for {industry.name} Jobs in PNG
+                  Tips for {industry.name} Jobs across the Pacific
                 </h2>
                 <ul className="space-y-3">
                   {industry.tips.map((tip, i) => (
@@ -314,7 +314,7 @@ export default function IndustryLanding() {
                 Get {industry.name} Job Alerts
               </h3>
               <p className="text-sm text-primary-700 dark:text-primary-300 mb-4">
-                Be the first to know when new {industry.name.toLowerCase()} jobs are posted in PNG.
+                Be the first to know when new {industry.name.toLowerCase()} jobs are posted across the Pacific.
               </p>
               <Link
                 to="/register"

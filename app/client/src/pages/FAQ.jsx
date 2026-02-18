@@ -69,11 +69,11 @@ const faqData = [
     questions: [
       {
         q: 'What is WantokJobs?',
-        a: 'WantokJobs is Papua New Guinea\'s leading job platform, connecting job seekers with employers across PNG and the Pacific. We use AI-powered matching and multi-channel alerts to help people find the right opportunities.',
+        a: 'WantokJobs is the Pacific Islands\' leading job platform, connecting job seekers with employers across PNG, Fiji, Solomon Islands, Vanuatu, Samoa, Tonga, and Timor-Leste. We use AI-powered matching and multi-channel alerts to help people find the right opportunities.',
       },
       {
         q: 'What makes WantokJobs different?',
-        a: 'We offer AI-powered job matching, multi-channel notifications (email, SMS, WhatsApp), mobile-first design, and local expertise. We understand the PNG job market and are committed to helping Papua New Guineans advance their careers.',
+        a: 'We offer AI-powered job matching, multi-channel notifications (email, SMS, WhatsApp), mobile-first design, and local expertise. We understand the Pacific job market and are committed to helping Papua New Guineans and Pacific Islanders advance their careers.',
       },
       {
         q: 'What industries do you cover?',

@@ -17,21 +17,17 @@ const COUNTRIES = {
     currency: 'PGK',
     symbol: 'K',
     locations: ['Port Moresby', 'Lae', 'Mt Hagen', 'Goroka', 'Madang', 'Wewak', 'Kokopo', 'Lihir', 'Other'],
-    // PNG 2024/2025 resident tax brackets (annual)
-    // 0–K20,000: 30% on excess over 0
-    // K20,001–K33,000: K3,900 + 35%
-    // K33,001–K70,000: K8,450 + 40% (corrected from PWC: cumulative)
-    // K70,001–K250,000: K23,250 + 42% (corrected)
-    // Over K250,000: K98,850 + 42%
-    // Note: PNG has NO tax-free threshold for residents as of 2024 budget changes.
+    // PNG 2026 resident tax brackets (Income Tax Act 2025, effective 1 Jan 2026)
+    // K20,000 tax-free threshold confirmed permanent by IRC.
+    // Source: Internal Revenue Commission PNG, 2026 National Budget
     brackets: [
-      { limit: 20000, rate: 0.30 },
-      { limit: 33000, rate: 0.35 },
-      { limit: 70000, rate: 0.40 },
-      { limit: 250000, rate: 0.42 },
+      { limit: 20000, rate: 0 },
+      { limit: 33000, rate: 0.30 },
+      { limit: 70000, rate: 0.35 },
+      { limit: 250000, rate: 0.40 },
       { limit: Infinity, rate: 0.42 },
     ],
-    bracketDisplay: '30% up to K20,000 · 35% K20,001–K33,000 · 40% K33,001–K70,000 · 42% K70,001–K250,000 · 42% over K250,000',
+    bracketDisplay: '0% up to K20,000 (tax-free) · 30% K20,001–K33,000 · 35% K33,001–K70,000 · 40% K70,001–K250,000 · 42% over K250,000',
     fortnightDivisor: 26,
   },
   FJ: {
@@ -40,14 +36,10 @@ const COUNTRIES = {
     currency: 'FJD',
     symbol: '$',
     locations: ['Suva', 'Nadi', 'Lautoka', 'Labasa', 'Ba', 'Other'],
-    // Fiji 2025 resident tax brackets (annual)
+    // Fiji 2024/2025 resident tax brackets (annual)
+    // Source: FRCS (Fiji Revenue & Customs Service)
     // Tax-free threshold: FJD 30,000
-    // FJD 30,001–50,000: 18%
-    // FJD 50,001–270,000: 20%
-    // FJD 270,001–300,000: 33%
-    // FJD 300,001–350,000: 34%
-    // Over FJD 350,000: 35%
-    // Plus Social Responsibility Tax (SRT) on income over FJD 270,000
+    // Rates verified against Fiji Income Tax Act
     brackets: [
       { limit: 30000, rate: 0 },
       { limit: 50000, rate: 0.18 },
@@ -66,11 +58,8 @@ const COUNTRIES = {
     symbol: '$',
     locations: ['Honiara', 'Gizo', 'Auki', 'Other'],
     // Solomon Islands resident tax brackets (annual)
+    // Source: Inland Revenue Division, Ministry of Finance SI
     // Tax-free threshold: SBD 15,080
-    // SBD 15,081–30,000: 11%
-    // SBD 30,001–60,000: 23%
-    // SBD 60,001–90,000: 35%
-    // Over SBD 90,000: 40%
     brackets: [
       { limit: 15080, rate: 0 },
       { limit: 30000, rate: 0.11 },

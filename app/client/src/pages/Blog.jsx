@@ -68,7 +68,7 @@ export default function Blog() {
     <>
       <PageHead
         title="Career Blog"
-        description="Expert career advice, job search tips, and industry insights for job seekers in Papua New Guinea."
+        description="Expert career advice, job search tips, and industry insights for job seekers across PNG and the Pacific Islands."
       />
       
       <div className="min-h-screen bg-gray-50">
@@ -77,7 +77,7 @@ export default function Blog() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">WantokJobs Blog</h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto text-center">
-              Career advice, job search tips, and industry insights to help you succeed in Papua New Guinea's job market.
+              Career advice, job search tips, and industry insights to help you succeed in the Pacific Islands job market.
             </p>
           </div>
         </div>
@@ -262,8 +262,8 @@ function getMockArticles() {
     {
       id: 1,
       slug: 'how-to-write-perfect-cv-png',
-      title: 'How to Write the Perfect CV for PNG Employers',
-      excerpt: 'Learn the essential tips for creating a CV that stands out to Papua New Guinea employers. From formatting to content, we cover everything you need to know.',
+      title: 'How to Write the Perfect CV for Pacific Employers',
+      excerpt: 'Learn the essential tips for creating a CV that stands out to employers across PNG and the Pacific Islands. From formatting to content, we cover everything you need to know.',
       category: 'Resume Writing',
       author: 'Sarah Johnson',
       publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
@@ -280,8 +280,8 @@ function getMockArticles() {
     {
       id: 3,
       slug: 'mining-jobs-png-guide',
-      title: 'Complete Guide to Mining Jobs in PNG',
-      excerpt: 'Explore the thriving mining sector in Papua New Guinea. Learn about opportunities, requirements, and how to land your dream mining job.',
+      title: 'Complete Guide to Mining Jobs in PNG & the Pacific',
+      excerpt: 'Explore the thriving mining sector across PNG and the Pacific Islands. Learn about opportunities, requirements, and how to land your dream mining job.',
       category: 'Industry News',
       author: 'David Pato',
       publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),

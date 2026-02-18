@@ -244,9 +244,9 @@ export default function Home() {
     <>
       <ActivityToast />
       <PageHead
-        title="WantokJobs — PNG's First Transparent Hiring Platform | Fair Recruitment"
-        description={`PNG's leading transparent job platform. ${stats.totalEmployers.toLocaleString()}+ employers, ${stats.transparentEmployers} transparent employers, ${stats.governmentBodies} government bodies. Fair hiring, open processes. ${stats.activeJobs}+ jobs.`}
-        keywords="jobs PNG, transparent hiring PNG, fair recruitment Papua New Guinea, government jobs PNG, Port Moresby jobs, Lae jobs, careers PNG, employment PNG"
+        title="WantokJobs — The Pacific's First Transparent Hiring Platform | Fair Recruitment"
+        description={`The Pacific's leading transparent job platform. ${stats.totalEmployers.toLocaleString()}+ employers, ${stats.transparentEmployers} transparent employers, ${stats.governmentBodies} government bodies. Fair hiring, open processes. ${stats.activeJobs}+ jobs across PNG & the Pacific Islands.`}
+        keywords="jobs PNG, jobs Pacific Islands, transparent hiring PNG, fair recruitment Papua New Guinea, government jobs PNG, Pacific careers, Fiji jobs, Solomon Islands jobs"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebSite",
@@ -413,8 +413,8 @@ export default function Home() {
               The Transparency Framework
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-              Fair hiring for PNG. Government departments, SOEs, NGOs, and statutory authorities must now disclose hiring panels, 
-              selection criteria, and outcomes. <strong>No other PNG job platform has this.</strong>
+              Fair hiring for PNG and the Pacific Islands. Government departments, SOEs, NGOs, and statutory authorities must now disclose hiring panels, 
+              selection criteria, and outcomes. <strong>No other Pacific job platform has this.</strong>
             </p>
           </div>
 
@@ -444,7 +444,7 @@ export default function Home() {
               },
               {
                 icon: Shield,
-                title: 'For PNG',
+                title: 'For the Pacific',
                 color: 'bg-green-100 text-green-600',
                 points: [
                   'Combat wantok system abuse',
@@ -750,12 +750,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">Why WantokJobs?</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">Built for Papua New Guinea. Powered by AI.</p>
+            <p className="text-xl text-gray-600 dark:text-gray-400">Built for PNG & the Pacific Islands. Powered by AI.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { icon: Shield, title: 'Transparency Framework', desc: 'Only PNG platform with mandatory hiring transparency for public sector. Fair, merit-based recruitment.' },
+              { icon: Shield, title: 'Transparency Framework', desc: 'Only Pacific platform with mandatory hiring transparency for public sector. Fair, merit-based recruitment.' },
               { icon: UserCheck, title: 'Employer Scout', desc: `Automated employer profile building from multiple sources — ${stats.governmentBodies || 69} public sector profiles and counting` },
               { icon: Zap, title: 'Jean AI Assistant', desc: 'Chat widget on every page. Get instant help with job searches, applications, and career advice' },
               { icon: Bell, title: 'WhatsApp Job Alerts', desc: 'Get notified instantly when jobs matching your profile are posted — via email, SMS, or WhatsApp' },

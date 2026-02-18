@@ -19,9 +19,9 @@ export default function About() {
   return (
     <>
       <PageHead
-        title="About WantokJobs — PNG's First Transparent Hiring Platform"
-        description="WantokJobs is Papua New Guinea's answer to unfair hiring practices. The first Pacific platform with mandatory transparency for government and public sector employers."
-        keywords="about WantokJobs, transparent hiring PNG, fair recruitment Papua New Guinea, job platform PNG"
+        title="About WantokJobs — The Pacific's First Transparent Hiring Platform"
+        description="WantokJobs is the Pacific Islands' answer to unfair hiring practices. The first platform with mandatory transparency for government and public sector employers across PNG, Fiji, Solomon Islands, and the Pacific."
+        keywords="about WantokJobs, transparent hiring PNG, fair recruitment Pacific Islands, job platform PNG, Pacific jobs"
       />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -31,11 +31,11 @@ export default function About() {
             🏆 First in the Pacific
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            PNG's Answer to Unfair Hiring
+            The Pacific's Answer to Unfair Hiring
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             We're building a job platform where merit matters more than connections. 
-            Where transparency replaces hidden deals. Where every Papua New Guinean gets a fair chance.
+            Where transparency replaces hidden deals. Where every Pacific Islander gets a fair chance — starting with Papua New Guinea.
           </p>
         </div>
 
@@ -48,7 +48,7 @@ export default function About() {
             <h2 className="text-3xl font-bold text-gray-900">Our Mission</h2>
           </div>
           <p className="text-lg text-gray-700 leading-relaxed">
-            To end corrupt hiring practices in Papua New Guinea by mandating transparency for public sector employers. 
+            To end corrupt hiring practices across PNG and the Pacific Islands by mandating transparency for public sector employers. 
             We believe every job seeker deserves to know how they're evaluated, who's on the hiring panel, and why decisions are made. 
             <strong> Merit should trump wantok connections.</strong>
           </p>
@@ -59,7 +59,7 @@ export default function About() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6">The Problem We're Solving</h2>
           <div className="bg-white rounded-xl shadow-sm p-8 border-l-4 border-red-500">
             <p className="text-gray-700 mb-4">
-              For too long, hiring in PNG—especially in government and public sector roles—has been plagued by:
+              For too long, hiring across the Pacific—especially in government and public sector roles—has been plagued by:
             </p>
             <ul className="space-y-3">
               {[
@@ -136,9 +136,9 @@ export default function About() {
               </p>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">🇵🇬 For Papua New Guinea</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">🌏 For the Pacific</h3>
               <p className="text-gray-700">
-                Combat corruption. Increase public sector accountability. Create a level playing field. 
+                Combat corruption across PNG, Fiji, Solomon Islands, and the wider Pacific. Increase public sector accountability. Create a level playing field. 
                 Build trust in government institutions. Ensure the best people get the jobs—not just the best-connected.
               </p>
             </div>
@@ -171,7 +171,7 @@ export default function About() {
             {[
               {
                 title: '🏆 First in the Pacific',
-                desc: 'No other job platform in PNG or the Pacific has mandatory transparency requirements.'
+                desc: 'No other job platform in the Pacific Islands has mandatory transparency requirements.'
               },
               {
                 title: '🤖 Employer Scout',
@@ -187,7 +187,7 @@ export default function About() {
               },
               {
                 title: '🗣️ Tok Pisin Support',
-                desc: 'Platform available in both English and Tok Pisin. Built for Papua New Guineans, by Papua New Guineans.'
+                desc: 'Platform available in both English and Tok Pisin. Built for Pacific Islanders, starting in Papua New Guinea.'
               },
               {
                 title: '💳 Credit-Based Billing',
