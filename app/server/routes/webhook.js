@@ -69,8 +69,8 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   // Respond immediately, deploy in background
   res.json({ status: 'deploying', pusher, commits });
 
-  // Deploy: git pull then delayed restart (delay avoids killing self mid-response)
-  const deployCmd = `cd ${REPO_DIR}/app && git stash 2>/dev/null; git pull origin main && (sleep 2 && systemctl restart wantokjobs) &`;
+  // Deploy: git pull, rebuild client if needed, then delayed restart
+  const deployCmd = `cd ${REPO_DIR}/app && git stash 2>/dev/null; git pull origin main && (cd client && npx vite build 2>/dev/null; cd .. && sleep 2 && systemctl restart wantokjobs) &`;
   exec(deployCmd, { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) {
       logger.error('Deploy failed', { error: err.message, stderr });
