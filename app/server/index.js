@@ -615,3 +615,4 @@ process.on('uncaughtException', (error) => {
 });
 
 module.exports = app; // For testing
+// auto-deploy test Wed Feb 18 12:22:01 +08 2026
