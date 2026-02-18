@@ -59,12 +59,26 @@ class RegexJobParser {
   }
 
   /**
+   * Pre-process raw text to split inline section headers onto their own lines.
+   * Many PNG job posts have headers like "About You To be considered..." all on one line.
+   */
+  preprocessText() {
+    const inlineHeaderPattern = /(?<=\.\s|[.!?]\s{1,3}|\s{2,})(About\s+(?:the\s+)?(?:Role|Position|Company|Us|You|Job)|Key\s+Accountabilities|Responsibilities|Requirements|Qualifications|Duties|How\s+to\s+Apply|Life\s+at\s+\w+|Working\s+at\s+\w+|Why\s+(?:Join|Work)|Benefits|What\s+We\s+Offer|Selection\s+Criteria|Equal\s+Opportunity|The\s+(?:Ideal\s+)?Candidate)(?=\s)/g;
+    
+    let text = this.rawText.replace(inlineHeaderPattern, '\n$1');
+    this.lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  }
+
+  /**
    * Detect section headers and split text into blocks
    */
   detectSections() {
+    // Pre-process to split inline headers
+    this.preprocessText();
+    
     this.sectionBlocks = [];
     
-    const sectionHeaderRegex = /^(?:#+\s*)?(?:about|overview|company|introduction|background|responsibilities|duties|key tasks|role|tasks|requirements|qualifications|must have|essential|skills|experience|education|benefits|perks|salary|compensation|offer|package|how to apply|application|submit|send|deadline|closing|contact|email|phone)/i;
+    const sectionHeaderRegex = /^(?:#+\s*)?(?:about\s+(?:the\s+)?(?:role|position|company|us|you|job)|about|overview|company|introduction|background|responsibilities|key\s+accountabilities|accountabilities|duties|key\s+tasks|role\s+(?:summary|description|purpose)|the\s+role|tasks|requirements|qualifications|must\s+have|essential|desired|preferred|skills|experience|education|criteria|selection\s+criteria|competencies|benefits|perks|salary|compensation|offer|we\s+offer|what\s+we\s+offer|package|life\s+at|working\s+at|why\s+(?:join|work)|how\s+to\s+apply|application|submit|send|to\s+apply|interested\s+candidates|deadline|closing|applications?\s+close|contact|email|phone|equal\s+opportunity|eeo)/i;
     
     let currentSection = null;
     let currentContent = [];
@@ -82,9 +96,13 @@ class RegexJobParser {
           });
         }
         
-        // Start new section
-        currentSection = line;
-        currentContent = [];
+        // Split header from trailing content on the same line
+        // e.g. "About You To be considered..." → header="About You", content starts with "To be considered..."
+        const matchedText = headerMatch ? headerMatch[0] : line;
+        const remainder = line.slice(matchedText.length).trim();
+        
+        currentSection = matchedText;
+        currentContent = remainder ? [remainder] : [];
       } else {
         currentContent.push(line);
       }
@@ -160,10 +178,14 @@ class RegexJobParser {
   extractResponsibilitiesSection() {
     const respPatterns = [
       /(?:key\s+)?responsibilities/i,
+      /(?:key\s+)?accountabilities/i,
       /duties/i,
       /(?:key\s+)?tasks/i,
-      /role\s+description/i,
-      /what\s+you(?:'ll|\s+will)\s+do/i
+      /role\s+(?:description|summary|purpose)/i,
+      /about\s+the\s+role/i,
+      /the\s+role/i,
+      /what\s+you(?:'ll|\s+will)\s+do/i,
+      /scope\s+of\s+(?:work|role)/i
     ];
     
     for (const block of this.sectionBlocks) {
@@ -186,7 +208,15 @@ class RegexJobParser {
       /must\s+have/i,
       /essential\s+(?:skills|qualifications)/i,
       /skills\s+(?:and\s+)?(?:experience|qualifications)/i,
-      /what\s+(?:we(?:'re|\s+are)\s+looking\s+for|you\s+need)/i
+      /what\s+(?:we(?:'re|\s+are)\s+looking\s+for|you\s+need)/i,
+      /about\s+you/i,
+      /the\s+(?:ideal\s+)?candidate/i,
+      /who\s+(?:we(?:'re|\s+are)\s+looking\s+for|you\s+are)/i,
+      /selection\s+criteria/i,
+      /minimum\s+(?:requirements|qualifications)/i,
+      /desired\s+(?:skills|qualifications|experience)/i,
+      /competencies/i,
+      /criteria/i
     ];
     
     for (const block of this.sectionBlocks) {
@@ -209,7 +239,12 @@ class RegexJobParser {
       /compensation/i,
       /salary/i,
       /what\s+we\s+offer/i,
-      /package/i
+      /we\s+offer/i,
+      /why\s+(?:join|work)/i,
+      /life\s+at/i,
+      /working\s+at/i,
+      /package/i,
+      /remuneration/i
     ];
     
     for (const block of this.sectionBlocks) {
@@ -306,7 +341,7 @@ class RegexJobParser {
     // If no bullets found, try splitting by sentences
     if (bullets.length === 0 && text.length > 20) {
       const sentences = text.split(/[.;]\s+/).filter(s => s.length > 15 && s.length < 300);
-      return sentences.slice(0, 5);
+      return sentences.slice(0, 10);
     }
     
     return bullets.slice(0, 10); // Max 10 items per section
@@ -479,7 +514,7 @@ async function formatJobDescription(rawText, jobTitle = '', companyName = '') {
   console.log(`Job Formatter: Regex parser confidence: ${(parseResult.confidence * 100).toFixed(1)}%`);
   
   // If regex parser has high confidence (>70%), use it
-  if (parseResult.confidence >= 0.7) {
+  if (parseResult.confidence >= 0.5) {
     const formatted_html = buildFormattedHTML(parseResult.sections);
     
     return {
@@ -491,7 +526,7 @@ async function formatJobDescription(rawText, jobTitle = '', companyName = '') {
   }
   
   // Step 2: Low confidence, fall back to LLM
-  console.log(`Job Formatter: Regex confidence too low (${(result.confidence * 100).toFixed(1)}%), using LLM fallback`);
+  console.log(`Job Formatter: Regex confidence too low (${(parseResult.confidence * 100).toFixed(1)}%), using LLM fallback`);
   
   try {
     const llmSections = await formatWithLLM(rawText, jobTitle, companyName);

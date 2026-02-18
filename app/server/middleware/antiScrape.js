@@ -220,7 +220,7 @@ function honeypotSetup(app) {
     '/api/jobs/export.csv',
     '/api/dump',
     '/api/v1/bulk',
-    '/sitemap-jobs.xml',
+    // REMOVED: '/sitemap-jobs.xml', — This was blocking legitimate SEO crawlers
     '/data/jobs.json',
     '/backup/db',
   ];
