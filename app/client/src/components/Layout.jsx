@@ -257,7 +257,7 @@ export default function Layout() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white mt-12" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-8">
             <div>
               <h3 className="text-lg font-bold mb-4">WantokJobs</h3>
               <p className="text-gray-400">
@@ -269,12 +269,22 @@ export default function Layout() {
               <ul className="space-y-2">
                 <li><Link to="/jobs" className="text-gray-400 hover:text-white">{t('footer.browseJobs')}</Link></li>
                 <li><Link to="/companies" className="text-gray-400 hover:text-white">{t('footer.companies')}</Link></li>
+                <li><Link to="/categories" className="text-gray-400 hover:text-white">📂 Categories</Link></li>
                 <li><Link to="/transparency" className="text-gray-400 hover:text-white">🛡️ Transparency</Link></li>
-                <li><Link to="/features" className="text-gray-400 hover:text-white">💡 Feature Requests</Link></li>
-                <li><Link to="/training" className="text-gray-400 hover:text-white">{t('footer.training')}</Link></li>
+                <li><Link to="/pricing" className="text-gray-400 hover:text-white">💰 Pricing</Link></li>
+                <li><Link to="/blog" className="text-gray-400 hover:text-white">📰 Blog</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold mb-4">Resources</h3>
+              <ul className="space-y-2">
                 <li><Link to="/about" className="text-gray-400 hover:text-white">{t('footer.aboutUs')}</Link></li>
-                <li><Link to="/success-stories" className="text-gray-400 hover:text-white">Success Stories</Link></li>
-                <li><Link to="/help" className="text-gray-400 hover:text-white">Help Center</Link></li>
+                <li><Link to="/help" className="text-gray-400 hover:text-white">❓ Help Center</Link></li>
+                <li><Link to="/faq" className="text-gray-400 hover:text-white">📋 FAQ</Link></li>
+                <li><Link to="/success-stories" className="text-gray-400 hover:text-white">⭐ Success Stories</Link></li>
+                <li><Link to="/features" className="text-gray-400 hover:text-white">💡 Feature Requests</Link></li>
+                <li><Link to="/salary-calculator" className="text-gray-400 hover:text-white">🧮 Salary Calculator</Link></li>
+                <li><Link to="/contact" className="text-gray-400 hover:text-white">✉️ Contact Us</Link></li>
               </ul>
             </div>
             <div>
@@ -292,8 +302,17 @@ export default function Layout() {
             </div>
             <div>
               <h3 className="text-lg font-bold mb-4">{t('footer.contact')}</h3>
-              <p className="text-gray-400">Email: info@wantokjobs.com</p>
-              <p className="text-gray-400">Phone: +675 7583 0582</p>
+              <p className="text-gray-400 mb-2">Email: info@wantokjobs.com</p>
+              <p className="text-gray-400 mb-4">Phone: +675 7583 0582</p>
+              <div className="flex gap-3 mt-3">
+                <a href="https://wa.me/67575830582" target="_blank" rel="noopener" className="text-gray-400 hover:text-green-400" title="WhatsApp">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.09.547 4.058 1.504 5.772L0 24l6.396-1.467A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.94 0-3.76-.55-5.304-1.5l-.38-.226-3.795.87.91-3.666-.248-.395A9.953 9.953 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                </a>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <Link to="/privacy" className="text-gray-500 hover:text-gray-300 text-xs mr-4">Privacy Policy</Link>
+                <Link to="/terms" className="text-gray-500 hover:text-gray-300 text-xs">Terms of Service</Link>
+              </div>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
