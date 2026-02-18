@@ -17,6 +17,7 @@ router.get('/', (req, res) => {
     let query = `
       SELECT u.id, u.name, pe.company_name, pe.industry, pe.company_size, 
              pe.location, pe.country, pe.logo_url, pe.verified, pe.featured,
+             pe.transparency_score, pe.transparency_required, pe.employer_type,
              (SELECT COUNT(*) FROM jobs WHERE employer_id = u.id AND status = 'active') as active_jobs_count,
              (SELECT COUNT(*) FROM jobs WHERE employer_id = u.id) as total_jobs_count
       FROM users u
@@ -100,7 +101,21 @@ router.get('/', (req, res) => {
 
     const total = db.prepare(countQuery).get(...countParams);
 
-    const result = { data: companies, total: total.count };
+    // Add transparency badges to companies
+    const getTransparencyBadge = require('./transparency').getTransparencyBadge || function(score, required) {
+      if (!required) return null;
+      if (score >= 80) return { emoji: '✅', label: 'Transparency Verified', level: 'high', color: 'green' };
+      if (score >= 50) return { emoji: '🟡', label: 'Partially Transparent', level: 'medium', color: 'yellow' };
+      if (score >= 1) return { emoji: '🔴', label: 'Low Transparency', level: 'low', color: 'red' };
+      return { emoji: '⚫', label: 'No Transparency Data', level: 'none', color: 'black' };
+    };
+    
+    const enrichedCompanies = companies.map(company => ({
+      ...company,
+      transparency_badge: getTransparencyBadge(company.transparency_score || 0, company.transparency_required || 0),
+    }));
+
+    const result = { data: enrichedCompanies, total: total.count };
     cache.set(cacheKey, result, 120);
     res.json(result);
   } catch (error) {

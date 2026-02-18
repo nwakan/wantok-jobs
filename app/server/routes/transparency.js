@@ -7,6 +7,55 @@ const logger = require('../utils/logger');
 const router = express.Router();
 
 /**
+ * Get transparency badge for an employer
+ * @param {number} score - Transparency score (0-100)
+ * @param {boolean} required - Whether transparency is required
+ * @returns {object} Badge object with emoji, label, color
+ */
+function getTransparencyBadge(score, required = false) {
+  if (!required) {
+    return null; // No badge for employers not required to be transparent
+  }
+  
+  if (score >= 80) {
+    return {
+      emoji: '✅',
+      label: 'Transparency Verified',
+      level: 'high',
+      color: 'green',
+      description: 'This employer meets high transparency standards',
+    };
+  } else if (score >= 50) {
+    return {
+      emoji: '🟡',
+      label: 'Partially Transparent',
+      level: 'medium',
+      color: 'yellow',
+      description: 'Some transparency data provided',
+    };
+  } else if (score >= 1) {
+    return {
+      emoji: '🔴',
+      label: 'Low Transparency',
+      level: 'low',
+      color: 'red',
+      description: 'Minimal transparency data',
+    };
+  } else {
+    return {
+      emoji: '⚫',
+      label: 'No Transparency Data',
+      level: 'none',
+      color: 'black',
+      description: 'Required to provide transparency data but has not submitted any',
+    };
+  }
+}
+
+// Export for use in other routes
+router.getTransparencyBadge = getTransparencyBadge;
+
+/**
  * Calculate transparency score for an employer
  * Scoring criteria:
  * - Job posted with full selection criteria: +20
@@ -234,6 +283,9 @@ router.get('/employer/:id', (req, res) => {
 
     // Recalculate score
     const score = calculateTransparencyScore(id);
+    
+    // Get transparency badge
+    const badge = getTransparencyBadge(score, employer.transparency_required);
 
     res.json({
       success: true,
@@ -244,6 +296,7 @@ router.get('/employer/:id', (req, res) => {
           employerType: employer.employer_type,
           transparencyRequired: employer.transparency_required,
           transparencyScore: score,
+          transparencyBadge: badge,
           industry: employer.industry,
           location: employer.location,
           country: employer.country,

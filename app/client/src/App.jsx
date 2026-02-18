@@ -57,6 +57,7 @@ const CompareJobs = lazy(() => import('./pages/CompareJobs'));
 const SuccessStories = lazy(() => import('./pages/SuccessStories'));
 const IndustryLanding = lazy(() => import('./pages/IndustryLanding'));
 const Transparency = lazy(() => import('./pages/Transparency'));
+const TransparencyLeaderboard = lazy(() => import('./pages/TransparencyLeaderboard'));
 const Features = lazy(() => import('./pages/Features'));
 const ClaimEmployer = lazy(() => import('./pages/ClaimEmployer'));
 const CareerInsights = lazy(() => import('./pages/CareerInsights'));
@@ -144,6 +145,7 @@ function App() {
               {/* Public routes — lazy */}
               <Route path="about" element={<Lazy component={About} />} />
               <Route path="transparency" element={<Lazy component={Transparency} />} />
+              <Route path="transparency/leaderboard" element={<Lazy component={TransparencyLeaderboard} />} />
               <Route path="contact" element={<Lazy component={Contact} />} />
               <Route path="privacy" element={<Lazy component={Privacy} />} />
               <Route path="terms" element={<Lazy component={Terms} />} />
