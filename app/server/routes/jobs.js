@@ -15,6 +15,92 @@ const { validateJobData } = require('../middleware/jobValidator');
 
 const cache = require('../lib/cache');
 
+// Real-time AI pipeline — processes new jobs asynchronously
+let vectorStore, embeddingReady = false;
+try {
+  vectorStore = require('../lib/vector-store');
+  embeddingReady = !!process.env.COHERE_API_KEY;
+} catch(e) { /* embedding engine not available */ }
+
+async function processNewJob(job, employer) {
+  const startMs = Date.now();
+  const steps = [];
+
+  // Step 1: Generate semantic embedding (2-3s)
+  if (embeddingReady && vectorStore) {
+    try {
+      const text = [
+        job.title,
+        employer?.company_name ? `at ${employer.company_name}` : '',
+        job.description ? job.description.slice(0, 2000) : '',
+        job.requirements ? job.requirements.slice(0, 1000) : '',
+        job.location, job.country, job.industry, job.job_type
+      ].filter(Boolean).join(' ');
+
+      if (text.length > 20) {
+        await vectorStore.upsert('job', job.id, text, 'search_document');
+        steps.push('embedding');
+        logger.info('Job embedded', { jobId: job.id, ms: Date.now() - startMs });
+      }
+    } catch (e) {
+      logger.error('Job embedding failed', { jobId: job.id, error: e.message });
+    }
+  }
+
+  // Step 2: Find top matching jobseekers and notify them (3-5s)
+  if (embeddingReady && vectorStore) {
+    try {
+      const matches = vectorStore.search(
+        [job.title, job.description?.slice(0, 500), job.location].filter(Boolean).join(' '),
+        'profile', 10, 0.65
+      );
+      
+      if (matches && matches.length > 0) {
+        const matchIds = matches.map(m => m.entity_id);
+        const placeholders = matchIds.map(() => '?').join(',');
+        const matchedUsers = db.prepare(
+          `SELECT u.id, u.email, u.name FROM users u WHERE u.id IN (${placeholders}) AND u.status = 'active'`
+        ).all(...matchIds);
+        
+        // Create notifications for matched users
+        const insertNotif = db.prepare(
+          'INSERT OR IGNORE INTO notifications (user_id, type, title, message, metadata) VALUES (?, ?, ?, ?, ?)'
+        );
+        
+        for (const user of matchedUsers) {
+          try {
+            insertNotif.run(
+              user.id,
+              'job_match',
+              '🎯 New job matches your profile!',
+              `"${job.title}" ${employer?.company_name ? `at ${employer.company_name}` : ''} in ${job.location || 'PNG'} looks like a great fit for you.`,
+              JSON.stringify({ job_id: job.id, match_score: matches.find(m => m.entity_id === user.id)?.score || 0 })
+            );
+          } catch(e) { /* ignore duplicate */ }
+        }
+        
+        steps.push(`matched:${matchedUsers.length}`);
+        logger.info('Job matched', { jobId: job.id, matches: matchedUsers.length, ms: Date.now() - startMs });
+      }
+    } catch (e) {
+      logger.error('Job matching failed', { jobId: job.id, error: e.message });
+    }
+  }
+
+  // Step 3: Update FTS index
+  try {
+    const existing = db.prepare("SELECT rowid FROM jobs_fts WHERE rowid = ?").get(job.id);
+    if (!existing) {
+      db.prepare(
+        "INSERT INTO jobs_fts (rowid, title, description, requirements, location, industry) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run(job.id, job.title || '', job.description || '', job.requirements || '', job.location || '', job.industry || '');
+      steps.push('fts');
+    }
+  } catch(e) { /* FTS might not exist */ }
+
+  logger.info('AI pipeline complete', { jobId: job.id, steps, totalMs: Date.now() - startMs });
+}
+
 const router = express.Router();
 
 // GET /suggestions - Autocomplete for keywords and companies
@@ -708,6 +794,14 @@ router.post('/', authenticateToken, requireRole('employer'), validateJobData, va
     }
 
     cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
+
+    // Real-time AI pipeline (async, non-blocking)
+    if (status === 'active') {
+      processNewJob(job, employer).catch(e => 
+        logger.error('AI pipeline error', { jobId: job.id, error: e.message })
+      );
+    }
+
     res.status(201).json({ data: job, id: job.id });
   } catch (error) {
     logger.error('Create job error', { error: error.message });
