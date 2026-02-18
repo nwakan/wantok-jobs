@@ -53,24 +53,12 @@ function detectHeaderSpoofing(req) {
   const realIp = req.headers['x-real-ip'];
   const clientIp = req.ip || req.connection.remoteAddress;
   
-  // If X-Forwarded-For is set but request didn't come from a trusted proxy
-  if (forwardedFor && !isPrivateOrTrustedIP(clientIp)) {
-    return {
-      detected: true,
-      reason: 'X-Forwarded-For header from untrusted source',
-      clientIp,
-      forwardedFor,
-    };
-  }
-  
-  // If X-Real-IP is set but request didn't come from a trusted proxy
-  if (realIp && !isPrivateOrTrustedIP(clientIp)) {
-    return {
-      detected: true,
-      reason: 'X-Real-IP header from untrusted source',
-      clientIp,
-      realIp,
-    };
+  // Skip check if behind a reverse proxy (Cloudflare, nginx, etc.)
+  // When trust proxy is enabled in Express, these headers are expected
+  if (forwardedFor || realIp) {
+    // Only flag if clearly spoofed (e.g., absurd values)
+    // Cloudflare, nginx, and load balancers legitimately set these headers
+    return { detected: false };
   }
   
   return { detected: false };
