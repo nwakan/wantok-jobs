@@ -83,14 +83,14 @@ export default function CompanyProfile() {
         api.get(`/jobs?companyId=${id}`),
         api.get(`/employers/${id}/claim-status`).catch(() => ({ data: null }))
       ]);
-      setCompany(companyRes.data.company || companyRes.data);
-      setJobs(jobsRes.data.jobs || []);
-      if (claimRes.data) {
-        setClaimStatus(claimRes.data);
+      setCompany(companyRes.company || companyRes);
+      setJobs(companyRes.jobs || jobsRes.jobs || jobsRes || []);
+      if (claimRes) {
+        setClaimStatus(claimRes);
       }
     } catch (error) {
       console.error('Failed to fetch company data:', error);
-      alert('Failed to load company profile');
+      setCompany(null);
     } finally {
       setLoading(false);
     }
