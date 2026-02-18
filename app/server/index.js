@@ -341,6 +341,7 @@ app.get('/api/stats', (req, res) => {
     };
     const result = { success: true, data: stats, ...stats };
     statsCache.set('stats:public', result, 300);
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json(result);
   } catch (error) {
     logger.error('Stats error', { error: error.message, requestId: req.id });
