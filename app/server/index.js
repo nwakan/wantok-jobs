@@ -58,6 +58,13 @@ const requestLogger = require('./middleware/logging');
 // API cache middleware
 const apiCache = require('./middleware/cache');
 
+// Anti-scraping protection
+const { botBlocker, behaviorDetector, sanitizeResponse, honeypotSetup, securityHeaders } = require('./middleware/antiScrape');
+app.use(botBlocker);
+app.use(behaviorDetector);
+app.use(sanitizeResponse);
+app.use(securityHeaders);
+honeypotSetup(app);
 
 // Security headers (enhanced CSRF protection)
 app.use(helmet({
@@ -214,6 +221,15 @@ const chatLimiter = rateLimit({
   message: { error: 'Too many chat messages. Please wait a minute.', code: 'RATE_LIMIT' },
 });
 
+// Employer claim rate limit: 3/hour per IP/employer
+const claimLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many claim attempts. Please try again later.', code: 'RATE_LIMIT' },
+});
+
 // GitHub webhook — must be before express.json() to get raw body for HMAC
 app.use('/api/webhook', require('./routes/webhook'));
 
@@ -335,6 +351,8 @@ app.use('/api/saved-resumes', require('./routes/saved-resumes'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/companies', require('./routes/companies'));
+app.use('/api/employers', claimLimiter, require('./routes/employer-claims'));
+app.use('/api/admin/employer-claims', authenticateToken, require('./routes/employer-claims'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/activity', require('./routes/activity-feed'));
 app.use('/api/uploads', uploadLimiter, require('./routes/uploads'));

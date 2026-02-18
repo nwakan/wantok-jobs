@@ -58,6 +58,7 @@ const SuccessStories = lazy(() => import('./pages/SuccessStories'));
 const IndustryLanding = lazy(() => import('./pages/IndustryLanding'));
 const Transparency = lazy(() => import('./pages/Transparency'));
 const Features = lazy(() => import('./pages/Features'));
+const ClaimEmployer = lazy(() => import('./pages/ClaimEmployer'));
 
 // === Shared dashboard ===
 const ChangePassword = lazy(() => import('./pages/dashboard/shared/ChangePassword'));
@@ -120,6 +121,7 @@ const AdminWallet = lazy(() => import('./pages/dashboard/admin/WalletAdmin'));
 const AdminReviewManagement = lazy(() => import('./pages/dashboard/admin/ReviewManagement'));
 const AdminFeatureRequests = lazy(() => import('./pages/dashboard/admin/FeatureRequests'));
 const AdminMarketing = lazy(() => import('./pages/dashboard/admin/Marketing'));
+const AdminEmployerClaims = lazy(() => import('./pages/dashboard/admin/EmployerClaims'));
 
 function App() {
   return (
@@ -151,6 +153,7 @@ function App() {
               <Route path="companies" element={<Lazy component={CompaniesPage} />} />
               <Route path="companies/:id" element={<Lazy component={CompanyProfilePage} />} />
               <Route path="companies/:id/reviews" element={<Lazy component={CompanyReviews} />} />
+              <Route path="employers/:id/claim" element={<Lazy component={ClaimEmployer} />} />
               <Route path="blog" element={<Lazy component={Blog} />} />
               <Route path="blog/:slug" element={<Lazy component={BlogPost} />} />
               <Route path="stats" element={<Lazy component={Stats} />} />
@@ -232,6 +235,7 @@ function App() {
                 <Route path="wallet" element={<Lazy component={AdminWallet} />} />
                 <Route path="feature-requests" element={<Lazy component={AdminFeatureRequests} />} />
                 <Route path="marketing" element={<Lazy component={AdminMarketing} />} />
+                <Route path="employer-claims" element={<Lazy component={AdminEmployerClaims} />} />
                 <Route path="settings" element={<Lazy component={AdminSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>
