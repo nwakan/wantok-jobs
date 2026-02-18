@@ -91,8 +91,8 @@ function csrfProtection(req, res, next) {
     return next();
   }
   
-  // Exempt webhook endpoints
-  if (req.path.startsWith('/api/whatsapp') || req.path.startsWith('/api/webhook')) {
+  // Exempt webhook and API-only endpoints
+  if (req.path.startsWith('/api/whatsapp') || req.path.startsWith('/api/webhook') || req.path === '/api/cv/parse') {
     return next();
   }
   
