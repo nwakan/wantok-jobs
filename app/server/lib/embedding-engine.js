@@ -1,8 +1,11 @@
 /**
- * Embedding Engine — Semantic vector embeddings for WantokJobs
+ * Embedding Engine v2 — WITH CIRCUIT BREAKER & EXPONENTIAL BACKOFF
  * 
  * Uses Cohere Embed API (primary) with HuggingFace fallback
- * Supports batch embedding, usage tracking, and efficient storage
+ * Includes:
+ * - Exponential backoff (3 retries: 1s, 2s, 4s)
+ * - Circuit breaker: 5 failures in 10 minutes → use HuggingFace fallback for 5 minutes
+ * - Success/failure tracking in memory
  */
 
 const https = require('https');
@@ -16,6 +19,88 @@ const USAGE_FILE = path.join(__dirname, '../data/embedding-usage.json');
 // Rate limiting tracking
 let lastCohereCallTime = 0;
 const COHERE_MIN_DELAY_MS = 650; // 100 calls/min = ~600ms between calls, add 50ms buffer
+
+// Circuit breaker state
+const circuitBreaker = {
+  failures: [],
+  successes: [],
+  state: 'CLOSED', // CLOSED | OPEN | HALF_OPEN
+  openedAt: null,
+  
+  // Constants
+  FAILURE_THRESHOLD: 5, // Trip after 5 failures
+  FAILURE_WINDOW_MS: 10 * 60 * 1000, // Within 10 minutes
+  RECOVERY_TIMEOUT_MS: 5 * 60 * 1000, // Stay open for 5 minutes
+  
+  recordFailure() {
+    const now = Date.now();
+    this.failures.push(now);
+    
+    // Clean old failures outside the window
+    this.failures = this.failures.filter(t => now - t < this.FAILURE_WINDOW_MS);
+    
+    // Check if we should trip the circuit
+    if (this.failures.length >= this.FAILURE_THRESHOLD && this.state === 'CLOSED') {
+      this.state = 'OPEN';
+      this.openedAt = now;
+      console.error(`🚨 CIRCUIT BREAKER TRIPPED: ${this.failures.length} Cohere failures in ${this.FAILURE_WINDOW_MS / 60000} minutes`);
+      console.error(`   Switching to HuggingFace fallback for ${this.RECOVERY_TIMEOUT_MS / 60000} minutes`);
+    }
+  },
+  
+  recordSuccess() {
+    const now = Date.now();
+    this.successes.push(now);
+    
+    // Clean old successes
+    this.successes = this.successes.filter(t => now - t < this.FAILURE_WINDOW_MS);
+    
+    // If we were in HALF_OPEN and succeeded, close the circuit
+    if (this.state === 'HALF_OPEN') {
+      this.state = 'CLOSED';
+      this.failures = [];
+      console.log('✅ CIRCUIT BREAKER CLOSED: Cohere recovered');
+    }
+  },
+  
+  canAttempt() {
+    const now = Date.now();
+    
+    if (this.state === 'CLOSED') {
+      return true;
+    }
+    
+    if (this.state === 'OPEN') {
+      // Check if recovery timeout has passed
+      if (now - this.openedAt >= this.RECOVERY_TIMEOUT_MS) {
+        this.state = 'HALF_OPEN';
+        console.log('🔄 CIRCUIT BREAKER HALF-OPEN: Testing Cohere recovery');
+        return true;
+      }
+      return false;
+    }
+    
+    if (this.state === 'HALF_OPEN') {
+      return true;
+    }
+    
+    return false;
+  },
+  
+  getStats() {
+    const now = Date.now();
+    const recentFailures = this.failures.filter(t => now - t < this.FAILURE_WINDOW_MS).length;
+    const recentSuccesses = this.successes.filter(t => now - t < this.FAILURE_WINDOW_MS).length;
+    
+    return {
+      state: this.state,
+      recentFailures,
+      recentSuccesses,
+      openedAt: this.openedAt ? new Date(this.openedAt).toISOString() : null,
+      recoveryIn: this.state === 'OPEN' ? Math.max(0, this.RECOVERY_TIMEOUT_MS - (now - this.openedAt)) / 1000 : 0
+    };
+  }
+};
 
 // Provider configurations
 const PROVIDERS = {
@@ -92,6 +177,13 @@ function trackError(provider) {
 }
 
 /**
+ * Sleep helper for backoff
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * HTTP helper for POST requests
  */
 function httpPost(hostname, path, body, headers = {}) {
@@ -139,9 +231,9 @@ function httpPost(hostname, path, body, headers = {}) {
 }
 
 /**
- * Generate embeddings using Cohere API
+ * Generate embeddings using Cohere API WITH EXPONENTIAL BACKOFF
  */
-async function embedWithCohere(texts, inputType = 'search_document') {
+async function embedWithCohereRetry(texts, inputType = 'search_document', maxRetries = 3) {
   const provider = PROVIDERS.cohere;
   const key = provider.getKey();
   
@@ -149,42 +241,66 @@ async function embedWithCohere(texts, inputType = 'search_document') {
     throw new Error('COHERE_API_KEY not configured');
   }
   
-  // Rate limiting: ensure minimum delay between calls (Trial key: 100 calls/min)
-  const now = Date.now();
-  const timeSinceLastCall = now - lastCohereCallTime;
-  if (timeSinceLastCall < COHERE_MIN_DELAY_MS) {
-    const delayNeeded = COHERE_MIN_DELAY_MS - timeSinceLastCall;
-    await new Promise(resolve => setTimeout(resolve, delayNeeded));
+  // Exponential backoff: 1s, 2s, 4s
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Rate limiting: ensure minimum delay between calls (Trial key: 100 calls/min)
+      const now = Date.now();
+      const timeSinceLastCall = now - lastCohereCallTime;
+      if (timeSinceLastCall < COHERE_MIN_DELAY_MS) {
+        const delayNeeded = COHERE_MIN_DELAY_MS - timeSinceLastCall;
+        await sleep(delayNeeded);
+      }
+      lastCohereCallTime = Date.now();
+      
+      const body = {
+        model: provider.model,
+        texts: Array.isArray(texts) ? texts : [texts],
+        input_type: inputType, // 'search_document' or 'search_query'
+        embedding_types: ['float'],
+      };
+      
+      const response = await httpPost(
+        provider.baseUrl,
+        provider.path,
+        body,
+        { 'Authorization': `Bearer ${key}` }
+      );
+      
+      if (!response.embeddings || !response.embeddings.float) {
+        throw new Error('Invalid Cohere response: missing embeddings');
+      }
+      
+      const vectors = response.embeddings.float;
+      trackUsage('cohere', vectors.length);
+      circuitBreaker.recordSuccess();
+      
+      return {
+        vectors,
+        model: provider.model,
+        dimensions: provider.dimensions,
+        provider: 'cohere'
+      };
+      
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries - 1;
+      
+      if (isLastAttempt) {
+        console.error(`Embedding Engine: Cohere failed after ${maxRetries} attempts:`, error.message);
+        trackError('cohere');
+        circuitBreaker.recordFailure();
+        throw error;
+      }
+      
+      // Exponential backoff: 1s, 2s, 4s
+      const backoffMs = Math.pow(2, attempt) * 1000;
+      console.warn(`Embedding Engine: Cohere attempt ${attempt + 1} failed, retrying in ${backoffMs}ms...`);
+      await sleep(backoffMs);
+    }
   }
-  lastCohereCallTime = Date.now();
   
-  const body = {
-    model: provider.model,
-    texts: Array.isArray(texts) ? texts : [texts],
-    input_type: inputType, // 'search_document' or 'search_query'
-    embedding_types: ['float'],
-  };
-  
-  const response = await httpPost(
-    provider.baseUrl,
-    provider.path,
-    body,
-    { 'Authorization': `Bearer ${key}` }
-  );
-  
-  if (!response.embeddings || !response.embeddings.float) {
-    throw new Error('Invalid Cohere response: missing embeddings');
-  }
-  
-  const vectors = response.embeddings.float;
-  trackUsage('cohere', vectors.length);
-  
-  return {
-    vectors,
-    model: provider.model,
-    dimensions: provider.dimensions,
-    provider: 'cohere'
-  };
+  // Should never reach here
+  throw new Error('Cohere embedding failed after all retries');
 }
 
 /**
@@ -242,6 +358,13 @@ function canUseProvider(providerName) {
     if (!provider.getKey()) {
       return false;
     }
+    
+    // Check circuit breaker
+    if (!circuitBreaker.canAttempt()) {
+      const stats = circuitBreaker.getStats();
+      console.log(`Embedding Engine: Circuit breaker is ${stats.state}, skipping Cohere (recovery in ${stats.recoveryIn}s)`);
+      return false;
+    }
   }
   
   // For HuggingFace, key is recommended but not strictly required for public inference
@@ -280,14 +403,17 @@ async function embed(texts, inputType = 'search_document') {
     throw new Error('No texts provided for embedding');
   }
   
-  // Try Cohere first (preferred)
+  // Try Cohere first (preferred) - now with exponential backoff and circuit breaker
   if (canUseProvider('cohere')) {
     try {
-      return await embedWithCohere(textsArray, inputType);
+      return await embedWithCohereRetry(textsArray, inputType);
     } catch (e) {
-      console.error('Embedding Engine: Cohere failed:', e.message);
-      trackError('cohere');
+      console.error('Embedding Engine: Cohere failed (after retries):', e.message);
+      // Error already tracked in embedWithCohereRetry
     }
+  } else {
+    const stats = circuitBreaker.getStats();
+    console.log('Embedding Engine: Cohere unavailable, circuit breaker state:', stats);
   }
   
   // Fallback to HuggingFace (currently disabled due to DNS issues with router.huggingface.co)
@@ -388,7 +514,7 @@ function textHash(text) {
 }
 
 /**
- * Get usage statistics
+ * Get usage statistics (including circuit breaker state)
  */
 function getUsageStats() {
   const usage = loadUsage();
@@ -412,7 +538,11 @@ function getUsageStats() {
     };
   }
   
-  return { date: usage.date, providers: stats };
+  return { 
+    date: usage.date, 
+    providers: stats,
+    circuitBreaker: circuitBreaker.getStats()
+  };
 }
 
 module.exports = {
@@ -423,5 +553,6 @@ module.exports = {
   bufferToVector,
   textHash,
   getUsageStats,
-  PROVIDERS
+  PROVIDERS,
+  circuitBreaker // Export for testing/monitoring
 };
