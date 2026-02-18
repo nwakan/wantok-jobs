@@ -30,6 +30,7 @@ const BOT_PATTERNS = [
 const ALLOWED_BOTS = [
   /Googlebot/i, /bingbot/i, /DuckDuckBot/i, /facebot/i,
   /Twitterbot/i, /LinkedInBot/i, /WhatsApp/i,
+  /WantokWatchdog/i,
 ];
 
 // Track request patterns per IP
