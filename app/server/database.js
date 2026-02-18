@@ -839,4 +839,24 @@ try {
   )`);
 } catch (e) { /* FTS5 already exists */ }
 
+// SME payments table for WhatsApp credit purchases
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sme_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    package_key TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    currency TEXT DEFAULT 'PGK',
+    payment_method TEXT DEFAULT 'bank_transfer',
+    reference_code TEXT UNIQUE,
+    phone_number TEXT,
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending','verified','rejected','expired')),
+    admin_notes TEXT,
+    verified_by INTEGER,
+    verified_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
 module.exports = db;
