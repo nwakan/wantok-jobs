@@ -67,7 +67,7 @@ function canPostFree(db, userId) {
   try {
     const used = db.prepare(`
       SELECT COUNT(*) as count FROM credit_transactions 
-      WHERE user_id = ? AND credit_type = 'job_post' AND reason LIKE '%free trial%'
+      WHERE user_id = ? AND credit_type = 'job_posting' AND reason LIKE '%free trial%'
     `).get(userId);
     return used.count === 0;
   } catch (e) {
@@ -111,7 +111,7 @@ function deductCredit(db, userId, jobId, reason = 'Job post via WhatsApp') {
 
     db.prepare(`
       INSERT INTO credit_transactions (user_id, amount, credit_type, balance_after, reason, metadata, created_at)
-      VALUES (?, -1, 'job_post', ?, ?, ?, datetime('now'))
+      VALUES (?, -1, 'job_posting', ?, ?, ?, datetime('now'))
     `).run(userId, newBalance, reason, JSON.stringify({ job_id: jobId }));
 
     return { success: true, balance_after: newBalance };
@@ -140,7 +140,7 @@ function addCredits(db, userId, packageKey, paymentRef) {
 
     db.prepare(`
       INSERT INTO credit_transactions (user_id, amount, credit_type, balance_after, reason, metadata, created_at)
-      VALUES (?, ?, 'job_post', ?, ?, ?, datetime('now'))
+      VALUES (?, ?, 'job_posting', ?, ?, ?, datetime('now'))
     `).run(
       userId,
       pkg.credits,
