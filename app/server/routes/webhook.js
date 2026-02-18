@@ -69,8 +69,8 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   // Respond immediately, deploy in background
   res.json({ status: 'deploying', pusher, commits });
 
-  // Deploy: git pull, rebuild client if needed, then delayed restart
-  const deployCmd = `cd ${REPO_DIR}/app && git stash 2>/dev/null; git pull origin main && (cd client && npx vite build 2>/dev/null; cd .. && sleep 2 && systemctl restart wantokjobs) &`;
+  // Deploy: use nohup to fully detach from this process, then pull + build + restart
+  const deployCmd = `nohup bash -c 'sleep 3 && cd ${REPO_DIR}/app && git stash 2>/dev/null; git pull origin main && cd client && npx vite build 2>/dev/null; cd .. && systemctl restart wantokjobs' > /var/log/wantokjobs-deploy.log 2>&1 &`;
   exec(deployCmd, { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) {
       logger.error('Deploy failed', { error: err.message, stderr });
