@@ -66,16 +66,22 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
 
   logger.info('GitHub webhook: deploy triggered', { pusher, commits, headCommit: headCommit.slice(0, 100) });
 
-  // Respond immediately, deploy in background
+  // Respond immediately
   res.json({ status: 'deploying', pusher, commits });
 
-  // Deploy: use nohup to fully detach from this process, then pull + build + restart
-  const deployCmd = `nohup bash -c 'sleep 3 && cd ${REPO_DIR}/app && git stash 2>/dev/null; git pull origin main && cd client && npx vite build 2>/dev/null; cd .. && systemctl restart wantokjobs' > /var/log/wantokjobs-deploy.log 2>&1 &`;
-  exec(deployCmd, { timeout: 30000 }, (err, stdout, stderr) => {
+  // Trigger deploy script using setsid to fully orphan the process
+  // This ensures the deploy script continues even when the server restarts itself
+  const deployScript = path.join(REPO_DIR, 'app', 'vps-scripts', 'deploy.sh');
+  
+  // Use setsid to create a new session completely detached from this process
+  // The deploy script will survive even when systemctl restarts this node process
+  const deployCmd = `setsid bash "${deployScript}" >/dev/null 2>&1 < /dev/null &`;
+  
+  exec(deployCmd, { detached: true }, (err) => {
     if (err) {
-      logger.error('Deploy failed', { error: err.message, stderr });
+      logger.error('Failed to trigger deploy script', { error: err.message });
     } else {
-      logger.info('Deploy successful', { output: stdout.trim().slice(0, 200) });
+      logger.info('Deploy script triggered successfully');
     }
   });
 });

@@ -1,10 +1,11 @@
-const CACHE_VERSION = 'wantokjobs-v2';
+// Dynamic cache version based on build timestamp
+// This will be updated on every deploy
+const CACHE_VERSION = `wantokjobs-${new Date().getTime()}`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
+// Only cache offline page and PWA manifest - NOT index.html
 const STATIC_ASSETS = [
-  '/',
   '/offline.html',
   '/manifest.json',
   '/icon-192.png',
@@ -22,6 +23,7 @@ self.addEventListener('install', (event) => {
       });
     })
   );
+  // CRITICAL: Skip waiting and activate immediately to ensure new version takes over
   self.skipWaiting();
 });
 
@@ -32,7 +34,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName.startsWith('wantokjobs-') && cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== API_CACHE) {
+          if (cacheName.startsWith('wantokjobs-') && cacheName !== STATIC_CACHE && cacheName !== API_CACHE) {
             console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
@@ -40,6 +42,7 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  // CRITICAL: Take control of all clients immediately
   self.clients.claim();
 });
 
@@ -58,60 +61,49 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API requests: network first, cache as fallback
+  // API requests: network only, NO caching
+  // API responses should always be fresh
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful GET responses
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(API_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Return cached API response if available
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Return offline response for failed API calls
-            return new Response(JSON.stringify({ error: 'Offline', offline: true }), {
-              headers: { 'Content-Type': 'application/json' },
-              status: 503,
-            });
-          });
-        })
+      fetch(request).catch(() => {
+        // Return offline response for failed API calls
+        return new Response(JSON.stringify({ error: 'Offline', offline: true }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 503,
+        });
+      })
     );
     return;
   }
 
-  // Static assets: cache first, network fallback
+  // HTML pages (index.html, etc): NEVER cache - always fetch fresh
+  // This is CRITICAL to ensure users always get the latest JS bundle references
+  if (
+    request.mode === 'navigate' ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('.html')
+  ) {
+    event.respondWith(
+      fetch(request).catch(() => {
+        // Fallback to offline page only
+        return caches.match('/offline.html');
+      })
+    );
+    return;
+  }
+
+  // Static assets with hashes (JS, CSS, images): stale-while-revalidate
+  // These files have content hashes in their names, so they're immutable
   if (
     url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$/) ||
-    url.pathname === '/' ||
     url.pathname.startsWith('/assets/')
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          // Return cached version and update in background
-          fetch(request).then((response) => {
-            if (response.ok) {
-              caches.open(STATIC_CACHE).then((cache) => {
-                cache.put(request, response);
-              });
-            }
-          }).catch(() => {});
-          return cachedResponse;
-        }
-
-        // Not in cache, fetch from network
-        return fetch(request).then((response) => {
+        // Return cached version immediately if available
+        const fetchPromise = fetch(request).then((response) => {
           if (response.ok) {
+            // Update cache in background for next time
             const responseClone = response.clone();
             caches.open(STATIC_CACHE).then((cache) => {
               cache.put(request, responseClone);
@@ -119,41 +111,26 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         }).catch(() => {
-          // Return offline page for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/offline.html');
-          }
-          return new Response('Offline', { status: 503 });
+          // Network failed, return cached version if we have it
+          return cachedResponse;
         });
+
+        // Stale-while-revalidate: return cached immediately, update in background
+        return cachedResponse || fetchPromise;
       })
     );
     return;
   }
 
-  // All other requests: network first, cache fallback
+  // All other requests: network only (no caching for dynamic content)
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok) {
-          const responseClone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Return offline page for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/offline.html');
-          }
-          return new Response('Offline', { status: 503 });
-        });
-      })
+    fetch(request).catch(() => {
+      // Return offline page for navigation requests
+      if (request.mode === 'navigate') {
+        return caches.match('/offline.html');
+      }
+      return new Response('Offline', { status: 503 });
+    })
   );
 });
 
