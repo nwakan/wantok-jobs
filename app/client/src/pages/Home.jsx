@@ -166,7 +166,7 @@ export default function Home() {
   const fetchData = async () => {
     try {
       const [jobsResponse, statsResponse, catResponse, employerResponse, trendingResponse] = await Promise.all([
-        jobsAPI.getAll({ limit: 6 }),
+        jobsAPI.getAll({ limit: 6 }).catch(() => null),
         fetch('/api/stats').then(r => r.json()).catch(() => null),
         fetch('/api/stats/categories').then(r => r.json()).catch(() => null),
         fetch('/api/stats/top-employers').then(r => r.json()).catch(() => null),

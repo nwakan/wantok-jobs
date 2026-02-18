@@ -80,11 +80,11 @@ export default function CompanyProfile() {
     try {
       const [companyRes, jobsRes, claimRes] = await Promise.all([
         api.get(`/companies/${id}`),
-        api.get(`/jobs?companyId=${id}`),
-        api.get(`/employers/${id}/claim-status`).catch(() => ({ data: null }))
+        api.get(`/jobs?companyId=${id}`).catch(() => null),
+        api.get(`/employers/${id}/claim-status`).catch(() => null)
       ]);
       setCompany(companyRes.company || companyRes);
-      setJobs(companyRes.jobs || jobsRes.jobs || jobsRes || []);
+      setJobs(companyRes.jobs || jobsRes?.jobs || jobsRes?.data || []);
       if (claimRes) {
         setClaimStatus(claimRes);
       }
