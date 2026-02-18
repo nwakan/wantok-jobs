@@ -100,10 +100,9 @@ function apiSecurity(req, res, next) {
     res.setHeader('X-Request-ID', req.id);
   }
   
-  // Add response time header on finish
+  // Log slow requests on finish (can't set headers after finish)
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    res.setHeader('X-Response-Time', `${duration}ms`);
     
     // Log slow requests (>2s)
     if (duration > 2000) {

@@ -520,8 +520,9 @@ if (process.env.NODE_ENV === 'production') {
         const jobMatch = req.path.match(/^\/jobs\/(\d+)$/);
         if (jobMatch) {
           const job = db.prepare(`
-            SELECT j.*, u.company_name, u.logo, u.website
-            FROM jobs j LEFT JOIN users u ON j.employer_id = u.id
+            SELECT j.*, p.company_name, p.logo_url as logo, p.website
+            FROM jobs j
+            LEFT JOIN profiles_employer p ON j.employer_id = p.user_id
             WHERE j.id = ? AND j.status = 'active'
           `).get(jobMatch[1]);
           if (job) {
@@ -559,7 +560,12 @@ if (process.env.NODE_ENV === 'production') {
         // Company profile pages: /companies/:id
         const companyMatch = req.path.match(/^\/companies\/(\d+)$/);
         if (companyMatch) {
-          const company = db.prepare(`SELECT id, company_name, company_description, logo, location, industry FROM users WHERE id = ? AND role = 'employer'`).get(companyMatch[1]);
+          const company = db.prepare(`
+            SELECT p.user_id as id, p.company_name, p.description as company_description, p.logo_url as logo, p.location, p.industry
+            FROM profiles_employer p
+            JOIN users u ON p.user_id = u.id
+            WHERE p.user_id = ? AND u.role = 'employer'
+          `).get(companyMatch[1]);
           if (company) {
             const meta = {
               title: `${company.company_name} - Jobs & Profile | WantokJobs`,
