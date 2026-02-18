@@ -140,7 +140,7 @@ export default function Home() {
       "@type": "WebSite",
       "name": "WantokJobs",
       "url": "https://wantokjobs.com",
-      "description": "Papua New Guinea's leading job board. Find jobs, post vacancies, and connect with employers across PNG.",
+      "description": "The Pacific Islands' leading job board. Find jobs, post vacancies, and connect with employers across PNG and the Pacific.",
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
@@ -278,7 +278,7 @@ export default function Home() {
             className="text-center mb-12"
           >
             <h1 className="text-3xl md:text-6xl font-bold mb-4 md:mb-6">
-              PNG's First<br />
+              The Pacific's First<br />
               <span className="text-secondary-400">Transparent Hiring Platform</span>
             </h1>
             <p className="text-lg md:text-2xl text-primary-100 mb-2">

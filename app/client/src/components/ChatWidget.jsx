@@ -330,7 +330,7 @@ export default function ChatWidget() {
     <>
       {/* Chat bubble */}
       {!isOpen && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-end gap-3">
+        <div className="fixed bottom-6 right-4 z-50 flex items-end gap-3 sm:bottom-4">
           {/* Proactive hint (contextual page triggers or generic for new visitors) */}
           {showHint && (contextHint || (!hasGreeted && settings?.proactive)) && (
             <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm px-4 py-2.5 rounded-2xl rounded-br-md shadow-lg max-w-[220px] animate-fade-in cursor-pointer border dark:border-gray-700"
