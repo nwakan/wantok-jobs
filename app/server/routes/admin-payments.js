@@ -9,10 +9,13 @@ const db = require('../database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const pricing = require('../utils/jean/sme-pricing');
+const { sendWhatsAppNotification } = require('../utils/jean/whatsapp-notify');
+const { getPaymentDigest } = require('../utils/jean/payment-digest');
 
 /**
  * GET /api/admin/payments
  * List all pending payments (admin only)
+ * Now includes receipt_url if available
  */
 router.get('/', authenticateToken, requireRole('admin'), (req, res) => {
   try {
@@ -23,6 +26,7 @@ router.get('/', authenticateToken, requireRole('admin'), (req, res) => {
         p.*,
         u.name as user_name,
         u.email as user_email,
+        u.phone as user_phone,
         pe.company_name,
         (SELECT balance FROM credit_wallets WHERE user_id = p.user_id) as current_balance
       FROM sme_payments p
@@ -89,6 +93,21 @@ router.get('/stats', authenticateToken, requireRole('admin'), (req, res) => {
 });
 
 /**
+ * GET /api/admin/payments/digest
+ * Get daily digest of pending payments (admin only)
+ * Returns pending payments older than 6 hours
+ */
+router.get('/digest', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const digest = getPaymentDigest(db);
+    res.json(digest);
+  } catch (error) {
+    logger.error('Failed to get payment digest:', error.message);
+    res.status(500).json({ error: 'Failed to get digest' });
+  }
+});
+
+/**
  * PUT /api/admin/payments/:id/verify
  * Approve a payment and add credits (admin only)
  */
@@ -129,13 +148,19 @@ router.put('/:id/verify', authenticateToken, requireRole('admin'), (req, res) =>
       }
 
       // Create notification for employer
+      const notificationMsg = `Your payment of K${payment.amount} has been approved! ${result.credits_added} credit${result.credits_added > 1 ? 's' : ''} added to your account.`;
+      
       db.prepare(`
         INSERT INTO notifications (user_id, type, title, message, link, created_at)
         VALUES (?, 'payment_verified', 'Payment Approved', ?, '/dashboard/employer/billing', datetime('now'))
-      `).run(
-        payment.user_id,
-        `Your payment of K${payment.amount} has been approved! ${result.credits_added} credit${result.credits_added > 1 ? 's' : ''} added to your account.`
-      );
+      `).run(payment.user_id, notificationMsg);
+
+      // Send WhatsApp notification
+      const user = db.prepare('SELECT phone FROM users WHERE id = ?').get(payment.user_id);
+      if (user && user.phone) {
+        const whatsappMsg = `✅ *Payment Confirmed!*\n\nYour payment of K${payment.amount} (Ref: ${payment.reference_code}) has been verified!\n\n🎉 *${result.credits_added} credit${result.credits_added > 1 ? 's' : ''}* added to your account.\n💰 New balance: *${result.balance_after} credit${result.balance_after > 1 ? 's' : ''}*\n\nYou can now post jobs via WhatsApp! Just say "post a job" to get started. 🚀`;
+        sendWhatsAppNotification(db, user.phone, whatsappMsg);
+      }
 
       db.prepare('COMMIT').run();
 
@@ -189,13 +214,19 @@ router.put('/:id/reject', authenticateToken, requireRole('admin'), (req, res) =>
     `).run(req.user.id, admin_notes, id);
 
     // Notify employer
+    const notificationMsg = `Your payment of K${payment.amount} could not be verified. Reason: ${admin_notes}. Please contact support@wantokjobs.com if you need help.`;
+    
     db.prepare(`
       INSERT INTO notifications (user_id, type, title, message, link, created_at)
       VALUES (?, 'payment_rejected', 'Payment Issue', ?, '/dashboard/employer/billing', datetime('now'))
-    `).run(
-      payment.user_id,
-      `Your payment of K${payment.amount} could not be verified. Reason: ${admin_notes}. Please contact support@wantokjobs.com if you need help.`
-    );
+    `).run(payment.user_id, notificationMsg);
+
+    // Send WhatsApp notification
+    const user = db.prepare('SELECT phone FROM users WHERE id = ?').get(payment.user_id);
+    if (user && user.phone) {
+      const whatsappMsg = `❌ *Payment Issue*\n\nYour payment of K${payment.amount} (Ref: ${payment.reference_code}) could not be verified.\n\n*Reason:* ${admin_notes}\n\nPlease contact us at support@wantokjobs.com if you need help, or make a new payment with the correct details. 🙏`;
+      sendWhatsAppNotification(db, user.phone, whatsappMsg);
+    }
 
     logger.info(`Payment ${id} rejected by admin ${req.user.id} for user ${payment.user_id}`);
 
@@ -209,6 +240,7 @@ router.put('/:id/reject', authenticateToken, requireRole('admin'), (req, res) =>
 /**
  * GET /api/admin/payments/:id
  * Get single payment details (admin only)
+ * Now includes receipt_url if available
  */
 router.get('/:id', authenticateToken, requireRole('admin'), (req, res) => {
   try {
@@ -219,6 +251,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), (req, res) => {
         p.*,
         u.name as user_name,
         u.email as user_email,
+        u.phone as user_phone,
         pe.company_name,
         admin.name as verified_by_name
       FROM sme_payments p

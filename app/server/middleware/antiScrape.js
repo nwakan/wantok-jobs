@@ -11,10 +11,6 @@
 
 const crypto = require('crypto');
 
-// TEMPORARY: Disable anti-scrape for app improvement screenshots
-// Remove after 2026-02-21
-const ANTI_SCRAPE_DISABLED_UNTIL = new Date('2026-02-21T17:00:00+08:00');
-
 // Known scraper/bot user agents
 const BOT_PATTERNS = [
   /bot/i, /crawl/i, /spider/i, /scrape/i, /fetch/i,
@@ -84,9 +80,6 @@ function getIpData(ip) {
  * Block known bad bots
  */
 function botBlocker(req, res, next) {
-  // Temporary bypass for app improvement
-  if (new Date() < ANTI_SCRAPE_DISABLED_UNTIL) return next();
-
   const ua = req.get('User-Agent') || '';
   
   // Allow known good bots
@@ -109,9 +102,6 @@ function botBlocker(req, res, next) {
  * Behavioral rate limiting — detect scraping patterns
  */
 function behaviorDetector(req, res, next) {
-  // Temporary bypass for app improvement
-  if (new Date() < ANTI_SCRAPE_DISABLED_UNTIL) return next();
-
   const ip = req.ip || req.connection.remoteAddress;
   
   // Check if blocked
