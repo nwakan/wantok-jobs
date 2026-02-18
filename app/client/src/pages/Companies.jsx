@@ -1,298 +1,548 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Building2, CheckCircle2, Shield, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, MapPin, Building2, CheckCircle2, Shield, Filter, ChevronLeft, ChevronRight, Globe, Users, Briefcase, X, SlidersHorizontal } from 'lucide-react';
 import PageHead from '../components/PageHead';
 import { CompanyCardSkeleton } from '../components/SkeletonLoader';
 import api from '../api';
 import OptimizedImage from '../components/OptimizedImage';
 
+const COUNTRIES = [
+  { value: '', label: '🌏 All Countries' },
+  { value: 'Papua New Guinea', label: '🇵🇬 Papua New Guinea' },
+  { value: 'Fiji', label: '🇫🇯 Fiji' },
+  { value: 'Solomon Islands', label: '🇸🇧 Solomon Islands' },
+  { value: 'Vanuatu', label: '🇻🇺 Vanuatu' },
+  { value: 'Samoa', label: '🇼🇸 Samoa' },
+  { value: 'Tonga', label: '🇹🇴 Tonga' },
+  { value: 'Tuvalu', label: '🇹🇻 Tuvalu' },
+  { value: 'Palau', label: '🇵🇼 Palau' },
+  { value: 'Kiribati', label: '🇰🇮 Kiribati' },
+  { value: 'Nauru', label: '🇳🇷 Nauru' },
+  { value: 'Marshall Islands', label: '🇲🇭 Marshall Islands' },
+  { value: 'Federated States of Micronesia', label: '🇫🇲 Micronesia' },
+  { value: 'Cook Islands', label: '🇨🇰 Cook Islands' },
+  { value: 'Niue', label: '🇳🇺 Niue' },
+  { value: 'New Caledonia', label: '🇳🇨 New Caledonia' },
+];
+
+const INDUSTRIES = [
+  { value: '', label: 'All Industries' },
+  { value: 'Government', label: 'Government' },
+  { value: 'Government & Public Sector', label: 'Government & Public Sector' },
+  { value: 'Banking & Finance', label: 'Banking & Finance' },
+  { value: 'Education & Training', label: 'Education & Training' },
+  { value: 'Hospitality & Tourism', label: 'Hospitality & Tourism' },
+  { value: 'Construction & Engineering', label: 'Construction & Engineering' },
+  { value: 'Mining & Resources', label: 'Mining & Resources' },
+  { value: 'Oil & Gas', label: 'Oil & Gas' },
+  { value: 'Healthcare & Medical', label: 'Healthcare & Medical' },
+  { value: 'Information Technology', label: 'Information Technology' },
+  { value: 'NGO & Development', label: 'NGO & Development' },
+  { value: 'Telecommunications', label: 'Telecommunications' },
+  { value: 'Retail & Wholesale', label: 'Retail & Wholesale' },
+  { value: 'Agriculture & Fisheries', label: 'Agriculture & Fisheries' },
+  { value: 'Consulting & Professional Services', label: 'Professional Services' },
+  { value: 'Security', label: 'Security' },
+  { value: 'Energy & Utilities', label: 'Energy & Utilities' },
+  { value: 'Shipping & Logistics', label: 'Shipping & Logistics' },
+  { value: 'Aviation', label: 'Aviation' },
+];
+
+const EMPLOYER_TYPES = [
+  { value: '', label: 'All Types' },
+  { value: 'government', label: '🏛️ Government' },
+  { value: 'soe', label: '🏢 State-Owned Enterprise' },
+  { value: 'statutory', label: '⚖️ Statutory Authority' },
+  { value: 'ngo', label: '🤝 NGO' },
+  { value: 'listed', label: '📈 Publicly Listed' },
+  { value: 'private', label: '🏪 Private Company' },
+];
+
+const LOCATIONS = [
+  { value: '', label: 'All Locations' },
+  { value: 'Port Moresby', label: 'Port Moresby, NCD' },
+  { value: 'Lae', label: 'Lae, Morobe' },
+  { value: 'Mt Hagen', label: 'Mt Hagen, WHP' },
+  { value: 'Kokopo', label: 'Kokopo, ENBP' },
+  { value: 'Madang', label: 'Madang' },
+  { value: 'Goroka', label: 'Goroka, EHP' },
+  { value: 'Wewak', label: 'Wewak, ESP' },
+  { value: 'Kimbe', label: 'Kimbe, WNB' },
+  { value: 'Suva', label: 'Suva, Fiji' },
+  { value: 'Honiara', label: 'Honiara, Solomon Islands' },
+];
+
+const PER_PAGE = 24;
+
 export default function Companies() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [filters, setFilters] = useState({
-    search: '',
-    industry: '',
-    location: '',
-    employerType: '',
-    transparencyOnly: false,
+    search: searchParams.get('search') || '',
+    industry: searchParams.get('industry') || '',
+    location: searchParams.get('location') || '',
+    country: searchParams.get('country') || '',
+    employerType: searchParams.get('type') || '',
+    transparencyOnly: searchParams.get('transparent') === 'true',
+    hasJobs: searchParams.get('hasJobs') === 'true',
   });
 
-  useEffect(() => {
-    fetchCompanies();
-    fetch('/api/stats').then(r => r.json()).then(d => setStats(d.data || d)).catch(() => {});
-  }, []);
+  const activeFilterCount = [filters.industry, filters.location, filters.country, filters.employerType, filters.transparencyOnly, filters.hasJobs].filter(Boolean).length;
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
       if (filters.industry) params.append('industry', filters.industry);
       if (filters.location) params.append('location', filters.location);
+      if (filters.country) params.append('country', filters.country);
       if (filters.employerType) params.append('employer_type', filters.employerType);
       if (filters.transparencyOnly) params.append('transparency_only', 'true');
-      
+      params.append('limit', PER_PAGE);
+      params.append('offset', (page - 1) * PER_PAGE);
+
       const response = await api.get(`/companies?${params.toString()}`);
-      const list = Array.isArray(response) ? response : (response.data || response.companies || []);
-      setCompanies(Array.isArray(list) ? list : []);
+      let list = Array.isArray(response) ? response : (response.data || response.companies || []);
+      if (!Array.isArray(list)) list = [];
+      
+      // Client-side filter for "has active jobs"
+      if (filters.hasJobs) {
+        list = list.filter(c => (c.active_jobs_count || c.activeJobs || 0) > 0);
+      }
+
+      setCompanies(list);
+      setTotal(response.total || list.length);
     } catch (error) {
       console.error('Failed to fetch companies:', error);
-      // Fallback to mock data if API fails
-      setCompanies(getMockCompanies());
+      setCompanies([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, page]);
 
-  const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
+  useEffect(() => {
+    fetch('/api/stats').then(r => r.json()).then(d => setStats(d.data || d)).catch(() => {});
+  }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  useEffect(() => {
     fetchCompanies();
+    // Sync filters to URL
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.industry) params.set('industry', filters.industry);
+    if (filters.location) params.set('location', filters.location);
+    if (filters.country) params.set('country', filters.country);
+    if (filters.employerType) params.set('type', filters.employerType);
+    if (filters.transparencyOnly) params.set('transparent', 'true');
+    if (filters.hasJobs) params.set('hasJobs', 'true');
+    if (page > 1) params.set('page', page);
+    setSearchParams(params, { replace: true });
+  }, [filters, page]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '', industry: '', location: '', country: '', employerType: '', transparencyOnly: false, hasJobs: false });
+    setPage(1);
+  };
+
+  const totalPages = Math.ceil(total / PER_PAGE);
+
+  const getTransparencyBadge = (score, required) => {
+    if (score >= 80) return { emoji: '🟢', label: 'Excellent', bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400' };
+    if (score >= 50) return { emoji: '🟡', label: 'Improving', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400' };
+    if (score >= 1) return { emoji: '🔴', label: 'Low', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' };
+    if (required) return { emoji: '⚫', label: 'No Data', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-400' };
+    return null;
+  };
+
+  const getEmployerTypeLabel = (type) => {
+    const map = { government: '🏛️ Govt', soe: '🏢 SOE', statutory: '⚖️ Statutory', ngo: '🤝 NGO', listed: '📈 Listed', private: '🏪 Private' };
+    return map[type] || type;
   };
 
   return (
     <>
       <PageHead
-        title="Top Employers in Papua New Guinea"
-        description="Browse companies hiring in Papua New Guinea. Discover top employers and find your next career opportunity."
+        title="Company Directory — PNG & Pacific Employers | WantokJobs"
+        description={`Browse ${stats?.totalEmployers?.toLocaleString() || '2,500'}+ verified employers hiring across Papua New Guinea and the Pacific Islands. Filter by country, industry, and transparency.`}
       />
-      
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Company Directory</h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Discover {stats ? `${stats.totalEmployers.toLocaleString()}+` : ''} verified employers hiring across Papua New Guinea and the Pacific region.
-              <br />
-              <span className="text-primary-600 font-semibold">{stats?.transparentEmployers || 140} employers with transparent hiring • {stats?.governmentBodies || 69} government bodies</span>
+
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Hero */}
+        <div className="bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3">Company Directory</h1>
+            <p className="text-primary-100 text-lg max-w-2xl mb-6">
+              Discover verified employers hiring across Papua New Guinea and the Pacific Islands
             </p>
+
+            {/* Stats chips */}
+            {stats && (
+              <div className="flex flex-wrap gap-3">
+                <span className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4" /> {stats.totalEmployers?.toLocaleString()}+ Employers
+                </span>
+                <span className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5">
+                  <Shield className="w-4 h-4" /> {stats.transparentEmployers} Transparent
+                </span>
+                <span className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5">
+                  <Briefcase className="w-4 h-4" /> {stats.activeJobs} Active Jobs
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Search bar + filter toggle */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchCompanies()}
+                  placeholder="Search companies by name..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2.5 rounded-lg border font-medium flex items-center gap-2 transition ${
+                  showFilters || activeFilterCount > 0
+                    ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-300 dark:border-primary-600 text-primary-700 dark:text-primary-400'
+                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{activeFilterCount}</span>
+                )}
+              </button>
+            </div>
+
+            {/* Expandable filter panel */}
+            {showFilters && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* Country filter */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Country</label>
+                    <select
+                      value={filters.country}
+                      onChange={(e) => handleFilterChange('country', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Industry filter */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Industry</label>
+                    <select
+                      value={filters.industry}
+                      onChange={(e) => handleFilterChange('industry', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      {INDUSTRIES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Employer type */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Type</label>
+                    <select
+                      value={filters.employerType}
+                      onChange={(e) => handleFilterChange('employerType', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      {EMPLOYER_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Location filter */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">City</label>
+                    <select
+                      value={filters.location}
+                      onChange={(e) => handleFilterChange('location', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      {LOCATIONS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Toggle filters */}
+                <div className="flex flex-wrap gap-4 mt-3 items-center">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.transparencyOnly}
+                      onChange={(e) => handleFilterChange('transparencyOnly', e.target.checked)}
+                      className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600"
+                    />
+                    <Shield className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Transparent only</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.hasJobs}
+                      onChange={(e) => handleFilterChange('hasJobs', e.target.checked)}
+                      className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600"
+                    />
+                    <Briefcase className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Currently hiring</span>
+                  </label>
+                  {activeFilterCount > 0 && (
+                    <button onClick={clearFilters} className="text-sm text-red-600 dark:text-red-400 hover:underline flex items-center gap-1">
+                      <X className="w-3.5 h-3.5" /> Clear all filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Search and Filters */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="grid md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    name="search"
-                    value={filters.search}
-                    onChange={handleFilterChange}
-                    placeholder="Search companies..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-                <select
-                  name="employerType"
-                  value={filters.employerType}
-                  onChange={handleFilterChange}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">All Employer Types</option>
-                  <option value="government">🏛️ Government</option>
-                  <option value="soe">🏢 State-Owned Enterprise</option>
-                  <option value="statutory">⚖️ Statutory Authority</option>
-                  <option value="ngo">🤝 NGO</option>
-                  <option value="private">🏪 Private Company</option>
-                  <option value="listed">📈 Publicly Listed</option>
-                </select>
-                <select
-                  name="industry"
-                  value={filters.industry}
-                  onChange={handleFilterChange}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">All Industries</option>
-                  <option value="mining">Mining & Resources</option>
-                  <option value="healthcare">Healthcare</option>
-                  <option value="education">Education</option>
-                  <option value="it">Information Technology</option>
-                  <option value="finance">Banking & Finance</option>
-                  <option value="construction">Construction</option>
-                  <option value="retail">Retail</option>
-                  <option value="hospitality">Hospitality</option>
-                </select>
-                <select
-                  name="location"
-                  value={filters.location}
-                  onChange={handleFilterChange}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">All Locations</option>
-                  <option value="port-moresby">Port Moresby, NCD</option>
-                  <option value="lae">Lae, Morobe</option>
-                  <option value="mt-hagen">Mt Hagen, Western Highlands</option>
-                  <option value="kokopo">Kokopo, East New Britain</option>
-                  <option value="madang">Madang</option>
-                  <option value="goroka">Goroka, Eastern Highlands</option>
-                </select>
-              </div>
-              <div className="flex flex-wrap gap-4 items-center">
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="transparencyOnly"
-                    checked={filters.transparencyOnly}
-                    onChange={(e) => setFilters({ ...filters, transparencyOnly: e.target.checked })}
-                    className="w-4 h-4 text-primary-600 rounded"
-                  />
-                  <Shield className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-gray-700">Transparent employers only</span>
-                </label>
-                <button
-                  type="submit"
-                  className="bg-primary-600 text-white px-8 py-2 rounded-lg font-semibold hover:bg-primary-700 transition"
-                >
-                  <Filter className="w-4 h-4 inline mr-2" />
-                  Search Companies
-                </button>
-              </div>
-            </form>
+          {/* Active filter tags */}
+          {activeFilterCount > 0 && !showFilters && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {filters.country && (
+                <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5" /> {filters.country}
+                  <button onClick={() => handleFilterChange('country', '')} className="ml-1 hover:text-primary-900"><X className="w-3.5 h-3.5" /></button>
+                </span>
+              )}
+              {filters.industry && (
+                <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  {filters.industry}
+                  <button onClick={() => handleFilterChange('industry', '')} className="ml-1"><X className="w-3.5 h-3.5" /></button>
+                </span>
+              )}
+              {filters.employerType && (
+                <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  {EMPLOYER_TYPES.find(t => t.value === filters.employerType)?.label || filters.employerType}
+                  <button onClick={() => handleFilterChange('employerType', '')} className="ml-1"><X className="w-3.5 h-3.5" /></button>
+                </span>
+              )}
+              {filters.location && (
+                <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> {filters.location}
+                  <button onClick={() => handleFilterChange('location', '')} className="ml-1"><X className="w-3.5 h-3.5" /></button>
+                </span>
+              )}
+              {filters.transparencyOnly && (
+                <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  <Shield className="w-3.5 h-3.5" /> Transparent
+                  <button onClick={() => handleFilterChange('transparencyOnly', false)} className="ml-1"><X className="w-3.5 h-3.5" /></button>
+                </span>
+              )}
+              {filters.hasJobs && (
+                <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  <Briefcase className="w-3.5 h-3.5" /> Hiring
+                  <button onClick={() => handleFilterChange('hasJobs', false)} className="ml-1"><X className="w-3.5 h-3.5" /></button>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Results count */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {loading ? 'Loading...' : `Showing ${companies.length} of ${total.toLocaleString()} companies`}
+              {filters.country && ` in ${filters.country}`}
+            </p>
           </div>
 
           {/* Companies Grid */}
           {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(9)].map((_, idx) => (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(12)].map((_, idx) => (
                 <CompanyCardSkeleton key={idx} />
               ))}
             </div>
-          ) : (
+          ) : companies.length > 0 ? (
             <>
-              {companies.length > 0 ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {companies.map((company) => {
-                    // Helper function to get transparency badge
-                    const getTransparencyBadge = (score) => {
-                      if (!score && score !== 0) return null;
-                      if (score >= 80) return { emoji: '🟢', label: 'Excellent', color: 'text-green-600' };
-                      if (score >= 50) return { emoji: '🟡', label: 'Improving', color: 'text-yellow-600' };
-                      return { emoji: '🔴', label: 'Needs Work', color: 'text-red-600' };
-                    };
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {companies.map((company) => {
+                  const name = company.company_name || company.name || 'Unknown Company';
+                  const jobs = company.active_jobs_count ?? company.activeJobs ?? 0;
+                  const score = company.transparency_score;
+                  const required = company.transparency_required;
+                  const badge = getTransparencyBadge(score, required);
 
-                    const transparencyBadge = getTransparencyBadge(company.transparency_score);
-                    const isTransparent = company.requires_transparency || company.transparency_score >= 50;
-                    
-                    return (
-                      <button
-                        key={company.id}
-                        onClick={() => navigate(`/companies/${company.id}`)}
-                        className="bg-white rounded-lg shadow-sm p-6 hover:shadow-lg transition-all hover:-translate-y-1 text-left group relative"
-                      >
-                        {/* Transparent Employer Badge */}
-                        {isTransparent && (
-                          <div className="absolute top-3 right-3 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                            <Shield className="w-3 h-3" />
-                            Transparent
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-col items-center text-center">
-                          {/* Logo */}
-                          <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-50 transition">
-                            {company.logo ? (
-                              <OptimizedImage src={company.logo} alt={company.name} width={64} height={64} className="w-16 h-16 object-contain" />
-                            ) : (
-                              <Building2 className="w-10 h-10 text-gray-400" />
-                            )}
-                          </div>
-                          
-                          {/* Company Name */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-bold text-gray-900 group-hover:text-primary-600 transition">
-                              {company.name}
-                            </h3>
-                            {!!company.verified && (
-                              <CheckCircle2 className="w-5 h-5 text-primary-600" title="Verified Employer" />
-                            )}
-                          </div>
-                          
-                          {/* Employer Type */}
-                          {company.employer_type && (
-                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded mb-2">
-                              {company.employer_type === 'government' ? '🏛️ Government' :
-                               company.employer_type === 'soe' ? '🏢 SOE' :
-                               company.employer_type === 'statutory' ? '⚖️ Statutory' :
-                               company.employer_type === 'ngo' ? '🤝 NGO' :
-                               company.employer_type === 'listed' ? '📈 Listed' : '🏪 Private'}
-                            </span>
+                  return (
+                    <button
+                      key={company.id}
+                      onClick={() => navigate(company.is_agency_managed ? `/companies/agency-client/${company.id}` : `/companies/${company.id}`)}
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-600 transition-all text-left group relative"
+                    >
+                      {/* Top badges row */}
+                      <div className="flex items-start justify-between mb-3">
+                        {/* Logo */}
+                        <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20 transition">
+                          {company.logo_url ? (
+                            <OptimizedImage src={company.logo_url} alt={name} width={48} height={48} className="w-12 h-12 object-contain rounded" />
+                          ) : (
+                            <Building2 className="w-7 h-7 text-gray-400 dark:text-gray-500" />
                           )}
-                          
-                          {/* Industry */}
-                          <p className="text-sm text-gray-600 mb-2">{company.industry}</p>
-                          
-                          {/* Location */}
-                          <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
-                            <MapPin className="w-4 h-4" />
-                            <span>{company.location}</span>
-                          </div>
-                          
-                          {/* Transparency Score */}
-                          {transparencyBadge && (
-                            <div className="mb-3 flex items-center gap-2">
-                              <span className="text-2xl">{transparencyBadge.emoji}</span>
-                              <div className="text-left">
-                                <div className="text-xs font-semibold text-gray-700">{transparencyBadge.label}</div>
-                                <div className={`text-xs ${transparencyBadge.color}`}>Score: {company.transparency_score}</div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Job Count */}
-                          <div className="w-full pt-4 border-t border-gray-100">
-                            <span className="text-primary-600 font-semibold">
-                              {company.activeJobs} active {company.activeJobs === 1 ? 'job' : 'jobs'}
-                            </span>
-                          </div>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No companies found</h3>
-                  <p className="text-gray-600">Try adjusting your filters or search terms.</p>
+
+                        {/* Badges */}
+                        <div className="flex flex-col items-end gap-1">
+                          {!!company.verified && (
+                            <span className="text-primary-600 dark:text-primary-400" title="Verified">
+                              <CheckCircle2 className="w-5 h-5" />
+                            </span>
+                          )}
+                          {badge && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${badge.bg} ${badge.text}`} title={`Transparency: ${score}/100`}>
+                              {badge.emoji} {score > 0 ? score : badge.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Name */}
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition mb-1 line-clamp-2 text-sm">
+                        {name}
+                      </h3>
+
+                      {/* Type + Industry */}
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {company.employer_type && (
+                          <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                            {getEmployerTypeLabel(company.employer_type)}
+                          </span>
+                        )}
+                        {company.industry && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {company.industry}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Location + Country */}
+                      {(company.location || company.country) && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="truncate">{[company.location, company.country].filter(Boolean).join(', ')}</span>
+                        </div>
+                      )}
+
+                      {/* Footer */}
+                      <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                        {jobs > 0 ? (
+                          <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
+                            {jobs} active {jobs === 1 ? 'job' : 'jobs'}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400 dark:text-gray-500">No active jobs</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 7) {
+                        pageNum = i + 1;
+                      } else if (page <= 4) {
+                        pageNum = i + 1;
+                      } else if (page >= totalPages - 3) {
+                        pageNum = totalPages - 6 + i;
+                      } else {
+                        pageNum = page - 3 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          className={`w-10 h-10 rounded-lg text-sm font-medium transition ${
+                            page === pageNum
+                              ? 'bg-primary-600 text-white'
+                              : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               )}
             </>
+          ) : (
+            <div className="text-center py-16">
+              <Building2 className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No companies found</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Try adjusting your filters or search terms.</p>
+              <button onClick={clearFilters} className="text-primary-600 dark:text-primary-400 font-medium hover:underline">
+                Clear all filters
+              </button>
+            </div>
           )}
 
           {/* CTA Section */}
-          <div className="mt-16 bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg p-8 text-center text-white">
-            <h2 className="text-3xl font-bold mb-3">Is Your Company Listed?</h2>
+          <div className="mt-12 bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl p-8 text-center text-white">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Is Your Company Listed?</h2>
             <p className="text-primary-100 mb-6 max-w-2xl mx-auto">
-              Join {stats ? `${stats.totalEmployers.toLocaleString()}+` : ''} employers finding great talent on WantokJobs. Post jobs, build your employer brand, and connect with qualified candidates.
+              Join {stats ? `${stats.totalEmployers?.toLocaleString()}+` : ''} employers finding great talent on WantokJobs.
             </p>
-            <button
-              onClick={() => navigate('/register?type=employer')}
-              className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
-            >
-              Register as Employer
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => navigate('/register?type=employer')}
+                className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
+              >
+                Register as Employer
+              </button>
+              <button
+                onClick={() => navigate('/claim-employer')}
+                className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition"
+              >
+                Claim Your Profile
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </>
   );
-}
-
-// Mock data fallback
-function getMockCompanies() {
-  return [
-    { id: 1, name: 'PNG Mining Corp', industry: 'Mining & Resources', location: 'Port Moresby, NCD', activeJobs: 12, verified: true },
-    { id: 2, name: 'Pacific Healthcare', industry: 'Healthcare', location: 'Lae, Morobe', activeJobs: 8, verified: true },
-    { id: 3, name: 'National Bank PNG', industry: 'Banking & Finance', location: 'Port Moresby, NCD', activeJobs: 5, verified: true },
-    { id: 4, name: 'TechSolutions PNG', industry: 'Information Technology', location: 'Port Moresby, NCD', activeJobs: 6, verified: false },
-    { id: 5, name: 'Build PNG Construction', industry: 'Construction', location: 'Mt Hagen, WHP', activeJobs: 15, verified: true },
-    { id: 6, name: 'Paradise Hotels', industry: 'Hospitality & Tourism', location: 'Kokopo, ENBP', activeJobs: 7, verified: true },
-  ];
 }

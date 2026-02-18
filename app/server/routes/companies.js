@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
-    const { limit = 20, offset = 0, industry, country, featured, search, location } = req.query;
+    const { limit = 24, offset = 0, industry, country, featured, search, location, employer_type, transparency_only } = req.query;
 
     let query = `
       SELECT u.id, u.name, pe.company_name, pe.industry, pe.company_size, 
@@ -47,11 +47,21 @@ router.get('/', (req, res) => {
       params.push(country);
     }
 
+    if (employer_type) {
+      query += ' AND pe.employer_type = ?';
+      params.push(employer_type);
+    }
+
+    if (transparency_only === 'true') {
+      query += ' AND pe.transparency_required = 1';
+    }
+
     if (featured === 'true') {
       query += ' AND pe.featured = 1';
     }
 
-    query += ' ORDER BY pe.featured DESC, pe.verified DESC, u.created_at DESC LIMIT ? OFFSET ?';
+    // Sort: featured first, then verified, then those with active jobs, then by name
+    query += ' ORDER BY pe.featured DESC, pe.verified DESC, active_jobs_count DESC, pe.company_name ASC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
 
     const companies = db.prepare(query).all(...params);
@@ -84,16 +94,31 @@ router.get('/', (req, res) => {
     const agencyCompanies = db.prepare(agencyQuery).all(...agencyParams);
     companies.push(...agencyCompanies.map(c => ({ ...c, is_agency_managed: true })));
 
-    // Get total count
-    let countQuery = 'SELECT COUNT(*) as count FROM users u INNER JOIN profiles_employer pe ON u.id = pe.user_id WHERE u.role = ?';
+    // Get total count (mirror all filters)
+    let countQuery = 'SELECT COUNT(*) as count FROM users u INNER JOIN profiles_employer pe ON u.id = pe.user_id WHERE u.role = ? AND u.id NOT IN (1, 11)';
     const countParams = ['employer'];
+    if (search) {
+      countQuery += ' AND (pe.company_name LIKE ? OR u.name LIKE ?)';
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
     if (industry) {
       countQuery += ' AND pe.industry = ?';
       countParams.push(industry);
     }
+    if (location) {
+      countQuery += ' AND pe.location LIKE ?';
+      countParams.push(`%${location}%`);
+    }
     if (country) {
       countQuery += ' AND pe.country = ?';
       countParams.push(country);
+    }
+    if (employer_type) {
+      countQuery += ' AND pe.employer_type = ?';
+      countParams.push(employer_type);
+    }
+    if (transparency_only === 'true') {
+      countQuery += ' AND pe.transparency_required = 1';
     }
     if (featured === 'true') {
       countQuery += ' AND pe.featured = 1';
