@@ -167,8 +167,8 @@ function createQuickEmployer(db, phoneNumber, companyName, location) {
 
     // Create employer profile
     db.prepare(`
-      INSERT INTO profiles_employer (user_id, company_name, location, country, profile_complete)
-      VALUES (?, ?, ?, 'Papua New Guinea', 0)
+      INSERT INTO profiles_employer (user_id, company_name, location, country)
+      VALUES (?, ?, ?, 'Papua New Guinea')
     `).run(userId, companyName, location || null);
 
     // Link WhatsApp number

@@ -234,12 +234,52 @@ function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS credit_transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      credit_type TEXT NOT NULL CHECK(credit_type IN ('job_posting', 'ai_matching', 'candidate_search', 'alert')),
+      credit_type TEXT NOT NULL CHECK(credit_type IN ('job_posting', 'ai_matching', 'candidate_search', 'alert', 'job_post')),
       amount INTEGER NOT NULL,
       balance_after INTEGER NOT NULL,
       reason TEXT NOT NULL,
       reference_type TEXT,
       reference_id INTEGER,
+      metadata TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    -- Credit wallets for tracking balances
+    CREATE TABLE IF NOT EXISTS credit_wallets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      balance INTEGER DEFAULT 0,
+      reserved_balance INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    -- SME payments for WhatsApp employer flow
+    CREATE TABLE IF NOT EXISTS sme_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      package_key TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      currency TEXT DEFAULT 'PGK',
+      payment_method TEXT DEFAULT 'bank_transfer',
+      reference_code TEXT UNIQUE,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending','verified','rejected','expired')),
+      admin_notes TEXT,
+      verified_by INTEGER,
+      verified_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    -- WhatsApp employers (phone number to user mapping)
+    CREATE TABLE IF NOT EXISTS whatsapp_employers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone_number TEXT NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL,
+      verified INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );

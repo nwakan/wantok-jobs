@@ -468,6 +468,7 @@ app.use('/api/testimonials', require('./routes/testimonials'));
 app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 app.use('/api/admin/employer-claims', authenticateToken, require('./routes/employer-claims'));
+app.use('/api/admin/payments', require('./routes/admin-payments'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/account', require('./routes/account'));
 app.use('/api/account', require('./routes/account-security')); // Account security endpoints

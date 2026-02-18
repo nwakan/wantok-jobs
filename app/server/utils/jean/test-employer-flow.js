@@ -4,9 +4,10 @@
  */
 
 const db = require('../../database');
-const Jean = require('./index');
+const jean = require('./index');
 const pricing = require('./sme-pricing');
 const waHandler = require('./whatsapp-employer');
+const actions = require('./actions');
 
 const RESET_COLOR = '\x1b[0m';
 const GREEN = '\x1b[32m';
@@ -42,10 +43,42 @@ async function runTests() {
   log('\n🧪 WhatsApp Employer Flow Test Suite', YELLOW);
   log('Testing Jean\'s SME job posting and pricing system\n', YELLOW);
 
-  const jean = new Jean();
   const testPhone = '+675 7123 4567';
   let testUserId = null;
   let testJobId = null;
+
+  // Cleanup from previous test runs
+  try {
+    const testEmail = `whatsapp_${testPhone.replace(/[\s\+]/g, '')}@temp.wantokjobs.com`;
+    
+    // Try by phone
+    const existingByPhone = db.prepare('SELECT user_id FROM whatsapp_employers WHERE phone_number = ?').get(testPhone);
+    if (existingByPhone) {
+      const uid = existingByPhone.user_id;
+      db.prepare('DELETE FROM jobs WHERE employer_id = ?').run(uid);
+      db.prepare('DELETE FROM credit_transactions WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM credit_wallets WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM whatsapp_employers WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM profiles_employer WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM users WHERE id = ?').run(uid);
+      info('Cleaned up previous test data (by phone)');
+    }
+    
+    // Try by email
+    const existingByEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(testEmail);
+    if (existingByEmail) {
+      const uid = existingByEmail.id;
+      db.prepare('DELETE FROM jobs WHERE employer_id = ?').run(uid);
+      db.prepare('DELETE FROM credit_transactions WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM credit_wallets WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM whatsapp_employers WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM profiles_employer WHERE user_id = ?').run(uid);
+      db.prepare('DELETE FROM users WHERE id = ?').run(uid);
+      info('Cleaned up previous test data (by email)');
+    }
+  } catch (e) {
+    // Ignore cleanup errors
+  }
 
   // ─── Test 1: Greeting new employer ───────────────────────
   section('Test 1: Greeting New Employer');
@@ -165,7 +198,6 @@ async function runTests() {
       status: 'active',
     };
 
-    const actions = require('./actions');
     const postResult = actions.postJob(db, testUserId, jobData);
     
     if (postResult.success && postResult.jobId) {
@@ -260,7 +292,6 @@ async function runTests() {
   section('Test 11: Upsell Message Generation');
 
   try {
-    const actions = require('./actions');
     const upsellMsg = actions.generateUpsellMessage(db, testUserId);
     pass('Upsell message generated');
     info(`Message: ${upsellMsg}`);
