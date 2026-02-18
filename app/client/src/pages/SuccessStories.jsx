@@ -79,14 +79,14 @@ export default function SuccessStories() {
 
   return (
     <>
-      <PageHead title="Success Stories | WantokJobs" description="Read how WantokJobs has helped Papua New Guineans find jobs and employers find talent." />
+      <PageHead title="Success Stories | WantokJobs" description="Read how WantokJobs has helped people across PNG and the Pacific Islands find jobs and employers find talent." />
 
       <div className="bg-gradient-to-br from-primary-600 to-teal-700 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-80" />
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Success Stories</h1>
           <p className="text-xl text-primary-100 max-w-2xl mx-auto">
-            Real stories from Papua New Guineans who found opportunities through WantokJobs
+            Real stories from people across PNG and the Pacific who found opportunities through WantokJobs
           </p>
         </div>
       </div>

@@ -266,7 +266,7 @@ export default function BlogPost() {
                         </p>
                         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Final Thoughts</h2>
                         <p className="text-gray-700 leading-relaxed mb-6">
-                          The job market in Papua New Guinea is dynamic and full of opportunities for those who are prepared. 
+                          The job market across PNG and the Pacific Islands is dynamic and full of opportunities for those who are prepared. 
                           By following these guidelines and staying informed, you'll be well-positioned to advance your career.
                         </p>
                       </>
@@ -298,7 +298,7 @@ export default function BlogPost() {
                       <div>
                         <h4 className="font-semibold text-gray-900 mb-1">About {article.author}</h4>
                         <p className="text-sm text-gray-600">
-                          {article.authorBio || `${article.author} is a career expert and writer at WantokJobs, helping job seekers across Papua New Guinea advance their careers.`}
+                          {article.authorBio || `${article.author} is a career expert and writer at WantokJobs, helping job seekers across PNG and the Pacific Islands advance their careers.`}
                         </p>
                       </div>
                     </div>
@@ -418,14 +418,14 @@ function getMockArticle() {
   return {
     id: 1,
     slug: 'how-to-write-perfect-cv-png',
-    title: 'How to Write the Perfect CV for PNG Employers',
-    excerpt: 'Learn the essential tips for creating a CV that stands out to Papua New Guinea employers. From formatting to content, we cover everything you need to know.',
+    title: 'How to Write the Perfect CV for Pacific Employers',
+    excerpt: 'Learn the essential tips for creating a CV that stands out to employers across PNG and the Pacific Islands. From formatting to content, we cover everything you need to know.',
     category: 'Resume Writing',
     author: 'Sarah Johnson',
-    authorBio: 'Sarah Johnson is a career coach and resume expert with over 10 years of experience helping professionals in Papua New Guinea land their dream jobs.',
+    authorBio: 'Sarah Johnson is a career coach and resume expert with over 10 years of experience helping professionals across PNG and the Pacific Islands land their dream jobs.',
     publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     readTime: '8 min',
-    tags: ['CV', 'Resume', 'Job Search', 'Career Tips', 'PNG Jobs'],
+    tags: ['CV', 'Resume', 'Job Search', 'Career Tips', 'Pacific Jobs'],
   };
 }
 
@@ -446,7 +446,7 @@ function getMockRelated() {
     {
       id: 4,
       slug: 'salary-negotiation-png',
-      title: 'How to Negotiate Your Salary in PNG',
+      title: 'How to Negotiate Your Salary in PNG & the Pacific',
       category: 'Career Advice',
     },
   ];

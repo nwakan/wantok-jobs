@@ -257,7 +257,7 @@ const faqs = [
   { q: 'Is it free for job seekers?', a: 'Searching and applying for jobs is 100% free. Job alert packages are optional extras.' },
   { q: 'What are agency plans?', a: 'Agency plans are designed for recruitment agencies managing multiple client companies. You can post jobs on behalf of clients with their branding.' },
   { q: 'Do you offer refunds?', a: 'Unused credits can be refunded within 14 days of purchase. Contact support@wantokjobs.com.' },
-  { q: 'What are SME packages?', a: 'SME packages are designed for small and medium businesses in PNG. Post jobs via WhatsApp — no computer needed. Packages start from K0 (free trial) to K350/month.' },
+  { q: 'What are SME packages?', a: 'SME packages are designed for small and medium businesses across PNG and the Pacific. Post jobs via WhatsApp — no computer needed. Packages start from K0 (free trial) to K350/month.' },
 ];
 
 // ─── Employer Volume Tiers ─────────────────────────────────────────
@@ -907,7 +907,7 @@ export default function Pricing() {
         {/* Social Proof */}
         <div className="bg-white py-12 border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-gray-500 mb-8">Trusted by PNG's leading employers — including 69 government bodies</p>
+            <p className="text-gray-500 mb-8">Trusted by the Pacific's leading employers — including 69 government bodies</p>
             <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
               <div>
                 <div className="text-4xl font-bold text-primary-600 mb-2">{stats ? formatCount(stats.totalEmployers) : '...'}</div>
@@ -1057,7 +1057,7 @@ export default function Pricing() {
                 <h3 className="text-lg font-semibold text-gray-900">Post jobs via WhatsApp — no computer needed</h3>
               </div>
               <p className="text-gray-600 mb-4">
-                Designed for small and medium businesses across PNG. Simple, affordable, mobile-first.
+                Designed for small and medium businesses across PNG and the Pacific. Simple, affordable, mobile-first.
               </p>
               <a
                 href="https://wa.me/67570000000?text=Hi%20Jean%2C%20I%27d%20like%20to%20post%20a%20job%20on%20WantokJobs"

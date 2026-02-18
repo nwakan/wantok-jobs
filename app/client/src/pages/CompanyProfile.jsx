@@ -43,7 +43,7 @@ export default function CompanyProfile() {
       ...(company.founded_year && { "foundingDate": company.founded_year.toString() }),
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": company.location || 'Papua New Guinea',
+        "addressLocality": company.location || 'Pacific Islands',
         "addressCountry": company.country || "PG"
       },
       ...(avgRating > 0 && {
@@ -134,7 +134,7 @@ export default function CompanyProfile() {
     <>
       <PageHead
         title={`${companyName} - Company Profile | WantokJobs`}
-        description={`${companyName} - ${company.industry || 'Employer'} in ${company.location || 'Papua New Guinea'}. ${stats.active_jobs || 0} active jobs. View company profile, jobs, and reviews.`}
+        description={`${companyName} - ${company.industry || 'Employer'} in ${company.location || 'the Pacific Islands'}. ${stats.active_jobs || 0} active jobs. View company profile, jobs, and reviews.`}
       />
       
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6">
@@ -324,7 +324,7 @@ export default function CompanyProfile() {
                     <p>{company.description || company.bio}</p>
                   ) : (
                     <p>
-                      {companyName} is a {company.industry?.toLowerCase() || 'leading'} company based in {company.location || 'Papua New Guinea'}. 
+                      {companyName} is a {company.industry?.toLowerCase() || 'leading'} company based in {company.location || 'the Pacific Islands'}. 
                       We are committed to excellence and are always looking for talented individuals to join our team.
                     </p>
                   )}

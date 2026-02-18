@@ -91,7 +91,7 @@ Write a concise, professional cover letter (3 paragraphs max). Be specific to th
   try {
     const result = await route(prompt, {
       task: 'coverletter',
-      systemPrompt: 'You write professional, concise cover letters for job applications in Papua New Guinea. Be direct and specific.',
+      systemPrompt: 'You write professional, concise cover letters for job applications in PNG and the Pacific Islands. Be direct and specific.',
       maxTokens: 1024,
       temperature: 0.7,
     });
@@ -110,7 +110,7 @@ router.post('/improve-job', auth, async (req, res) => {
   
   const { title, description, requirements } = req.body;
   
-  const prompt = `Improve this job posting to attract better candidates in Papua New Guinea.
+  const prompt = `Improve this job posting to attract better candidates across PNG and the Pacific Islands.
 
 Title: ${title}
 Description: ${(description || '').slice(0, 1000)}
@@ -121,7 +121,7 @@ Return JSON: {"title": "improved title", "description": "improved description", 
   try {
     const result = await route(prompt, {
       task: 'jobdesc',
-      systemPrompt: 'You are a recruitment specialist for Papua New Guinea. Improve job postings to be clear, inclusive, and attractive. Include salary transparency suggestions. Return only valid JSON.',
+      systemPrompt: 'You are a recruitment specialist for PNG and the Pacific Islands. Improve job postings to be clear, inclusive, and attractive. Include salary transparency suggestions. Return only valid JSON.',
       maxTokens: 1500,
       temperature: 0.6,
     });

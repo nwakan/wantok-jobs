@@ -53,16 +53,16 @@ export default function Stats() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <PageHead
         title="WantokJobs Statistics"
-        description="Connecting PNG's workforce with opportunities"
+        description="Connecting the Pacific's workforce with opportunities"
       />
 
       {/* Hero Section */}
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Building Papua New Guinea's Future
+          Building the Pacific's Future
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Join thousands of PNG professionals and employers using WantokJobs to build careers and grow businesses.
+          Join thousands of professionals and employers across PNG and the Pacific using WantokJobs to build careers and grow businesses.
         </p>
       </div>
 
@@ -204,7 +204,7 @@ export default function Stats() {
           Ready to Join WantokJobs?
         </h2>
         <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-          Whether you're looking for talent or your next opportunity, WantokJobs connects you with PNG's best.
+          Whether you're looking for talent or your next opportunity, WantokJobs connects you with the Pacific's best.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link

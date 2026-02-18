@@ -18,9 +18,9 @@
   },
   "hero": {
     "title1": "Find Your Dream Job in",
-    "title2": "Papua New Guinea",
+    "title2": "Pacific Islands",
     "subtitle": "Join {jobseekers}+ job seekers and {employers}+ employers",
-    "activeJobs": "{count} active opportunities across PNG",
+    "activeJobs": "{count} active opportunities across PNG & the Pacific",
     "searchPlaceholder": "Job title or keywords...",
     "locationPlaceholder": "Select location",
     "categoryPlaceholder": "Select category",
@@ -48,13 +48,13 @@
     "subscribed": "Subscribed!",
     "whyChoose": "Why Choose WantokJobs?",
     "pngFocused": "PNG Focused",
-    "pngFocusedDesc": "Built specifically for Papua New Guinea's job market",
+    "pngFocusedDesc": "Built specifically for PNG and the Pacific Islands job market",
     "trustedEmployers": "Trusted Employers",
     "trustedEmployersDesc": "Verified employers and organizations",
     "easyApply": "Easy Apply",
     "easyApplyDesc": "Apply via the platform or WhatsApp",
     "readyToStart": "Ready to Start Your Career Journey?",
-    "readyToStartDesc": "Join thousands of Papua New Guineans finding their next opportunity",
+    "readyToStartDesc": "Join thousands of Pacific Islanders finding their next opportunity",
     "getStarted": "Get Started"
   },
   "jobs": {

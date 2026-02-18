@@ -256,7 +256,7 @@ export default function ReferenceResponse() {
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
           <p>Powered by <a href="https://wantokjobs.com" className="text-primary-600 hover:text-primary-700 font-medium">WantokJobs</a></p>
-          <p className="mt-2">Papua New Guinea's Premier Job Portal</p>
+          <p className="mt-2">The Pacific Islands' Premier Job Portal</p>
         </div>
       </div>
     </div>

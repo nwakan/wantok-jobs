@@ -729,7 +729,7 @@ export default function JobseekerOverview() {
                 </div>
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Based on {salaryInsights.job_count} {salaryInsights.role_name} jobs in PNG
+                Based on {salaryInsights.job_count} {salaryInsights.role_name} jobs across the Pacific
               </p>
             </div>
           )}

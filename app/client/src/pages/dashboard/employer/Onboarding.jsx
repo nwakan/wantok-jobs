@@ -185,7 +185,7 @@ export default function EmployerOnboarding() {
           Welcome to WantokJobs!
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Set up your company profile</h1>
-        <p className="text-gray-600">Complete these steps to start attracting top candidates in PNG</p>
+        <p className="text-gray-600">Complete these steps to start attracting top candidates across PNG and the Pacific</p>
       </div>
 
       {/* Progress Bar */}
@@ -438,7 +438,7 @@ export default function EmployerOnboarding() {
             </div>
             <h2 className="text-lg font-bold text-gray-900">You're all set! 🎉</h2>
             <p className="text-gray-600 max-w-md mx-auto">
-              Your company profile is {completeness}% complete. Now post your first job to start receiving applications from candidates across Papua New Guinea.
+              Your company profile is {completeness}% complete. Now post your first job to start receiving applications from candidates across PNG and the Pacific Islands.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
               <Link

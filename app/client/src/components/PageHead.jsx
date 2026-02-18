@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 const BASE_URL = 'https://wantokjobs.com';
 const DEFAULT_IMAGE = `${BASE_URL}/og-image.png`;
 const SITE_NAME = 'WantokJobs';
-const DEFAULT_DESCRIPTION = 'Find jobs in Papua New Guinea. Browse thousands of opportunities from top PNG employers. Your Wantok in the job market.';
+const DEFAULT_DESCRIPTION = 'Find jobs across PNG and the Pacific Islands. Browse thousands of opportunities from top employers in Papua New Guinea, Fiji, Solomon Islands, and more. Your Wantok in the job market.';
 
 /**
  * PageHead — manages document <head> meta for SEO, Open Graph, and structured data.
@@ -30,7 +30,7 @@ export default function PageHead({
   const location = useLocation();
   const fullTitle = title
     ? (title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`)
-    : `${SITE_NAME} — Find Jobs in Papua New Guinea`;
+    : `${SITE_NAME} — Find Jobs in PNG & the Pacific Islands`;
   const canonicalUrl = `${BASE_URL}${location.pathname}`;
   const ogImage = image || DEFAULT_IMAGE;
   const metaDescription = description || DEFAULT_DESCRIPTION;

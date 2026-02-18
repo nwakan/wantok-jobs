@@ -108,7 +108,7 @@ export default function CategoryLanding() {
   return (
     <>
       <PageHead
-        title={category.meta_title || `${category.name} Jobs in PNG | WantokJobs`}
+        title={category.meta_title || `${category.name} Jobs — Pacific Islands | WantokJobs`}
         description={category.meta_description || category.description}
       />
       
@@ -123,7 +123,7 @@ export default function CategoryLanding() {
               <div>
                 <h1 className="text-4xl font-bold mb-2">{category.name}</h1>
                 <p className="text-primary-100 text-lg">
-                  {category.active_jobs || 0} active job{category.active_jobs !== 1 ? 's' : ''} in Papua New Guinea
+                  {category.active_jobs || 0} active job{category.active_jobs !== 1 ? 's' : ''} across PNG & the Pacific
                 </p>
               </div>
             </div>

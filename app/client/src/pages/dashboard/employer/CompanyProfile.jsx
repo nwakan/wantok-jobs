@@ -508,7 +508,7 @@ export default function CompanyProfile() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={8}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-                  placeholder="Tell job seekers about your company — what you do, your mission, what makes you a great employer in PNG..."
+                  placeholder="Tell job seekers about your company — what you do, your mission, what makes you a great employer in PNG and the Pacific..."
                 />
                 <p className="text-xs text-gray-500 mt-1">{formData.description.length} chars • Tip: 200+ words helps you rank higher in search results</p>
               </div>

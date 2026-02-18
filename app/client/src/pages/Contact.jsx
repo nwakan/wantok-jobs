@@ -7,7 +7,7 @@ import api from '../api';
 const faqs = [
   { q: 'How do I create an account on WantokJobs?', a: 'Click "Register" at the top of the page, choose whether you\'re a jobseeker or employer, fill in your details, and verify your email. It only takes a minute!' },
   { q: 'Is it free to search and apply for jobs?', a: 'Yes! Searching and applying for jobs on WantokJobs is completely free for jobseekers. Simply create an account and start applying.' },
-  { q: 'How do I post a job as an employer?', a: 'Log in to your employer account, go to your dashboard, and click "Post a Job". Fill in the job details, select a package, and publish. Your job will be visible to thousands of jobseekers across PNG.' },
+  { q: 'How do I post a job as an employer?', a: 'Log in to your employer account, go to your dashboard, and click "Post a Job". Fill in the job details, select a package, and publish. Your job will be visible to thousands of jobseekers across PNG and the Pacific.' },
   { q: 'How long does it take to get a response?', a: 'For support enquiries, we aim to respond within 24 hours during business days. For job applications, response times depend on the employer.' },
   { q: 'Can I use WantokJobs on my mobile phone?', a: 'Absolutely! WantokJobs is fully mobile-friendly. You can browse jobs, apply, and manage your account from any smartphone or tablet.' },
 ];
@@ -37,7 +37,7 @@ export default function Contact() {
 
   return (
     <>
-      <PageHead title="Contact Us" description="Get in touch with WantokJobs. We're here to help job seekers and employers across Papua New Guinea." />
+      <PageHead title="Contact Us" description="Get in touch with WantokJobs. We're here to help job seekers and employers across PNG and the Pacific Islands." />
 
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -91,10 +91,10 @@ function emailLayout({ preheader, body, footerText, showUnsubscribe = false, uns
           </p>
           
           <p style="margin:8px 0 0;font-size:12px;color:#9CA3AF;text-align:center;font-weight:600;">
-            WantokJobs — Papua New Guinea's #1 Job Board
+            WantokJobs — The Pacific's #1 Job Board
           </p>
           <p style="margin:8px 0 0;font-size:11px;color:#D1D5DB;text-align:center;">
-            © ${new Date().getFullYear()} WantokJobs. Connecting PNG's talent with opportunity.
+            © ${new Date().getFullYear()} WantokJobs. Connecting Pacific talent with opportunity.
           </p>
         </td></tr>
         
@@ -202,13 +202,13 @@ function newsletterDigest({ subscriberName, jobs, stats, personalizedJobs, unsub
   const hasPersonalized = personalizedJobs && personalizedJobs.length > 0;
   
   return emailLayout({
-    preheader: `${jobs.length} new jobs this week across PNG. ${hasPersonalized ? 'Plus personalized matches just for you!' : ''}`,
+    preheader: `${jobs.length} new jobs this week across PNG & the Pacific. ${hasPersonalized ? 'Plus personalized matches just for you!' : ''}`,
     body: `
       ${greeting(subscriberName)}
       
       <h2 style="color:${COLORS.dark};font-size:20px;margin:0 0 8px;font-weight:700;">Your Weekly Job Digest 📬</h2>
       <p style="font-size:15px;color:${COLORS.darkLight};margin:0 0 24px;line-height:1.6;">
-        Here's what's new on WantokJobs this week — <strong>${jobs.length} fresh opportunities</strong> across Papua New Guinea.
+        Here's what's new on WantokJobs this week — <strong>${jobs.length} fresh opportunities</strong> across PNG and the Pacific Islands.
       </p>
       
       ${stats ? `
@@ -272,14 +272,14 @@ function welcomeToNewsletter(subscriberName, subscriberEmail) {
       <h2 style="color:${COLORS.green};font-size:22px;margin:0 0 16px;font-weight:700;">Welcome to WantokJobs Weekly! 🎉</h2>
       
       <p style="font-size:15px;color:${COLORS.darkLight};line-height:1.7;margin:0 0 16px;">
-        You're now subscribed to the <strong>WantokJobs Weekly Digest</strong> — your curated roundup of the latest jobs, hiring trends, and career opportunities across Papua New Guinea.
+        You're now subscribed to the <strong>WantokJobs Weekly Digest</strong> — your curated roundup of the latest jobs, hiring trends, and career opportunities across PNG and the Pacific Islands.
       </p>
       
       <h3 style="color:${COLORS.dark};font-size:16px;margin:24px 0 12px;font-weight:600;">What you'll get every week:</h3>
       
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr><td style="padding:8px 0;font-size:14px;color:${COLORS.darkLight};">
-          💼 <strong>New job listings</strong> — fresh opportunities from top PNG employers
+          💼 <strong>New job listings</strong> — fresh opportunities from top Pacific employers
         </td></tr>
         <tr><td style="padding:8px 0;font-size:14px;color:${COLORS.darkLight};">
           🤖 <strong>Personalized matches</strong> — AI-powered recommendations (if you have a WantokJobs account)
@@ -288,7 +288,7 @@ function welcomeToNewsletter(subscriberName, subscriberEmail) {
           📊 <strong>Market insights</strong> — hiring trends and job market stats
         </td></tr>
         <tr><td style="padding:8px 0;font-size:14px;color:${COLORS.darkLight};">
-          💡 <strong>Career tips</strong> — advice from PNG's top recruiters
+          💡 <strong>Career tips</strong> — advice from the Pacific's top recruiters
         </td></tr>
       </table>
       

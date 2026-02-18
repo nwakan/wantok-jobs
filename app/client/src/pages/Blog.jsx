@@ -25,7 +25,7 @@ export default function Blog() {
     'Company Culture',
     'Resume Writing',
     'Interview Tips',
-    'PNG Employment',
+    'Pacific Employment',
   ];
 
   useEffect(() => {
@@ -298,8 +298,8 @@ function getMockArticles() {
     {
       id: 5,
       slug: 'salary-negotiation-png',
-      title: 'How to Negotiate Your Salary in PNG',
-      excerpt: 'Master the art of salary negotiation with these practical tips tailored for the PNG job market.',
+      title: 'How to Negotiate Your Salary in PNG & the Pacific',
+      excerpt: 'Master the art of salary negotiation with these practical tips tailored for the Pacific Islands job market.',
       category: 'Career Advice',
       author: 'John Aisi',
       publishedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
@@ -307,8 +307,8 @@ function getMockArticles() {
     {
       id: 6,
       slug: 'remote-work-opportunities',
-      title: 'Remote Work Opportunities in Papua New Guinea',
-      excerpt: 'Discover how remote work is changing the employment landscape in PNG and how you can take advantage of it.',
+      title: 'Remote Work Opportunities across the Pacific Islands',
+      excerpt: 'Discover how remote work is changing the employment landscape across PNG and the Pacific and how you can take advantage of it.',
       category: 'Job Search Tips',
       author: 'Emma Wari',
       publishedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),

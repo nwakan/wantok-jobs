@@ -331,7 +331,7 @@ export default function TransparencyLeaderboard() {
             re-advertisement transparency (+10), and panel diversity (+10).
           </p>
           <p className="text-sm text-blue-800">
-            Transparency helps jobseekers make informed decisions and improves hiring standards across PNG.
+            Transparency helps jobseekers make informed decisions and improves hiring standards across PNG and the Pacific.
             Updated daily.
           </p>
         </div>

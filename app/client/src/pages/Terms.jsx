@@ -89,7 +89,7 @@ export default function Terms() {
               <p className="text-gray-600 mb-3">When posting jobs, you agree to:</p>
               <ul className="list-disc pl-6 text-gray-600 space-y-2 mb-4">
                 <li>Provide accurate and complete job descriptions</li>
-                <li>Comply with all applicable employment laws in Papua New Guinea</li>
+                <li>Comply with all applicable employment laws in Papua New Guinea and the relevant Pacific Island jurisdiction</li>
                 <li>Not discriminate based on race, gender, religion, age, disability, or other protected characteristics</li>
                 <li>Post only legitimate job opportunities (no scams, pyramid schemes, or misleading offers)</li>
                 <li>Not use the platform to collect personal information for purposes other than recruitment</li>

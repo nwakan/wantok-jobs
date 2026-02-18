@@ -144,7 +144,7 @@ export default function JobDetail() {
         "@type": "Place",
         "address": {
           "@type": "PostalAddress",
-          "addressLocality": job.location || 'Papua New Guinea',
+          "addressLocality": job.location || 'Pacific Islands',
           "addressCountry": job.country || "PG"
         }
       },

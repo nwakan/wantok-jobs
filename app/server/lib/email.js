@@ -110,11 +110,11 @@ async function sendWelcomeJobseeker(user) {
     to: user.email, toName: user.name, tags: ['welcome'],
     subject: `Welcome to WantokJobs, ${user.name}! 🎉`,
     html: layout({
-      preheader: `Your job search in PNG just got smarter. Here's how to get started.`,
+      preheader: `Your job search across the Pacific just got smarter. Here's how to get started.`,
       body: `
         ${greeting(user.name)}
         <p style="font-size:15px;color:#374151;line-height:1.7;">
-          Welcome to <strong>WantokJobs</strong> — Papua New Guinea's AI-powered job platform. 
+          Welcome to <strong>WantokJobs</strong> — the Pacific Islands' AI-powered job platform. 
           We're here to help you find the right opportunity, faster.
         </p>
 
@@ -149,11 +149,11 @@ async function sendWelcomeEmployer(user) {
     to: user.email, toName: user.name, tags: ['welcome'],
     subject: `Welcome to WantokJobs, ${user.name}! Start Hiring Smarter 🏢`,
     html: layout({
-      preheader: `Reach 30,000+ jobseekers across Papua New Guinea. Post your first job today.`,
+      preheader: `Reach 30,000+ jobseekers across PNG and the Pacific Islands. Post your first job today.`,
       body: `
         ${greeting(user.name)}
         <p style="font-size:15px;color:#374151;line-height:1.7;">
-          Welcome to <strong>WantokJobs</strong> — the smart way to hire in Papua New Guinea. 
+          Welcome to <strong>WantokJobs</strong> — the smart way to hire across PNG and the Pacific Islands. 
           You now have access to over <strong>30,000 registered jobseekers</strong> across the country.
         </p>
 
@@ -425,11 +425,11 @@ async function sendJobPostedEmail(employer, job) {
     to: employer.email, toName: employer.name, tags: ['jobs'],
     subject: `Your job is live: ${job.title}`,
     html: layout({
-      preheader: `${job.title} is now visible to thousands of jobseekers across PNG.`,
+      preheader: `${job.title} is now visible to thousands of jobseekers across PNG and the Pacific.`,
       body: `
         ${greeting(employer.name)}
         <p style="font-size:15px;color:#374151;line-height:1.7;">
-          Your job listing is now <strong>live</strong> and visible to jobseekers across Papua New Guinea! 🎉
+          Your job listing is now <strong>live</strong> and visible to jobseekers across PNG and the Pacific Islands! 🎉
         </p>
         <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;padding:18px;margin:16px 0;background:#f9fafb;">
           <h3 style="margin:0 0 8px;color:#111827;">${job.title}</h3>
