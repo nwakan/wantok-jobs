@@ -10,6 +10,11 @@ const { events: notifEvents } = require('../lib/notifications');
 const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../lib/email');
 const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
 const { processReferral } = require('./referrals');
+const { 
+  checkAccountLockout, 
+  recordFailedLogin, 
+  recordSuccessfulLogin 
+} = require('./account-security');
 
 const router = express.Router();
 
@@ -270,19 +275,14 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       return res.status(403).json({ error: 'This account has been disabled. Contact support if you believe this is an error.' });
     }
 
-    // Security: Check if account is locked
-    if (user.lockout_until) {
-      const lockoutTime = new Date(user.lockout_until);
-      const now = new Date();
-      if (now < lockoutTime) {
-        const minutesRemaining = Math.ceil((lockoutTime - now) / 60000);
-        return res.status(429).json({ 
-          error: `Account locked due to multiple failed login attempts. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.` 
-        });
-      } else {
-        // Lockout expired, clear it
-        db.prepare("UPDATE users SET lockout_until = NULL, failed_attempts = 0 WHERE id = ?").run(user.id);
-      }
+    // Security: Check account lockout (new centralized system)
+    const lockout = checkAccountLockout(user.id);
+    if (lockout.locked) {
+      const minutesRemaining = Math.ceil((lockout.until - new Date()) / 60000);
+      return res.status(429).json({ 
+        error: `Account locked due to multiple failed login attempts. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`,
+        code: 'ACCOUNT_LOCKED',
+      });
     }
 
     // Force password reset for legacy users (non-bcrypt password format)
@@ -307,43 +307,15 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     }
 
     if (!valid) {
-      // Security: Increment failed attempts
-      const newFailedAttempts = (user.failed_attempts || 0) + 1;
+      // Record failed login (new centralized system)
       const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+      const userAgent = req.headers['user-agent'];
+      recordFailedLogin(user.id, clientIp, userAgent, 'Invalid password');
       
-      // Audit log: failed login attempt with IP
-      logger.warn('Failed login attempt', {
-        email: user.email,
-        userId: user.id,
-        ip: clientIp,
-        attempt: newFailedAttempts,
-        userAgent: req.headers['user-agent'],
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
       });
-
-      if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
-        // Lock account
-        const lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000).toISOString();
-        db.prepare("UPDATE users SET failed_attempts = ?, lockout_until = ? WHERE id = ?")
-          .run(newFailedAttempts, lockoutUntil, user.id);
-        
-        logger.warn('Account locked due to failed attempts', {
-          email: user.email,
-          userId: user.id,
-          ip: clientIp,
-          lockoutUntil,
-        });
-
-        return res.status(429).json({ 
-          error: `Too many failed login attempts. Account locked for ${LOCKOUT_DURATION_MINUTES} minutes.` 
-        });
-      } else {
-        // Just increment counter
-        db.prepare("UPDATE users SET failed_attempts = ? WHERE id = ?").run(newFailedAttempts, user.id);
-        const attemptsRemaining = MAX_FAILED_ATTEMPTS - newFailedAttempts;
-        return res.status(401).json({ 
-          error: `Invalid credentials. ${attemptsRemaining} attempt${attemptsRemaining > 1 ? 's' : ''} remaining before account lockout.` 
-        });
-      }
     }
 
     // Migrate legacy password to bcrypt
@@ -359,6 +331,11 @@ router.post('/login', validate(schemas.login), async (req, res) => {
       db.prepare("UPDATE users SET last_login = datetime('now'), failed_attempts = 0, lockout_until = NULL WHERE id = ?")
         .run(user.id); 
     } catch(e) {}
+
+    // Record successful login (new centralized system with suspicious login detection)
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const userAgent = req.headers['user-agent'];
+    recordSuccessfulLogin(user.id, clientIp, userAgent);
 
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)').run(user.id, 'login', 'user', user.id); } catch(e) {}

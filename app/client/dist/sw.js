@@ -1,26 +1,24 @@
-const CACHE_NAME = 'wantokjobs-v2-png-optimized';
-const API_CACHE_NAME = 'wantokjobs-api-v2';
-const JOBS_CACHE_NAME = 'wantokjobs-jobs-v1';
-const IMAGES_CACHE_NAME = 'wantokjobs-images-v1';
+const CACHE_VERSION = 'wantokjobs-v1';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
-  '/manifest.json',
   '/offline.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
-
-// Maximum cache sizes (for low-storage devices)
-const MAX_JOBS_CACHE = 50;
-const MAX_IMAGES_CACHE = 30;
-const MAX_API_CACHE = 100;
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch(err => {
-        console.warn('Failed to cache some static assets:', err);
+    caches.open(STATIC_CACHE).then((cache) => {
+      console.log('[SW] Caching static assets');
+      return cache.addAll(STATIC_ASSETS).catch((error) => {
+        console.error('[SW] Failed to cache static assets:', error);
       });
     })
   );
@@ -29,11 +27,13 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating service worker');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (![CACHE_NAME, API_CACHE_NAME, JOBS_CACHE_NAME, IMAGES_CACHE_NAME].includes(cacheName)) {
+          if (cacheName.startsWith('wantokjobs-') && cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== API_CACHE) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -43,118 +43,45 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Helper: Limit cache size
-async function limitCacheSize(cacheName, maxItems) {
-  const cache = await caches.open(cacheName);
-  const keys = await cache.keys();
-  if (keys.length > maxItems) {
-    // Delete oldest entries
-    await cache.delete(keys[0]);
-    await limitCacheSize(cacheName, maxItems); // Recursive cleanup
-  }
-}
-
-// Fetch event - optimized for PNG's slow networks
+// Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Special handling for job listings - cache and keep fresh
-  if (url.pathname.startsWith('/api/jobs') && request.method === 'GET') {
-    event.respondWith(
-      caches.open(JOBS_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
-        
-        // Return cached immediately if offline
-        if (!navigator.onLine && cachedResponse) {
-          return cachedResponse;
-        }
-
-        // Try network first, fallback to cache
-        return fetch(request)
-          .then((response) => {
-            if (response.ok) {
-              cache.put(request, response.clone());
-              limitCacheSize(JOBS_CACHE_NAME, MAX_JOBS_CACHE);
-            }
-            return response;
-          })
-          .catch(() => {
-            if (cachedResponse) {
-              // Add offline header
-              const headers = new Headers(cachedResponse.headers);
-              headers.set('X-From-Cache', 'true');
-              return new Response(cachedResponse.body, {
-                status: cachedResponse.status,
-                statusText: cachedResponse.statusText,
-                headers: headers
-              });
-            }
-            // Return offline message
-            return new Response(JSON.stringify({ 
-              error: 'Offline', 
-              message: 'You are offline. Please check your connection.',
-              data: []
-            }), {
-              status: 503,
-              headers: { 'Content-Type': 'application/json' }
-            });
-          });
-      })
-    );
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
     return;
   }
 
-  // Handle images - cache with size limit
-  if (request.destination === 'image' || url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
-    event.respondWith(
-      caches.open(IMAGES_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            cache.put(request, response.clone());
-            limitCacheSize(IMAGES_CACHE_NAME, MAX_IMAGES_CACHE);
-          }
-          return response;
-        }).catch(() => {
-          // Return placeholder for broken images
-          return new Response('', { status: 404 });
-        });
-      })
-    );
+  // Skip chrome extensions and non-http(s) requests
+  if (!url.protocol.startsWith('http')) {
     return;
   }
 
-  // Network-first for other API calls
+  // API requests: network first, cache as fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok && request.method === 'GET') {
+          // Cache successful GET responses
+          if (response.ok) {
             const responseClone = response.clone();
-            caches.open(API_CACHE_NAME).then((cache) => {
+            caches.open(API_CACHE).then((cache) => {
               cache.put(request, responseClone);
-              limitCacheSize(API_CACHE_NAME, MAX_API_CACHE);
             });
           }
           return response;
         })
         .catch(() => {
-          // Fallback to cache if network fails
-          return caches.match(request).then(cachedResponse => {
+          // Return cached API response if available
+          return caches.match(request).then((cachedResponse) => {
             if (cachedResponse) {
               return cachedResponse;
             }
-            return new Response(JSON.stringify({ 
-              error: 'Offline', 
-              message: 'You are offline'
-            }), {
+            // Return offline response for failed API calls
+            return new Response(JSON.stringify({ error: 'Offline', offline: true }), {
+              headers: { 'Content-Type': 'application/json' },
               status: 503,
-              headers: { 'Content-Type': 'application/json' }
             });
           });
         })
@@ -162,42 +89,109 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first strategy for static assets
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'error') {
+  // Static assets: cache first, network fallback
+  if (
+    url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$/) ||
+    url.pathname === '/' ||
+    url.pathname.startsWith('/assets/')
+  ) {
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          // Return cached version and update in background
+          fetch(request).then((response) => {
+            if (response.ok) {
+              caches.open(STATIC_CACHE).then((cache) => {
+                cache.put(request, response);
+              });
+            }
+          }).catch(() => {});
+          return cachedResponse;
+        }
+
+        // Not in cache, fetch from network
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
           return response;
-        }
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseClone);
+        }).catch(() => {
+          // Return offline page for navigation requests
+          if (request.mode === 'navigate') {
+            return caches.match('/offline.html');
+          }
+          return new Response('Offline', { status: 503 });
         });
-        return response;
-      }).catch(() => {
-        // For HTML requests, return the cached offline page
-        if (request.headers.get('Accept').includes('text/html')) {
-          return caches.match('/offline.html');
+      })
+    );
+    return;
+  }
+
+  // All other requests: network first, cache fallback
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const responseClone = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
         }
-        return new Response('Offline', { status: 503 });
-      });
-    })
+        return response;
+      })
+      .catch(() => {
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Return offline page for navigation requests
+          if (request.mode === 'navigate') {
+            return caches.match('/offline.html');
+          }
+          return new Response('Offline', { status: 503 });
+        });
+      })
   );
 });
 
-// Listen for messages from the app (e.g., to queue applications)
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+// Background sync for offline actions (future enhancement)
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync:', event.tag);
+  if (event.tag === 'sync-applications') {
+    event.waitUntil(syncApplications());
   }
-  
-  // Queue application when offline
-  if (event.data && event.data.type === 'QUEUE_APPLICATION') {
-    // Store in IndexedDB for later submission
-    // (Simplified - would need IndexedDB implementation)
-    console.log('Application queued for when online:', event.data.payload);
-  }
+});
+
+async function syncApplications() {
+  // Placeholder for syncing offline job applications
+  console.log('[SW] Syncing applications...');
+}
+
+// Push notifications (future enhancement)
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'WantokJobs';
+  const options = {
+    body: data.body || 'You have a new notification',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: data.url || '/',
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked');
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data || '/')
+  );
 });

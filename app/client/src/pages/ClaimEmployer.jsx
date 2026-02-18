@@ -276,10 +276,10 @@ export default function ClaimEmployer() {
                     <Shield className="w-8 h-8 text-primary-600" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Claim Your Company Profile
+                    Claim Ownership of Your Company Profile
                   </h2>
                   <p className="text-gray-600">
-                    Verify your identity to manage {employer.company_name || employer.name} on WantokJobs
+                    Prove you represent {employer.company_name || employer.name} and take control of your profile
                   </p>
                 </div>
 
@@ -287,25 +287,26 @@ export default function ClaimEmployer() {
                   <div className="flex gap-3">
                     <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-900">
-                      <p className="font-semibold mb-1">What you'll need:</p>
+                      <p className="font-semibold mb-1">How claiming works:</p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>Access to your official company email address or phone number</li>
-                        <li>Ability to receive verification codes</li>
-                        <li>5 minutes to complete the process</li>
+                        <li>Prove ownership by verifying your official company email or phone</li>
+                        <li>No need to verify the company itself (already verified)</li>
+                        <li>Get immediate access to manage your profile and post jobs</li>
+                        <li>Takes about 5 minutes</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-8">
-                  <h3 className="font-semibold text-gray-900">Benefits of claiming:</h3>
+                  <h3 className="font-semibold text-gray-900">What you get after claiming:</h3>
                   <div className="grid gap-3">
                     {[
-                      'Post unlimited job openings',
-                      'Respond to applicants directly',
-                      'Edit your company profile and branding',
-                      'Access employer analytics and insights',
-                      'Build your employer brand'
+                      'Full control of your company profile',
+                      'Post and manage unlimited job openings',
+                      'Review and respond to applicants',
+                      'Update company details and branding',
+                      'Access employer analytics and insights'
                     ].map((benefit) => (
                       <div key={benefit} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -549,10 +550,11 @@ export default function ClaimEmployer() {
                 ) : (
                   <>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Congratulations! 🎉
+                      Profile Claimed Successfully! 🎉
                     </h2>
                     <p className="text-gray-600 mb-8">
-                      You now manage <span className="font-semibold">{employer.company_name || employer.name}</span> on WantokJobs!
+                      You now own and manage <span className="font-semibold">{employer.company_name || employer.name}</span> on WantokJobs. 
+                      Your employer profile is verified and ready to use.
                     </p>
                     <div className="space-y-3">
                       <button 

@@ -1199,4 +1199,169 @@ router.get('/:id/reviews', authenticateToken, requireRole('employer', 'admin'), 
   }
 });
 
+// POST /api/jobs/:id/quick-apply - One-click apply for authenticated jobseekers (Part 2.7)
+router.post('/jobs/:id/quick-apply', authenticateToken, requireRole('jobseeker'), (req, res) => {
+  try {
+    const jobId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    // Get job
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ? AND status = ?').get(jobId, 'active');
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found or not active' });
+    }
+
+    // Get jobseeker profile
+    const profile = db.prepare('SELECT * FROM profiles_jobseeker WHERE user_id = ?').get(userId);
+    if (!profile) {
+      return res.status(400).json({ error: 'Please complete your profile first' });
+    }
+
+    // Validate minimum requirements
+    if (!profile.cv_url) {
+      return res.status(400).json({ 
+        error: 'CV required', 
+        message: 'Please upload your CV before applying',
+        action: 'upload_cv'
+      });
+    }
+
+    if (!profile.skills || profile.profile_complete < 50) {
+      return res.status(400).json({ 
+        error: 'Profile incomplete', 
+        message: 'Please complete at least 50% of your profile to apply',
+        action: 'complete_profile'
+      });
+    }
+
+    // Check if already applied
+    const existing = db.prepare(
+      'SELECT id FROM applications WHERE job_id = ? AND jobseeker_id = ?'
+    ).get(jobId, userId);
+    if (existing) {
+      return res.status(400).json({ error: 'You have already applied to this job' });
+    }
+
+    // Auto-generate cover letter
+    const coverLetter = generateCoverLetter(profile, job, req.user.name);
+
+    // Calculate match score
+    const { calculateCompatibility } = require('../utils/compatibility');
+    const compatibility = calculateCompatibility(profile, job);
+
+    // Create application
+    const result = db.prepare(`
+      INSERT INTO applications (
+        job_id, jobseeker_id, cover_letter, cv_url, 
+        status, match_score, source
+      ) VALUES (?, ?, ?, ?, 'applied', ?, 'quick-apply')
+    `).run(jobId, userId, coverLetter, profile.cv_url, compatibility.score);
+
+    const applicationId = result.lastInsertRowid;
+
+    // Update job applications count
+    db.prepare('UPDATE jobs SET applications_count = applications_count + 1 WHERE id = ?').run(jobId);
+
+    // Send confirmation email
+    const companyProfile = db.prepare('SELECT company_name FROM profiles_employer WHERE user_id = ?').get(job.employer_id);
+    const employer = db.prepare('SELECT email, name FROM users WHERE id = ?').get(job.employer_id);
+    sendApplicationConfirmationEmail(
+      { email: req.user.email, name: req.user.name },
+      job,
+      companyProfile?.company_name || employer?.name || 'the employer'
+    ).catch(() => {});
+
+    // Notify employer
+    const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(jobId)?.n;
+    if (employer) {
+      sendNewApplicationEmail(employer, job.title, req.user.name, appCount).catch(() => {});
+    }
+
+    // Create notification for employer
+    const { notifyEmployerOfApplication } = require('../../system/agents/employer-notifier');
+    try {
+      notifyEmployerOfApplication(applicationId);
+    } catch (e) {
+      logger.error('Employer notification error', { error: e.message });
+    }
+
+    // Log activity
+    try {
+      db.prepare(
+        'INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)'
+      ).run(userId, 'job_applied', 'application', applicationId, JSON.stringify({ 
+        job_id: jobId, 
+        job_title: job.title,
+        match_score: compatibility.score 
+      }));
+    } catch (e) {}
+
+    res.status(201).json({
+      success: true,
+      application_id: applicationId,
+      message: 'Applied! The employer will review your application.',
+      match_score: compatibility.score
+    });
+  } catch (error) {
+    logger.error('Quick apply error', { error: error.message, userId: req.user?.id });
+    res.status(500).json({ error: 'Failed to submit application' });
+  }
+});
+
+function generateCoverLetter(profile, job, userName) {
+  const firstName = userName.split(' ')[0];
+  const companyName = job.company_display_name || 'your company';
+  
+  let letter = `Dear Hiring Manager,\n\n`;
+  letter += `I am writing to express my strong interest in the ${job.title} position at ${companyName}.\n\n`;
+  
+  // Mention skills
+  let skills = [];
+  try {
+    if (profile.skills) {
+      const parsed = JSON.parse(profile.skills);
+      skills = Array.isArray(parsed) ? parsed : [];
+    }
+  } catch {}
+  
+  if (skills.length > 0) {
+    letter += `With my background in ${skills.slice(0, 3).join(', ')}, I believe I would be a strong fit for this role. `;
+  }
+  
+  // Mention experience
+  let workHistory = [];
+  try {
+    if (profile.work_history) {
+      const parsed = JSON.parse(profile.work_history);
+      workHistory = Array.isArray(parsed) ? parsed : [];
+    }
+  } catch {}
+  
+  if (workHistory.length > 0) {
+    const latestJob = workHistory[0];
+    if (latestJob.title) {
+      letter += `My experience as a ${latestJob.title}`;
+      if (latestJob.company) {
+        letter += ` at ${latestJob.company}`;
+      }
+      letter += ` has equipped me with the skills and knowledge needed to excel in this position.\n\n`;
+    }
+  } else {
+    letter += `\n\n`;
+  }
+  
+  // Location match
+  if (profile.location && job.location && profile.location.toLowerCase() === job.location.toLowerCase()) {
+    letter += `Being based in ${profile.location}, I am readily available to work at your ${job.location} location.\n\n`;
+  }
+  
+  letter += `I am particularly excited about this opportunity because it aligns well with my career goals and expertise. `;
+  letter += `I would welcome the chance to discuss how my skills and experience can contribute to ${companyName}'s continued success.\n\n`;
+  
+  letter += `Thank you for considering my application. I look forward to hearing from you.\n\n`;
+  letter += `Best regards,\n${firstName}`;
+  
+  return letter;
+}
+
 module.exports = router;

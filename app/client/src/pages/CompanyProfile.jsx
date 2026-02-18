@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Building2, MapPin, Globe, Users, CheckCircle2, Briefcase, Mail, Phone,
   Star, ThumbsUp, ThumbsDown, TrendingUp, Award, Calendar, Image as ImageIcon,
-  Gift, MessageSquare, ChevronDown, Filter, Eye
+  Gift, MessageSquare, ChevronDown, Filter, Eye, Shield
 } from 'lucide-react';
 import PageHead from '../components/PageHead';
 import JobCard from '../components/JobCard';
@@ -30,6 +30,7 @@ export default function CompanyProfile() {
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimEvidence, setClaimEvidence] = useState('');
   const [claimSubmitting, setClaimSubmitting] = useState(false);
+  const [claimStatus, setClaimStatus] = useState(null);
 
   useEffect(() => {
     fetchCompanyData();
@@ -77,12 +78,16 @@ export default function CompanyProfile() {
   const fetchCompanyData = async () => {
     setLoading(true);
     try {
-      const [companyRes, jobsRes] = await Promise.all([
+      const [companyRes, jobsRes, claimRes] = await Promise.all([
         api.get(`/companies/${id}`),
         api.get(`/jobs?companyId=${id}`),
+        api.get(`/employers/${id}/claim-status`).catch(() => ({ data: null }))
       ]);
       setCompany(companyRes.data.company || companyRes.data);
       setJobs(jobsRes.data.jobs || []);
+      if (claimRes.data) {
+        setClaimStatus(claimRes.data);
+      }
     } catch (error) {
       console.error('Failed to fetch company data:', error);
       alert('Failed to load company profile');
@@ -212,12 +217,13 @@ export default function CompanyProfile() {
                     </div>
                     <p className="text-lg text-gray-600 mb-2">{company.industry}</p>
                     
-                    {/* Claim button for agency-managed profiles */}
-                    {!!company.is_agency_managed && (
+                    {/* Claim button - show if profile is claimable */}
+                    {claimStatus && claimStatus.claimable && !claimStatus.claimed && (
                       <button
-                        onClick={() => setShowClaimModal(true)}
-                        className="mt-2 text-sm text-primary-600 hover:text-primary-800 underline"
+                        onClick={() => navigate(`/employers/${id}/claim`)}
+                        className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
                       >
+                        <Shield className="w-4 h-4" />
                         Is this your company? Claim it →
                       </button>
                     )}

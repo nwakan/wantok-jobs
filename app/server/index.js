@@ -139,6 +139,19 @@ app.use(rateLimit({
 app.use(cookieParser());
 app.use(requestLogger);
 
+// ─── Security Hardening Middleware ─────────────────────────────────
+// Input sanitization (detect SQL injection, XSS, path traversal)
+const inputSanitizer = require('./middleware/inputSanitizer');
+app.use(inputSanitizer);
+
+// API security headers (request ID, rate limit info, response time, header spoofing detection)
+const apiSecurity = require('./middleware/apiSecurity');
+app.use(apiSecurity);
+
+// Security audit logger (logs auth events, admin actions, attacks)
+const securityAudit = require('./middleware/securityAudit');
+app.use(securityAudit);
+
 // Stricter per-route rate limiters
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -234,6 +247,15 @@ const claimLimiter = rateLimit({
 app.use('/api/webhook', require('./routes/webhook'));
 
 app.use(express.json({ limit: '1mb' }));
+
+// ─── CSRF Protection ────────────────────────────────────────────────
+// CSRF token endpoint (must be before CSRF protection middleware)
+const { getCsrfToken, csrfProtection } = require('./middleware/csrf');
+app.get('/api/csrf-token', getCsrfToken);
+
+// CSRF protection for state-changing requests (POST/PUT/DELETE/PATCH)
+// Exempts webhook endpoints (/api/whatsapp, /api/webhook/*)
+app.use(csrfProtection);
 
 // Cache static assets aggressively
 app.use((req, res, next) => {
@@ -333,6 +355,7 @@ app.use('/api/applications', applicationLimiter, require('./routes/applications'
 app.use('/api/offer-letters', require('./routes/offer-letters'));
 app.use('/api/interviews', require('./routes/interviews'));
 app.use('/api/profile', require('./routes/profiles'));
+app.use('/api/profile', require('./routes/profile-insights')); // Profile insights (Part 2.3)
 app.use('/api/saved-jobs', require('./routes/saved-jobs'));
 app.use('/api/saved-searches', require('./routes/saved-searches'));
 app.use('/api/recommendations', require('./routes/recommendations'));
@@ -363,6 +386,7 @@ app.use('/api', require('./routes/reviews')); // Note: reviews uses /api directl
 app.use('/api/email-templates', require('./routes/email-templates'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/insights', require('./routes/insights'));
+app.use('/api/insights', require('./routes/insights-market')); // Market insights (Part 2.8)
 app.use('/api/company-follows', require('./routes/company-follows'));
 app.use('/api/training', require('./routes/training'));
 app.use('/api/transparency', require('./routes/transparency'));
@@ -403,9 +427,18 @@ app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/account', require('./routes/account'));
+app.use('/api/account', require('./routes/account-security')); // Account security endpoints
+
+// SEO and Meta Tags
+app.use('/', require('./routes/job-schema')); // Google Jobs JSON-LD schema
+app.use('/', require('./routes/meta-tags')); // Open Graph meta tags API
+
+// Admin Analytics
+app.use('/api/admin/analytics', authenticateToken, require('./routes/analytics-admin'));
 
 // Marketing Dashboard (admin only)
 app.use('/api/marketing', require('./routes/marketing'));
+app.use('/api/ai', require('./routes/ai'));
 
 // Sitemap routes (SEO)
 app.use('/', require('./routes/sitemap'));

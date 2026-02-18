@@ -275,6 +275,12 @@ router.post('/:id/claim/start', (req, res) => {
 /**
  * POST /api/employers/:id/claim/verify
  * Verify OTP and complete claim
+ * 
+ * IMPORTANT: This is about OWNERSHIP, not verification!
+ * - Employer profiles are already verified (verified=1)
+ * - This process proves "this is MY company"
+ * - Creates fully active user accounts (email_verified=1, account_status='active')
+ * - Does NOT change the employer profile's verified status
  */
 router.post('/:id/claim/verify', async (req, res) => {
   try {
@@ -366,33 +372,35 @@ router.post('/:id/claim/verify', async (req, res) => {
           WHERE id = ?
         `).run(userId);
       } else {
-        // Create new user account
+        // Create new user account - fully active since they proved ownership
         const tempPassword = crypto.randomBytes(16).toString('hex');
         const passwordHash = await bcrypt.hash(tempPassword, 10);
         
         const result = db.prepare(`
-          INSERT INTO users (email, password_hash, role, name, email_verified, force_password_reset)
-          VALUES (?, ?, 'employer', ?, 1, 1)
+          INSERT INTO users (email, password_hash, role, name, email_verified, force_password_reset, account_status)
+          VALUES (?, ?, 'employer', ?, 1, 1, 'active')
         `).run(claim.verification_value, passwordHash, claim.company_name);
         
         userId = result.lastInsertRowid;
         
-        // TODO: Send welcome email with password reset link
-        logger.info('New employer user created', { userId, email: claim.verification_value });
+        // TODO: Send welcome email with password setup link
+        logger.info('New employer user created via claim', { userId, email: claim.verification_value, claimedProfileId: id });
       }
     } else {
-      // Phone verification - need to create account differently
-      // For now, create a placeholder account (user can set email/password later)
+      // Phone verification - create account with temp email (user can update later)
+      // They proved ownership, so account is active
       const tempEmail = `phone_${claim.verification_value.replace(/[^0-9]/g, '')}@temp.wantokjobs.com`;
       const tempPassword = crypto.randomBytes(16).toString('hex');
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       
       const result = db.prepare(`
-        INSERT INTO users (email, password_hash, role, name, phone, email_verified, force_password_reset)
-        VALUES (?, ?, 'employer', ?, ?, 0, 1)
+        INSERT INTO users (email, password_hash, role, name, phone, email_verified, force_password_reset, account_status)
+        VALUES (?, ?, 'employer', ?, ?, 1, 1, 'active')
       `).run(tempEmail, passwordHash, claim.company_name, claim.verification_value);
       
       userId = result.lastInsertRowid;
+      
+      logger.info('New employer user created via phone claim', { userId, phone: claim.verification_value, claimedProfileId: id });
     }
     
     // Update employer profile
@@ -562,15 +570,18 @@ router.put('/admin/:claimId', authenticateToken, async (req, res) => {
         if (existingUser) {
           userId = existingUser.id;
         } else {
+          // Create fully active user - admin approved their claim
           const tempPassword = crypto.randomBytes(16).toString('hex');
           const passwordHash = await bcrypt.hash(tempPassword, 10);
           
           const result = db.prepare(`
-            INSERT INTO users (email, password_hash, role, name, email_verified, force_password_reset)
-            VALUES (?, ?, 'employer', ?, 1, 1)
+            INSERT INTO users (email, password_hash, role, name, email_verified, force_password_reset, account_status)
+            VALUES (?, ?, 'employer', ?, 1, 1, 'active')
           `).run(claim.verification_value, passwordHash, claim.company_name);
           
           userId = result.lastInsertRowid;
+          
+          logger.info('New employer user created via admin approval', { userId, email: claim.verification_value, claimId });
         }
       }
       

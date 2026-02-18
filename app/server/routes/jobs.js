@@ -425,6 +425,24 @@ router.get('/:id', (req, res) => {
     `).all(req.params.id);
     job.categories = categories;
 
+    // Calculate compatibility score for authenticated jobseekers (Part 2.5)
+    if (req.headers.authorization) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wantokjobs-secret-key-2024');
+        if (decoded.role === 'jobseeker') {
+          const profile = db.prepare('SELECT * FROM profiles_jobseeker WHERE user_id = ?').get(decoded.id);
+          if (profile) {
+            const { calculateCompatibility } = require('../utils/compatibility');
+            job.compatibility = calculateCompatibility(profile, job);
+          }
+        }
+      } catch (e) {
+        // Token invalid or expired, skip compatibility
+      }
+    }
+
     // Get similar jobs (3-5 jobs with same industry OR location, excluding current)
     const similarJobs = db.prepare(`
       SELECT j.id, j.title, j.location, j.job_type, j.salary_min, j.salary_max, 

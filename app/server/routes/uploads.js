@@ -19,6 +19,7 @@ const fs = require('fs');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const { uploadSecurity } = require('../middleware/uploadSecurity');
 
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const UPLOAD_DIR = path.join(dataDir, 'uploads');
@@ -88,7 +89,7 @@ function deleteOldFile(filePath) {
 // ─── Routes ─────────────────────────────────────────────────────────
 
 // POST /avatar — Upload user avatar
-router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), handleMulterError, (req, res) => {
+router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), uploadSecurity('avatar'), handleMulterError, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     
@@ -109,7 +110,7 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), handleM
 });
 
 // POST /logo — Upload company logo (employer only)
-router.post('/logo', authenticateToken, requireRole('employer'), logoUpload.single('logo'), handleMulterError, (req, res) => {
+router.post('/logo', authenticateToken, requireRole('employer'), logoUpload.single('logo'), uploadSecurity('logo'), handleMulterError, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     
@@ -130,7 +131,7 @@ router.post('/logo', authenticateToken, requireRole('employer'), logoUpload.sing
 });
 
 // POST /cv — Upload CV/Resume (jobseeker only)
-router.post('/cv', authenticateToken, requireRole('jobseeker'), cvUpload.single('cv'), handleMulterError, (req, res) => {
+router.post('/cv', authenticateToken, requireRole('jobseeker'), cvUpload.single('cv'), uploadSecurity('cv'), handleMulterError, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     
@@ -161,7 +162,7 @@ router.post('/cv', authenticateToken, requireRole('jobseeker'), cvUpload.single(
 });
 
 // POST /banner — Upload banner image (employer or admin)
-router.post('/banner', authenticateToken, bannerUpload.single('banner'), handleMulterError, (req, res) => {
+router.post('/banner', authenticateToken, bannerUpload.single('banner'), uploadSecurity('banner'), handleMulterError, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     if (req.user.role !== 'employer' && req.user.role !== 'admin') {
