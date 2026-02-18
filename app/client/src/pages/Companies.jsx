@@ -35,7 +35,8 @@ export default function Companies() {
       if (filters.transparencyOnly) params.append('transparency_only', 'true');
       
       const response = await api.get(`/companies?${params.toString()}`);
-      setCompanies(response.data || response.companies || response || []);
+      const list = Array.isArray(response) ? response : (response.data || response.companies || []);
+      setCompanies(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error('Failed to fetch companies:', error);
       // Fallback to mock data if API fails
