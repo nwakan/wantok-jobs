@@ -13,6 +13,10 @@ const crypto = require('crypto');
 // Usage tracking
 const USAGE_FILE = path.join(__dirname, '../data/embedding-usage.json');
 
+// Rate limiting tracking
+let lastCohereCallTime = 0;
+const COHERE_MIN_DELAY_MS = 650; // 100 calls/min = ~600ms between calls, add 50ms buffer
+
 // Provider configurations
 const PROVIDERS = {
   cohere: {
@@ -30,11 +34,14 @@ const PROVIDERS = {
     name: 'HuggingFace',
     model: 'sentence-transformers/all-MiniLM-L6-v2',
     dimensions: 384,
-    baseUrl: 'api-inference.huggingface.co',
+    // NOTE: HuggingFace deprecated api-inference.huggingface.co (HTTP 410)
+    // New endpoint router.huggingface.co does not resolve (DNS error)
+    // Fallback disabled until HuggingFace provides working endpoint
+    baseUrl: 'router.huggingface.co', // DNS does not resolve as of 2026-02-18
     path: '/models/sentence-transformers/all-MiniLM-L6-v2',
-    maxBatch: 1, // Process one at a time to avoid rate limits
-    dailyLimit: { requests: 10000, embeddings: 10000 }, // More generous
-    getKey: () => null, // No key required for inference API (deprecated, using Cohere instead)
+    maxBatch: 1,
+    dailyLimit: { requests: 10000, embeddings: 10000 },
+    getKey: () => process.env.HUGGINGFACE_API_KEY,
   }
 };
 
@@ -142,6 +149,15 @@ async function embedWithCohere(texts, inputType = 'search_document') {
     throw new Error('COHERE_API_KEY not configured');
   }
   
+  // Rate limiting: ensure minimum delay between calls (Trial key: 100 calls/min)
+  const now = Date.now();
+  const timeSinceLastCall = now - lastCohereCallTime;
+  if (timeSinceLastCall < COHERE_MIN_DELAY_MS) {
+    const delayNeeded = COHERE_MIN_DELAY_MS - timeSinceLastCall;
+    await new Promise(resolve => setTimeout(resolve, delayNeeded));
+  }
+  lastCohereCallTime = Date.now();
+  
   const body = {
     model: provider.model,
     texts: Array.isArray(texts) ? texts : [texts],
@@ -179,6 +195,9 @@ async function embedWithHuggingFace(texts) {
   const textsArray = Array.isArray(texts) ? texts : [texts];
   const vectors = [];
   
+  const key = provider.getKey();
+  const headers = key ? { 'Authorization': `Bearer ${key}` } : {};
+  
   // Process one at a time to avoid rate limits
   for (const text of textsArray) {
     const body = {
@@ -189,7 +208,8 @@ async function embedWithHuggingFace(texts) {
     const response = await httpPost(
       provider.baseUrl,
       provider.path,
-      body
+      body,
+      headers
     );
     
     // HuggingFace returns array directly
@@ -217,10 +237,15 @@ function canUseProvider(providerName) {
   const provider = PROVIDERS[providerName];
   if (!provider) return false;
   
-  // Check API key requirement
-  if (providerName === 'cohere' && !provider.getKey()) {
-    return false;
+  // Check API key requirement (Cohere requires key, HuggingFace is optional)
+  if (providerName === 'cohere') {
+    if (!provider.getKey()) {
+      return false;
+    }
   }
+  
+  // For HuggingFace, key is recommended but not strictly required for public inference
+  // If key is not available, the free tier will be used
   
   // Check daily limits
   const usage = loadUsage();
@@ -265,8 +290,19 @@ async function embed(texts, inputType = 'search_document') {
     }
   }
   
-  // HuggingFace is deprecated, Cohere is primary
-  throw new Error('Cohere API failed or exceeded limits. No fallback available.');
+  // Fallback to HuggingFace (currently disabled due to DNS issues with router.huggingface.co)
+  if (canUseProvider('huggingface')) {
+    try {
+      console.log('Embedding Engine: Attempting HuggingFace fallback (may fail due to DNS issues)');
+      return await embedWithHuggingFace(textsArray);
+    } catch (e) {
+      console.error('Embedding Engine: HuggingFace failed:', e.message);
+      trackError('huggingface');
+      // Don't throw, just report that HuggingFace is unavailable
+    }
+  }
+  
+  throw new Error('Cohere API failed and HuggingFace fallback is unavailable (DNS issues)');
 }
 
 /**
