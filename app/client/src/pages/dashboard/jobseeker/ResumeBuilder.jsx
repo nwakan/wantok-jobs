@@ -428,8 +428,8 @@ export default function ResumeBuilder() {
     (async () => {
       try {
         const res = await profileAPI.get();
-        const p = res.data.profile;
-        const u = res.data.user;
+        const p = res.profile;
+        const u = res.user;
         setData(prev => ({
           ...prev,
           fullName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),

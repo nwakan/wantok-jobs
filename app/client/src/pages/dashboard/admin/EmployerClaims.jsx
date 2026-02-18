@@ -34,7 +34,7 @@ export default function EmployerClaims() {
       if (filterStatus) params.append('status', filterStatus);
       
       const res = await api.get(`/admin/employer-claims?${params}`);
-      setClaims(res.data.claims || []);
+      setClaims(res.claims || []);
     } catch (error) {
       console.error('Failed to fetch claims:', error);
       showToast('Failed to load claims', 'error');

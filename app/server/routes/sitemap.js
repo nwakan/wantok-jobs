@@ -71,11 +71,12 @@ router.get('/sitemap-pages.xml', (req, res) => {
       { url: '/companies', changefreq: 'daily', priority: '0.8' },
       { url: '/categories', changefreq: 'weekly', priority: '0.7' },
       { url: '/about', changefreq: 'monthly', priority: '0.6' },
-      { url: '/transparency', changefreq: 'monthly', priority: '0.6' },
-      { url: '/career-insights', changefreq: 'weekly', priority: '0.7' },
-      { url: '/features', changefreq: 'monthly', priority: '0.6' },
       { url: '/pricing', changefreq: 'monthly', priority: '0.7' },
       { url: '/blog', changefreq: 'daily', priority: '0.7' },
+      { url: '/transparency', changefreq: 'monthly', priority: '0.6' },
+      { url: '/transparency/leaderboard', changefreq: 'monthly', priority: '0.6' },
+      { url: '/career-insights', changefreq: 'weekly', priority: '0.7' },
+      { url: '/features', changefreq: 'monthly', priority: '0.6' },
       { url: '/training', changefreq: 'weekly', priority: '0.6' },
       { url: '/salary-calculator', changefreq: 'monthly', priority: '0.6' },
       { url: '/success-stories', changefreq: 'weekly', priority: '0.6' },
@@ -192,12 +193,14 @@ router.get('/sitemap-companies.xml', (req, res) => {
     const now = new Date().toISOString().split('T')[0];
 
     const companies = db.prepare(`
-      SELECT id, updated_at 
-      FROM users 
-      WHERE role = 'employer' 
-      AND COALESCE(account_status, 'active') = 'active'
-      ORDER BY updated_at DESC 
-      LIMIT 5000
+      SELECT u.id, u.updated_at 
+      FROM users u
+      INNER JOIN profiles_employer p ON u.id = p.user_id
+      WHERE u.role = 'employer' 
+      AND COALESCE(u.account_status, 'active') = 'active'
+      AND p.verified = 1
+      ORDER BY u.updated_at DESC 
+      LIMIT 500
     `).all();
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -220,6 +223,25 @@ router.get('/sitemap-companies.xml', (req, res) => {
   } catch (error) {
     logger.error('Sitemap companies error', { error: error.message });
     res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to generate sitemap</error>');
+  }
+});
+
+// robots.txt
+router.get('/robots.txt', (req, res) => {
+  try {
+    const baseUrl = process.env.BASE_URL || 'https://wantokjobs.com';
+    const robotsTxt = `User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+    res.type('text/plain').send(robotsTxt);
+  } catch (error) {
+    logger.error('robots.txt error', { error: error.message });
+    res.status(500).send('Error generating robots.txt');
   }
 });
 

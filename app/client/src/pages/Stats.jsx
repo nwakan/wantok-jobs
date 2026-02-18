@@ -14,7 +14,7 @@ export default function Stats() {
   const fetchStats = async () => {
     try {
       const res = await api.get('/stats/public');
-      setStats(res.data);
+      setStats(res);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     } finally {

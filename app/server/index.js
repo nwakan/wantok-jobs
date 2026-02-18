@@ -453,54 +453,7 @@ app.use('/api/ai', require('./routes/ai'));
 // Sitemap routes (SEO)
 app.use('/', require('./routes/sitemap'));
 
-// robots.txt
-app.get('/robots.txt', (req, res) => {
-  res.type('text/plain').send(`User-agent: *
-Allow: /
-Disallow: /dashboard/
-Disallow: /api/
-Sitemap: https://wantokjobs.com/sitemap.xml
-`);
-});
-
-// Dynamic sitemap.xml
-app.get('/sitemap.xml', (req, res) => {
-  try {
-    const db = require('./database');
-    const baseUrl = 'https://wantokjobs.com';
-    const jobs = db.prepare("SELECT id, updated_at FROM jobs WHERE status = 'active' ORDER BY updated_at DESC LIMIT 1000").all();
-    const articles = db.prepare("SELECT slug, COALESCE(published_at, created_at) as last_mod FROM articles WHERE status = 'published' ORDER BY created_at DESC").all();
-    const categories = db.prepare("SELECT slug FROM categories").all();
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${baseUrl}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>${baseUrl}/jobs</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
-  <url><loc>${baseUrl}/categories</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>${baseUrl}/companies</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>${baseUrl}/blog</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
-  <url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>${baseUrl}/pricing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>${baseUrl}/faq</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>${baseUrl}/contact</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>`;
-
-    for (const job of jobs) {
-      xml += `\n  <url><loc>${baseUrl}/jobs/${job.id}</loc><lastmod>${job.updated_at ? job.updated_at.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
-    }
-    for (const cat of categories) {
-      xml += `\n  <url><loc>${baseUrl}/jobs?category=${cat.slug}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`;
-    }
-    for (const article of articles) {
-      xml += `\n  <url><loc>${baseUrl}/blog/${article.slug}</loc><lastmod>${article.last_mod ? article.last_mod.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`;
-    }
-
-    xml += '\n</urlset>';
-    res.type('application/xml').send(xml);
-  } catch (error) {
-    logger.error('Sitemap error', { error: error.message });
-    res.status(500).send('Error generating sitemap');
-  }
-});
+// Note: robots.txt and sitemap.xml are now handled by ./routes/sitemap
 
 // Serve uploaded files statically
 const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -517,12 +470,121 @@ if (process.env.NODE_ENV === 'production') {
     : path.join(__dirname, '..', 'client', 'dist');
   // Hashed assets get long-lived cache (already handled by the global middleware above)
   app.use(express.static(clientDist, { index: false }));
+
+  // ─── SSR Meta/JSON-LD injection for crawlers ─────────────────────
+  // Google, Facebook, Twitter crawlers don't execute JS. Inject meta tags
+  // and JSON-LD into the HTML shell so they see structured data.
+  const crawlerPattern = /googlebot|bingbot|slurp|duckduckbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|applebot/i;
+
+  function injectMetaIntoHtml(htmlPath, meta, jsonLd) {
+    let html = fs.readFileSync(htmlPath, 'utf-8');
+    const injected = [];
+    if (meta) {
+      injected.push(`<title>${meta.title}</title>`);
+      injected.push(`<meta name="description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
+      injected.push(`<meta property="og:title" content="${(meta.title || '').replace(/"/g, '&quot;')}">`);
+      injected.push(`<meta property="og:description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
+      injected.push(`<meta property="og:image" content="${meta.image || ''}">`);
+      injected.push(`<meta property="og:url" content="${meta.url || ''}">`);
+      injected.push(`<meta property="og:type" content="${meta.type || 'website'}">`);
+      injected.push(`<meta name="twitter:card" content="summary_large_image">`);
+      injected.push(`<meta name="twitter:title" content="${(meta.title || '').replace(/"/g, '&quot;')}">`);
+      injected.push(`<meta name="twitter:description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
+    }
+    if (jsonLd) {
+      injected.push(`<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`);
+    }
+    if (injected.length) {
+      html = html.replace('</head>', injected.join('\n') + '\n</head>');
+    }
+    return html;
+  }
+
   // index.html must never be cached — prevents stale JS after deploys
   app.get('*', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.sendFile(path.join(clientDist, 'index.html'));
+
+    const ua = req.headers['user-agent'] || '';
+    const isCrawler = crawlerPattern.test(ua);
+    const indexPath = path.join(clientDist, 'index.html');
+
+    // Only do SSR injection for crawlers on specific routes
+    if (isCrawler) {
+      try {
+        const baseUrl = process.env.APP_URL || 'https://wantokjobs.com';
+
+        // Job detail pages: /jobs/:id
+        const jobMatch = req.path.match(/^\/jobs\/(\d+)$/);
+        if (jobMatch) {
+          const job = db.prepare(`
+            SELECT j.*, u.company_name, u.logo, u.website
+            FROM jobs j LEFT JOIN users u ON j.employer_id = u.id
+            WHERE j.id = ? AND j.status = 'active'
+          `).get(jobMatch[1]);
+          if (job) {
+            const desc = (job.description || '').replace(/<[^>]*>/g, '').substring(0, 160);
+            const employmentTypeMap = { 'full-time': 'FULL_TIME', 'part-time': 'PART_TIME', 'contract': 'CONTRACTOR', 'temporary': 'TEMPORARY', 'internship': 'INTERN' };
+            const meta = {
+              title: `${job.title} - ${job.company_name || 'WantokJobs'}`,
+              description: desc || `${job.title} at ${job.company_name}`,
+              image: job.logo ? (job.logo.startsWith('http') ? job.logo : `${baseUrl}${job.logo}`) : `${baseUrl}/og-image.png`,
+              url: `${baseUrl}/jobs/${job.id}`,
+              type: 'website',
+            };
+            const jsonLd = {
+              "@context": "https://schema.org", "@type": "JobPosting",
+              title: job.title,
+              description: job.description || desc,
+              datePosted: job.created_at,
+              validThrough: job.expires_at || new Date(Date.now() + 30*86400000).toISOString(),
+              employmentType: employmentTypeMap[job.job_type] || 'FULL_TIME',
+              hiringOrganization: { "@type": "Organization", name: job.company_name || 'Unknown', sameAs: job.website || `${baseUrl}/companies/${job.employer_id}` },
+              jobLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: job.location || 'Papua New Guinea', addressCountry: "PG" } },
+              identifier: { "@type": "PropertyValue", name: "WantokJobs", value: `WJ-${job.id}` },
+              url: `${baseUrl}/jobs/${job.id}`,
+              directApply: true,
+            };
+            if (job.logo) jsonLd.hiringOrganization.logo = meta.image;
+            if (job.salary_min) {
+              jsonLd.baseSalary = { "@type": "MonetaryAmount", currency: "PGK", value: { "@type": "QuantitativeValue", minValue: parseFloat(job.salary_min), ...(job.salary_max ? { maxValue: parseFloat(job.salary_max) } : {}), unitText: job.salary_period || 'YEAR' } };
+            }
+            const html = injectMetaIntoHtml(indexPath, meta, jsonLd);
+            return res.send(html);
+          }
+        }
+
+        // Company profile pages: /companies/:id
+        const companyMatch = req.path.match(/^\/companies\/(\d+)$/);
+        if (companyMatch) {
+          const company = db.prepare(`SELECT id, company_name, company_description, logo, location, industry FROM users WHERE id = ? AND role = 'employer'`).get(companyMatch[1]);
+          if (company) {
+            const meta = {
+              title: `${company.company_name} - Jobs & Profile | WantokJobs`,
+              description: (company.company_description || `${company.company_name} - ${company.industry || 'Employer'} in ${company.location || 'PNG'}`).substring(0, 160),
+              image: company.logo ? (company.logo.startsWith('http') ? company.logo : `${baseUrl}${company.logo}`) : `${baseUrl}/og-image.png`,
+              url: `${baseUrl}/companies/${company.id}`,
+              type: 'profile',
+            };
+            const jsonLd = {
+              "@context": "https://schema.org", "@type": "Organization",
+              name: company.company_name,
+              description: meta.description,
+              url: meta.url,
+              address: { "@type": "PostalAddress", addressLocality: company.location || 'Papua New Guinea', addressCountry: "PG" },
+            };
+            if (company.logo) jsonLd.logo = meta.image;
+            const html = injectMetaIntoHtml(indexPath, meta, jsonLd);
+            return res.send(html);
+          }
+        }
+      } catch (err) {
+        logger.error('SSR meta injection error', { error: err.message, path: req.path });
+      }
+    }
+
+    res.sendFile(indexPath);
   });
 }
 
