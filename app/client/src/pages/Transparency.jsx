@@ -19,9 +19,9 @@ export default function Transparency() {
   return (
     <>
       <PageHead
-        title="Transparency Framework — Fair Hiring for PNG | WantokJobs"
-        description="PNG's first mandatory hiring transparency framework. See how employers hire, who's on panels, and selection criteria. Fair, merit-based recruitment for all."
-        keywords="transparency framework PNG, fair hiring Papua New Guinea, transparent recruitment, public sector hiring PNG, wantok system PNG"
+        title="Transparency Framework — Fair Hiring Across the Pacific | WantokJobs"
+        description="The Pacific's first mandatory hiring transparency framework. See how employers hire, who's on panels, and selection criteria. Fair, merit-based recruitment across PNG and the Pacific Islands."
+        keywords="transparency framework Pacific, fair hiring Papua New Guinea, transparent recruitment Pacific Islands, public sector hiring PNG, fair recruitment Fiji Solomon Islands"
       />
 
       <div className="min-h-screen bg-gray-50">
@@ -35,7 +35,7 @@ export default function Transparency() {
               The Transparency Framework
             </h1>
             <p className="text-xl md:text-2xl text-green-100 max-w-3xl mx-auto mb-8">
-              Mandatory hiring transparency for PNG's public sector. Fair processes. Open criteria. 
+              Mandatory hiring transparency for public sector employers across PNG and the Pacific Islands. Fair processes. Open criteria. 
               Merit-based hiring. <strong>No more hidden wantok deals.</strong>
             </p>
             <div className="flex flex-wrap justify-center gap-4">
@@ -67,12 +67,12 @@ export default function Transparency() {
             </h3>
             <div className="grid md:grid-cols-2 gap-4">
               {[
-                { icon: '🏛️', label: 'Government Departments', desc: 'All national, provincial, and local government entities' },
-                { icon: '🏢', label: 'State-Owned Enterprises', desc: 'SOEs like PNG Power, PNGPL, Bank South Pacific (SOE status)' },
-                { icon: '⚖️', label: 'Statutory Authorities', desc: 'IRC, ICCC, PNGEC, and other statutory bodies' },
-                { icon: '🤝', label: 'NGOs', desc: 'International and local non-government organizations' },
-                { icon: '📈', label: 'Publicly Listed Companies', desc: 'Companies listed on PNGX (Port Moresby Stock Exchange)' },
-                { icon: '🏪', label: 'Private Employers (Opt-In)', desc: 'Private companies can opt in to earn the "Transparent Employer" badge' }
+                { icon: '🏛️', label: 'Government & Public Sector', desc: 'National, provincial, and local government departments and ministries across all Pacific Island nations' },
+                { icon: '🏢', label: 'State-Owned Enterprises', desc: 'Government-owned entities such as PNG Power, PNGPL, Water PNG, Air Niugini, and equivalents in other Pacific nations' },
+                { icon: '⚖️', label: 'Statutory & Regulatory Bodies', desc: 'Independent authorities like IRC, ICCC, PNGEC, and equivalent regulatory bodies across the Pacific' },
+                { icon: '🤝', label: 'NGOs & Development Organizations', desc: 'International and local non-government organizations, donor-funded agencies, and multilateral bodies' },
+                { icon: '📈', label: 'Publicly Listed Companies', desc: 'Companies listed on stock exchanges — PNGX, SPX (Fiji), ASX, and other regional exchanges. E.g. BSP Financial Group, Kina Bank' },
+                { icon: '🏪', label: 'Private Employers (Opt-In)', desc: 'Private sector employers can voluntarily opt in to earn the "Transparent Employer" badge and build trust' }
               ].map((item, idx) => (
                 <div key={idx} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="text-3xl flex-shrink-0">{item.icon}</div>
@@ -384,7 +384,7 @@ export default function Transparency() {
                 },
                 {
                   q: 'How is this different from LinkedIn or other platforms?',
-                  a: 'NO other job platform in PNG (or the Pacific) has mandatory transparency requirements. PNGJobSeek, PNGWorkforce, LinkedIn — none of them enforce this. WantokJobs is first.'
+                  a: 'No other job platform in the Pacific has mandatory transparency requirements. PNGJobSeek, PNGWorkforce, LinkedIn — none of them enforce this. WantokJobs is the first across the entire region.'
                 },
                 {
                   q: 'What if I\'m a small private business?',
