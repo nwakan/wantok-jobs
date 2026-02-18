@@ -58,7 +58,8 @@ ${trimmedText}`;
   });
 
   // Extract JSON from response
-  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  const text = typeof result === 'string' ? result : result.text || result.content || '';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('AI did not return valid JSON');
   
   return JSON.parse(jsonMatch[0]);
