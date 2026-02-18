@@ -66,20 +66,20 @@ export default function ClaimEmployer() {
         value: verificationValue
       });
 
-      if (res.data.success) {
-        setClaimId(res.data.claimId);
+      if (res.success) {
+        setClaimId(res.claimId);
         
         // For development, auto-fill the code if provided
-        if (res.data.code) {
-          setVerificationCode(res.data.code);
+        if (res.code) {
+          setVerificationCode(res.code);
         }
         
-        if (res.data.needsAdminReview) {
+        if (res.needsAdminReview) {
           setNeedsApproval(true);
         }
         
         setStep(3);
-        showToast(res.data.message, 'success');
+        showToast(res.message, 'success');
       }
     } catch (error) {
       const message = error.response?.data?.error || 'Failed to start claim process';
@@ -102,19 +102,19 @@ export default function ClaimEmployer() {
         claimId
       });
 
-      if (res.data.success) {
-        if (res.data.needsApproval) {
+      if (res.success) {
+        if (res.needsApproval) {
           setNeedsApproval(true);
           setStep(4);
         } else {
           // Claim verified - log the user in
-          if (res.data.token) {
-            localStorage.setItem('token', res.data.token);
-            login(res.data.user);
+          if (res.token) {
+            localStorage.setItem('token', res.token);
+            login(res.user);
           }
           setStep(4);
         }
-        showToast(res.data.message, 'success');
+        showToast(res.message, 'success');
       }
     } catch (error) {
       const message = error.response?.data?.error || 'Failed to verify code';
