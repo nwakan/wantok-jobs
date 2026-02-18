@@ -184,6 +184,8 @@ GROUP BY entity_type;
 ```bash
 COHERE_API_KEY=YOUR_COHERE_API_KEY
 HUGGINGFACE_API_KEY=YOUR_HUGGINGFACE_KEY
+COHERE_API_KEY=your_cohere_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_api_key_here
 ```
 
 ### Rate Limiting

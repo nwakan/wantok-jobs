@@ -177,30 +177,78 @@ const PROVIDERS = {
       return { text, tokens, provider: 'groq', model };
     }
   },
+  openrouter: {
+    name: 'OpenRouter',
+    models: {
+      free: 'meta-llama/llama-3.3-70b-instruct:free',
+      deepseek: 'deepseek/deepseek-r1-0528:free',
+      mistral: 'mistralai/mistral-small-3.1-24b-instruct:free',
+      gemma: 'google/gemma-3-27b-it:free',
+      qwen: 'qwen/qwen3-coder:free',
+      hermes: 'nousresearch/hermes-3-llama-3.1-405b:free',
+      router: 'openrouter/free',
+    },
+    baseUrl: 'https://openrouter.ai/api/v1',
+    dailyLimit: { requests: 50, tokens: 500000 },
+    getKey: () => process.env.OPENROUTER_API_KEY,
+    
+    async call(prompt, opts = {}) {
+      const key = this.getKey();
+      if (!key) throw new Error('OPENROUTER_API_KEY not set');
+      
+      const model = opts.model || this.models.free;
+      const url = `${this.baseUrl}/chat/completions`;
+      
+      const messages = [];
+      if (opts.systemPrompt) {
+        messages.push({ role: 'system', content: opts.systemPrompt });
+      }
+      messages.push({ role: 'user', content: prompt });
+      
+      const body = {
+        model,
+        messages,
+        max_tokens: opts.maxTokens || 2048,
+        temperature: opts.temperature || 0.7,
+      };
+      
+      const response = await httpPost(url, body, {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://wantokjobs.com',
+        'X-Title': 'WantokJobs',
+      });
+      
+      const text = response?.choices?.[0]?.message?.content || '';
+      const tokens = response?.usage?.total_tokens || 0;
+      trackUsage('openrouter', tokens);
+      return { text, tokens, provider: 'openrouter', model };
+    }
+  },
 };
 
 // Task-to-provider routing
 const TASK_ROUTES = {
   // Chat / conversational
-  chat:           ['gemini', 'kimi', 'groq'],
+  chat:           ['groq', 'gemini', 'kimi', 'openrouter'],
   // Content generation (marketing, descriptions)
-  content:        ['gemini', 'kimi'],
+  content:        ['gemini', 'kimi', 'openrouter'],
   // Job matching / semantic analysis
-  matching:       ['gemini', 'kimi'],
+  matching:       ['gemini', 'kimi', 'openrouter'],
   // Resume parsing / structured extraction
-  resume:         ['gemini', 'kimi'],
+  resume:         ['gemini', 'kimi', 'openrouter'],
   // Translation (Tok Pisin)
-  translation:    ['gemini', 'kimi'],
+  translation:    ['gemini', 'kimi', 'openrouter'],
   // Classification (spam, category)
-  classification: ['gemini', 'groq', 'kimi'],
+  classification: ['groq', 'gemini', 'kimi', 'openrouter'],
   // Quick / simple tasks
-  quick:          ['groq', 'gemini', 'kimi'],
+  quick:          ['groq', 'gemini', 'kimi', 'openrouter'],
   // Cover letter generation
-  coverletter:    ['gemini', 'kimi'],
+  coverletter:    ['gemini', 'kimi', 'openrouter'],
   // Job description improvement
-  jobdesc:        ['gemini', 'kimi'],
+  jobdesc:        ['gemini', 'kimi', 'openrouter'],
   // General fallback
-  general:        ['gemini', 'kimi', 'groq'],
+  general:        ['groq', 'gemini', 'kimi', 'openrouter'],
 };
 
 /**
