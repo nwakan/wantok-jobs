@@ -30,6 +30,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 const crypto = require('crypto');
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Cloudflare/nginx)
 const PORT = process.env.PORT || 3001;
 
 // Request ID tracking middleware
@@ -615,4 +616,3 @@ process.on('uncaughtException', (error) => {
 });
 
 module.exports = app; // For testing
-// deploy-test 1771389278
