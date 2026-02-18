@@ -1120,9 +1120,9 @@ export default function JobDetail() {
               </div>
             )}
 
-            {/* About the Role */}
+            {/* Job Description */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              {/* Use formatted_description if available, otherwise fall back to raw description */}
+              {/* CRITICAL: If formatted_description exists, show ONLY that. Do NOT show raw description or separate requirements. */}
               {job.formatted_description ? (
                 <div 
                   className="prose prose-sm max-w-none text-gray-700"
@@ -1130,6 +1130,7 @@ export default function JobDetail() {
                 />
               ) : (
                 <>
+                  {/* Fallback: Show raw description + separate requirements only if no formatted version */}
                   <h2 className="text-xl font-bold text-gray-900 mb-4">About the Role</h2>
                   {hasHTML ? (
                     <div 
@@ -1141,24 +1142,24 @@ export default function JobDetail() {
                       {job.description}
                     </div>
                   )}
+                  
+                  {/* Requirements - only show if no formatted_description exists */}
+                  {requirements.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-bold text-gray-900 mb-3">Key Requirements</h3>
+                      <ul className="space-y-2">
+                        {requirements.map((req, index) => (
+                          <li key={index} className="flex items-start gap-2 text-gray-700">
+                            <span className="text-primary-600 mt-1">✓</span>
+                            <span>{req}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </>
               )}
             </div>
-
-            {/* Requirements */}
-            {requirements.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Key Requirements</h2>
-                <ul className="space-y-3">
-                  {requirements.map((req, index) => (
-                    <li key={index} className="flex items-start gap-3 text-gray-700">
-                      <span className="text-primary-600 mt-1">✓</span>
-                      <span>{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             {/* Enhanced Company Info (Glassdoor-style) */}
             {(companyInfo || job.company_description || job.website) && job.company_name !== 'Various Employers' && !job.company_description?.includes('System account for imported') && (

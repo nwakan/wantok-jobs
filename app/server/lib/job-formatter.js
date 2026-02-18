@@ -56,9 +56,15 @@ Format:
   "closingInfo": "Deadline and contact details"
 }
 
-Rules:
-- Keep it concise - 3-5 bullet points per section
-- Remove duplicate content
+CRITICAL RULES FOR DUPLICATE REMOVAL:
+- MERGE duplicate sections: If "responsibilities" appears twice in different places, combine into ONE list
+- REMOVE redundant content: If requirements appear as both paragraphs AND bullet points, extract ONLY the bullet points
+- De-duplicate items: If same requirement/responsibility appears multiple times, include it ONLY ONCE
+- If a section heading repeats (e.g., "Key Responsibilities" appears twice), merge all content under that heading into one section
+- Job descriptions often repeat content - your job is to extract it ONCE in the most structured format
+
+Additional Rules:
+- Keep it concise - 3-5 unique bullet points per section (not 10+ repetitive ones)
 - If a section is not mentioned, use empty string or empty array
 - Handle Tok Pisin text (Papua New Guinea language)
 - Extract salary/benefits clearly
@@ -138,42 +144,56 @@ Extract structured sections as JSON:`;
 
 /**
  * Build formatted HTML from structured sections
+ * De-duplicates items within each section to prevent repetition
  */
 function buildFormattedHTML(sections) {
-  let html = '';
+  // Add HTML comment to flag this as complete formatted description
+  let html = '<!-- FORMATTED_DESCRIPTION: Complete job description with all sections merged and deduplicated. Do not render raw description or separate requirements. -->\n';
 
   if (sections.about) {
     html += `<h3 class="text-lg font-bold text-gray-900 mb-3">About the Role</h3>\n`;
     html += `<p class="text-gray-700 mb-6 leading-relaxed">${escapeHtml(sections.about)}</p>\n`;
   }
 
+  // De-duplicate responsibilities
   if (sections.responsibilities && sections.responsibilities.length > 0) {
-    html += `<h3 class="text-lg font-bold text-gray-900 mb-3">Key Responsibilities</h3>\n`;
-    html += `<ul class="space-y-2 mb-6">\n`;
-    sections.responsibilities.forEach(item => {
-      html += `  <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">•</span><span class="text-gray-700">${escapeHtml(item)}</span></li>\n`;
-    });
-    html += `</ul>\n`;
+    const uniqueResponsibilities = deduplicateItems(sections.responsibilities);
+    if (uniqueResponsibilities.length > 0) {
+      html += `<h3 class="text-lg font-bold text-gray-900 mb-3">Key Responsibilities</h3>\n`;
+      html += `<ul class="space-y-2 mb-6">\n`;
+      uniqueResponsibilities.forEach(item => {
+        html += `  <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">•</span><span class="text-gray-700">${escapeHtml(item)}</span></li>\n`;
+      });
+      html += `</ul>\n`;
+    }
   }
 
+  // De-duplicate requirements
   if (sections.requirements && sections.requirements.length > 0) {
-    html += `<h3 class="text-lg font-bold text-gray-900 mb-3">Requirements</h3>\n`;
-    html += `<ul class="space-y-2 mb-6">\n`;
-    sections.requirements.forEach(item => {
-      const boldItem = boldifyKeyTerms(item);
-      html += `  <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span class="text-gray-700">${boldItem}</span></li>\n`;
-    });
-    html += `</ul>\n`;
+    const uniqueRequirements = deduplicateItems(sections.requirements);
+    if (uniqueRequirements.length > 0) {
+      html += `<h3 class="text-lg font-bold text-gray-900 mb-3">Requirements</h3>\n`;
+      html += `<ul class="space-y-2 mb-6">\n`;
+      uniqueRequirements.forEach(item => {
+        const boldItem = boldifyKeyTerms(item);
+        html += `  <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span class="text-gray-700">${boldItem}</span></li>\n`;
+      });
+      html += `</ul>\n`;
+    }
   }
 
+  // De-duplicate benefits
   if (sections.benefits && sections.benefits.length > 0) {
-    html += `<h3 class="text-lg font-bold text-gray-900 mb-3">Benefits & Compensation</h3>\n`;
-    html += `<ul class="space-y-2 mb-6">\n`;
-    sections.benefits.forEach(item => {
-      const boldItem = boldifyKeyTerms(item);
-      html += `  <li class="flex items-start gap-2"><span class="text-green-600 mt-1">✓</span><span class="text-gray-700">${boldItem}</span></li>\n`;
-    });
-    html += `</ul>\n`;
+    const uniqueBenefits = deduplicateItems(sections.benefits);
+    if (uniqueBenefits.length > 0) {
+      html += `<h3 class="text-lg font-bold text-gray-900 mb-3">Benefits & Compensation</h3>\n`;
+      html += `<ul class="space-y-2 mb-6">\n`;
+      uniqueBenefits.forEach(item => {
+        const boldItem = boldifyKeyTerms(item);
+        html += `  <li class="flex items-start gap-2"><span class="text-green-600 mt-1">✓</span><span class="text-gray-700">${boldItem}</span></li>\n`;
+      });
+      html += `</ul>\n`;
+    }
   }
 
   if (sections.howToApply) {
@@ -188,6 +208,45 @@ function buildFormattedHTML(sections) {
   }
 
   return html || '<p class="text-gray-500">No description available</p>';
+}
+
+/**
+ * De-duplicate items in a list based on normalized text similarity
+ */
+function deduplicateItems(items) {
+  if (!items || items.length === 0) return [];
+  
+  const seen = new Set();
+  const unique = [];
+  
+  for (const item of items) {
+    // Normalize: lowercase, remove extra spaces, remove punctuation for comparison
+    const normalized = item.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Skip empty items
+    if (!normalized) continue;
+    
+    // Check for exact duplicates and very similar items (substring match)
+    let isDuplicate = false;
+    for (const seenItem of seen) {
+      if (seenItem === normalized || 
+          seenItem.includes(normalized) || 
+          normalized.includes(seenItem)) {
+        isDuplicate = true;
+        break;
+      }
+    }
+    
+    if (!isDuplicate) {
+      seen.add(normalized);
+      unique.push(item);
+    }
+  }
+  
+  return unique;
 }
 
 /**
