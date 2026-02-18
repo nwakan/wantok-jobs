@@ -92,31 +92,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets with hashes (JS, CSS, images): stale-while-revalidate
-  // These files have content hashes in their names, so they're immutable
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$/) ||
-    url.pathname.startsWith('/assets/')
-  ) {
+  // Hashed static assets (JS, CSS in /assets/): network-first
+  // These have content hashes — the browser's HTTP cache handles immutable caching.
+  // The SW should NOT cache these to avoid serving stale bundles after deploys.
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      fetch(request).catch(() => {
+        // Only fall back to cache if completely offline
+        return caches.match(request);
+      })
+    );
+    return;
+  }
+
+  // Other static assets (images, fonts, icons): cache-first with network fallback
+  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|webp)$/)) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        // Return cached version immediately if available
-        const fetchPromise = fetch(request).then((response) => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(request).then((response) => {
           if (response.ok) {
-            // Update cache in background for next time
-            const responseClone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
           }
           return response;
-        }).catch(() => {
-          // Network failed, return cached version if we have it
-          return cachedResponse;
         });
-
-        // Stale-while-revalidate: return cached immediately, update in background
-        return cachedResponse || fetchPromise;
       })
     );
     return;
