@@ -351,6 +351,7 @@ app.use('/api', checkForcePasswordReset);
 
 // Core routes
 app.use('/api/jobs', require('./routes/jobs'));
+app.use('/api/search', require('./routes/semantic-search')); // Semantic search (Phase 1)
 app.use('/api/applications', applicationLimiter, require('./routes/applications'));
 app.use('/api/offer-letters', require('./routes/offer-letters'));
 app.use('/api/interviews', require('./routes/interviews'));

@@ -66,8 +66,75 @@ const actions = {
   },
 
   // ─── Job Search ────────────────────────────────────────
-  searchJobs(db, params = {}) {
+  async searchJobs(db, params = {}) {
     const { search, location, category, job_type, page = 1, limit = 5 } = params;
+    
+    // Try semantic search first if search query exists
+    if (search && search.trim().length > 0) {
+      try {
+        const vectorStore = require('../../lib/vector-store');
+        const { expand } = require('../../lib/tok-pisin');
+        
+        // Expand Tok Pisin terms
+        const expandedQuery = expand(search);
+        
+        // Perform semantic search
+        const semanticResults = await vectorStore.search('job', expandedQuery, limit * 3, 0.5);
+        
+        if (semanticResults && semanticResults.length > 0) {
+          const jobIds = semanticResults.map(r => r.entity_id);
+          const placeholders = jobIds.map(() => '?').join(',');
+          
+          let where = [`j.id IN (${placeholders})`, "j.status = 'active'"];
+          let binds = [...jobIds];
+          
+          // Apply additional filters
+          if (location) {
+            where.push("j.location LIKE ?");
+            binds.push(`%${location}%`);
+          }
+          if (category) {
+            where.push("j.category_slug = ?");
+            binds.push(category);
+          }
+          if (job_type) {
+            where.push("j.job_type = ?");
+            binds.push(job_type);
+          }
+          
+          const sql = `
+            SELECT j.id, j.title, j.location, j.job_type, j.salary_min, j.salary_max,
+                   j.salary_currency, j.created_at, j.category_slug,
+                   pe.company_name, pe.logo_url
+            FROM jobs j
+            LEFT JOIN profiles_employer pe ON j.employer_id = pe.user_id
+            WHERE ${where.join(' AND ')}
+            LIMIT ?
+          `;
+          
+          const jobs = db.prepare(sql).all(...binds, limit);
+          
+          // Map semantic scores
+          jobs.forEach(job => {
+            const result = semanticResults.find(r => r.entity_id === job.id);
+            if (result) job.semantic_score = result.score;
+          });
+          
+          return { 
+            jobs, 
+            total: jobs.length, 
+            page: 1, 
+            pages: 1,
+            method: 'semantic' 
+          };
+        }
+      } catch (e) {
+        logger.error('Jean semantic search failed, falling back to keyword search:', e.message);
+        // Fall through to keyword search
+      }
+    }
+    
+    // Keyword search fallback
     const where = ["j.status = 'active'"];
     const binds = [];
 
@@ -104,7 +171,7 @@ const actions = {
       LIMIT ? OFFSET ?
     `;
     const jobs = db.prepare(sql).all(...binds, limit, offset);
-    return { jobs, total, page, pages: Math.ceil(total / limit) };
+    return { jobs, total, page, pages: Math.ceil(total / limit), method: 'keyword' };
   },
 
   getJob(db, jobId) {

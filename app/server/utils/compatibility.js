@@ -9,9 +9,10 @@ const logger = require('./logger');
  * Calculate compatibility score between jobseeker and job
  * @param {Object} profile - Jobseeker profile from profiles_jobseeker
  * @param {Object} job - Job details
+ * @param {boolean} useSemantic - Whether to include semantic similarity (default: true)
  * @returns {Object} - { score, breakdown, tips }
  */
-function calculateCompatibility(profile, job) {
+function calculateCompatibility(profile, job, useSemantic = true) {
   if (!profile || !job) {
     return { score: 0, breakdown: {}, tips: [] };
   }
@@ -20,10 +21,31 @@ function calculateCompatibility(profile, job) {
   const breakdown = {};
   const tips = [];
 
-  // Skills match (40%)
+  // Try semantic similarity first (if enabled and available)
+  let semanticBoost = 0;
+  if (useSemantic) {
+    try {
+      const vectorStore = require('../lib/vector-store');
+      const profileVector = vectorStore.getVector('profile', profile.user_id);
+      const jobVector = vectorStore.getVector('job', job.id);
+      
+      if (profileVector && jobVector) {
+        const { cosineSimilarity } = require('../lib/embedding-engine');
+        const similarity = cosineSimilarity(profileVector, jobVector);
+        // Semantic similarity can boost score by up to 20%
+        semanticBoost = similarity * 20;
+        breakdown.semantic = Math.round(semanticBoost);
+      }
+    } catch (e) {
+      // Semantic matching not available or failed, continue with traditional scoring
+      logger.debug('Semantic matching not available for compatibility score:', e.message);
+    }
+  }
+
+  // Skills match (35% - reduced from 40% to make room for semantic)
   const skillsResult = matchSkills(profile, job);
-  totalScore += skillsResult.score;
-  breakdown.skills = skillsResult.score;
+  totalScore += skillsResult.score * 0.875; // Scale down from 40 to 35
+  breakdown.skills = Math.round(skillsResult.score * 0.875);
   if (skillsResult.missing.length > 0) {
     tips.push(`Add ${skillsResult.missing.slice(0, 2).join(', ')} to your skills to improve match`);
   }
@@ -50,13 +72,17 @@ function calculateCompatibility(profile, job) {
   const industryResult = matchIndustry(profile, job);
   totalScore += industryResult.score;
   breakdown.industry = industryResult.score;
+  
+  // Add semantic boost (up to 20%)
+  totalScore += semanticBoost;
 
   return {
-    score: Math.round(totalScore),
+    score: Math.round(Math.min(totalScore, 100)), // Cap at 100
     breakdown,
     tips,
     strengths: getStrengths(breakdown),
-    weaknesses: getWeaknesses(breakdown, tips)
+    weaknesses: getWeaknesses(breakdown, tips),
+    method: semanticBoost > 0 ? 'hybrid' : 'traditional'
   };
 }
 
