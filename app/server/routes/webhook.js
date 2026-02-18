@@ -69,10 +69,14 @@ router.post('/github', express.raw({ type: 'application/json' }), (req, res) => 
   // Respond immediately, deploy in background
   res.json({ status: 'deploying', pusher, commits });
 
-  // Trigger systemd deploy service (runs independently of this process)
-  exec('sudo systemctl start --no-block wantokjobs-deploy', (err) => {
-    if (err) logger.error('Failed to trigger deploy service', { error: err.message });
-    else logger.info('Deploy service triggered');
+  // Deploy: git pull then restart via the deploy webhook service
+  const deployCmd = `cd ${REPO_DIR}/app && git stash 2>/dev/null; git pull origin main && systemctl restart wantokjobs`;
+  exec(deployCmd, { timeout: 30000 }, (err, stdout, stderr) => {
+    if (err) {
+      logger.error('Deploy failed', { error: err.message, stderr });
+    } else {
+      logger.info('Deploy successful', { output: stdout.trim().slice(0, 200) });
+    }
   });
 });
 
