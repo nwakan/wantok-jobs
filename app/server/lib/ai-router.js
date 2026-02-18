@@ -139,7 +139,7 @@ const PROVIDERS = {
   groq: {
     name: 'Groq',
     models: {
-      fast: 'llama-3.1-70b-versatile',
+      fast: 'llama-3.3-70b-versatile',
       small: 'llama-3.1-8b-instant',
     },
     baseUrl: 'https://api.groq.com/openai/v1',
