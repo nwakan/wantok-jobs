@@ -5,13 +5,13 @@ import { useState, useEffect } from 'react';
 
 export default function Transparency() {
   const [activeTab, setActiveTab] = useState('jobseekers');
-  const [stats, setStats] = useState({ transparentEmployers: 140, governmentBodies: 69, totalEmployers: 2500 });
+  const [stats, setStats] = useState({ transparentEmployers: 0, governmentBodies: 0, totalEmployers: 0 });
   useEffect(() => {
     fetch('/api/stats').then(r => r.json()).then(d => {
       setStats({
-        transparentEmployers: d.transparentEmployers || 140,
-        governmentBodies: d.governmentBodies || 69,
-        totalEmployers: d.totalEmployers || 2500,
+        transparentEmployers: d.transparentEmployers || 0,
+        governmentBodies: d.governmentBodies || 0,
+        totalEmployers: d.totalEmployers || 0,
       });
     }).catch(() => {});
   }, []);

@@ -215,34 +215,39 @@ router.get('/top-employers', (req, res) => {
 // GET /regions - Job counts by Pacific Island region
 router.get('/regions', (req, res) => {
   try {
-    const png = db.prepare(`
-      SELECT COUNT(*) as count FROM jobs 
-      WHERE status = 'active' AND (country LIKE '%Papua New Guinea%' OR country = 'PG')
-    `).get();
-    const fiji = db.prepare(`
-      SELECT COUNT(*) as count FROM jobs 
-      WHERE status = 'active' AND (country LIKE '%Fiji%' OR country = 'FJ')
-    `).get();
+    // Mutually exclusive categories: Remote first, then by country
     const remote = db.prepare(`
       SELECT COUNT(*) as count FROM jobs 
       WHERE status = 'active' AND (remote_work = 1 OR location LIKE '%remote%')
     `).get();
+    const png = db.prepare(`
+      SELECT COUNT(*) as count FROM jobs 
+      WHERE status = 'active' AND (country LIKE '%Papua New Guinea%' OR country = 'PG')
+        AND COALESCE(remote_work, 0) != 1 AND COALESCE(location, '') NOT LIKE '%remote%'
+    `).get();
+    const fiji = db.prepare(`
+      SELECT COUNT(*) as count FROM jobs 
+      WHERE status = 'active' AND (country LIKE '%Fiji%' OR country = 'FJ')
+        AND COALESCE(remote_work, 0) != 1 AND COALESCE(location, '') NOT LIKE '%remote%'
+    `).get();
     const otherPacific = db.prepare(`
       SELECT COUNT(*) as count FROM jobs 
       WHERE status = 'active' 
-        AND country NOT LIKE '%Papua New Guinea%' AND country != 'PG'
-        AND country NOT LIKE '%Fiji%' AND country != 'FJ'
+        AND COALESCE(country, '') NOT LIKE '%Papua New Guinea%' AND COALESCE(country, '') != 'PG'
+        AND COALESCE(country, '') NOT LIKE '%Fiji%' AND COALESCE(country, '') != 'FJ'
         AND (country IS NOT NULL AND country != '')
-        AND remote_work != 1
+        AND COALESCE(remote_work, 0) != 1 AND COALESCE(location, '') NOT LIKE '%remote%'
     `).get();
+    const total = db.prepare(`SELECT COUNT(*) as count FROM jobs WHERE status = 'active'`).get();
 
     res.json({
       data: [
         { key: 'png', label: 'Papua New Guinea', count: png.count },
         { key: 'fj', label: 'Fiji', count: fiji.count },
-        { key: 'remote', label: 'Remote', count: remote.count },
+        { key: 'remote', label: 'Remote / Anywhere', count: remote.count },
         { key: 'other', label: 'Other Pacific', count: otherPacific.count },
-      ]
+      ],
+      total: total.count,
     });
   } catch (error) {
     logger.error('Region stats error', { error: error.message });
