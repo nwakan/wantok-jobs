@@ -74,6 +74,78 @@ const LOCATIONS = [
 
 const PER_PAGE = 24;
 
+// Country emoji map
+const COUNTRY_EMOJI_MAP = {
+  'Papua New Guinea': '🇵🇬',
+  'Fiji': '🇫🇯',
+  'Solomon Islands': '🇸🇧',
+  'Vanuatu': '🇻🇺',
+  'Samoa': '🇼🇸',
+  'Tonga': '🇹🇴',
+  'Tuvalu': '🇹🇻',
+  'Palau': '🇵🇼',
+  'Kiribati': '🇰🇮',
+  'Nauru': '🇳🇷',
+  'Marshall Islands': '🇲🇭',
+  'Federated States of Micronesia': '🇫🇲',
+  'Cook Islands': '🇨🇰',
+  'Niue': '🇳🇺',
+  'New Caledonia': '🇳🇨',
+};
+
+// Browse by Country Component
+function BrowseByCountry({ onCountryClick }) {
+  const [countries, setCountries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await api.get('/companies/countries');
+        const data = Array.isArray(response) ? response : (response.data || []);
+        setCountries(data);
+      } catch (error) {
+        console.error('Failed to fetch country stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  if (loading || countries.length === 0) return null;
+
+  return (
+    <div className="mt-12 mb-8">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          Browse Companies by Country
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          Discover employers across the Pacific region
+        </p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {countries.map((country) => (
+          <button
+            key={country.country}
+            onClick={() => onCountryClick(country.country)}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-600 transition-all group text-center"
+          >
+            <div className="text-4xl mb-3">{COUNTRY_EMOJI_MAP[country.country] || '🌏'}</div>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition mb-1 text-sm">
+              {country.country}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {country.count.toLocaleString()} {country.count === 1 ? 'company' : 'companies'}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Companies() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -519,6 +591,13 @@ export default function Companies() {
               </button>
             </div>
           )}
+
+          {/* Browse by Country Section */}
+          <BrowseByCountry onCountryClick={(country) => {
+            setFilters(prev => ({ ...prev, country }));
+            setPage(1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }} />
 
           {/* CTA Section */}
           <div className="mt-12 bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl p-8 text-center text-white">

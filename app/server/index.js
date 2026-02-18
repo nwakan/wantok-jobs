@@ -570,12 +570,21 @@ if (process.env.NODE_ENV === 'production') {
         const companyMatch = req.path.match(/^\/companies\/(\d+)$/);
         if (companyMatch) {
           const company = db.prepare(`
-            SELECT p.user_id as id, p.company_name, p.description as company_description, p.logo_url as logo, p.location, p.industry
+            SELECT p.user_id as id, p.company_name, p.description as company_description, 
+                   p.logo_url as logo, p.location, p.industry, p.country, p.website, 
+                   p.phone, p.email, p.founded_year
             FROM profiles_employer p
             JOIN users u ON p.user_id = u.id
             WHERE p.user_id = ? AND u.role = 'employer'
           `).get(companyMatch[1]);
           if (company) {
+            // Get review stats for aggregate rating
+            const reviewStats = db.prepare(`
+              SELECT AVG(rating) as avg_rating, COUNT(*) as review_count
+              FROM company_reviews
+              WHERE company_id = ? AND approved = 1
+            `).get(companyMatch[1]);
+
             const meta = {
               title: `${company.company_name} - Jobs & Profile | WantokJobs`,
               description: (company.company_description || `${company.company_name} - ${company.industry || 'Employer'} in ${company.location || 'PNG'}`).substring(0, 160),
@@ -583,14 +592,37 @@ if (process.env.NODE_ENV === 'production') {
               url: `${baseUrl}/companies/${company.id}`,
               type: 'profile',
             };
+            
+            // Enhanced JSON-LD with Organization + LocalBusiness
             const jsonLd = {
-              "@context": "https://schema.org", "@type": "Organization",
-              name: company.company_name,
-              description: meta.description,
-              url: meta.url,
-              address: { "@type": "PostalAddress", addressLocality: company.location || 'Papua New Guinea', addressCountry: "PG" },
+              "@context": "https://schema.org",
+              "@type": ["Organization", "LocalBusiness"],
+              "name": company.company_name,
+              "description": meta.description,
+              "url": meta.url,
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": company.location || 'Papua New Guinea',
+                "addressCountry": company.country || "PG"
+              }
             };
+            
             if (company.logo) jsonLd.logo = meta.image;
+            if (company.logo) jsonLd.image = meta.image;
+            if (company.website) jsonLd.sameAs = company.website;
+            if (company.phone) jsonLd.telephone = company.phone;
+            if (company.email) jsonLd.email = company.email;
+            if (company.founded_year) jsonLd.foundingDate = company.founded_year.toString();
+            
+            // Add aggregate rating if available
+            if (reviewStats && reviewStats.review_count > 0) {
+              jsonLd.aggregateRating = {
+                "@type": "AggregateRating",
+                "ratingValue": reviewStats.avg_rating.toFixed(1),
+                "reviewCount": reviewStats.review_count
+              };
+            }
+            
             const html = injectMetaIntoHtml(indexPath, meta, jsonLd);
             return res.send(html);
           }

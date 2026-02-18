@@ -5,6 +5,25 @@ const db = require('../database');
 
 const cache = require('../lib/cache');
 
+// GET /countries - Get employer counts by country
+router.get('/countries', (req, res) => {
+  try {
+    const countries = db.prepare(`
+      SELECT pe.country, COUNT(*) as count
+      FROM users u
+      INNER JOIN profiles_employer pe ON u.id = pe.user_id
+      WHERE u.role = 'employer' AND u.id NOT IN (1, 11) AND pe.country IS NOT NULL AND pe.country != ''
+      GROUP BY pe.country
+      ORDER BY count DESC
+    `).all();
+
+    res.json({ data: countries });
+  } catch (error) {
+    logger.error('Error fetching country stats', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch country stats' });
+  }
+});
+
 // GET / - Public company directory with pagination and job counts
 router.get('/', (req, res) => {
   try {
@@ -173,10 +192,13 @@ router.get('/agency-client/:id', (req, res) => {
   }
 });
 
-// GET /:id - Public company profile with full details, active jobs, and reviews
+// GET /:id - Public company profile with full details, active jobs, reviews, and related companies
 router.get('/:id', (req, res) => {
   try {
     const { id } = req.params;
+
+    // Set cache control header
+    res.setHeader('Cache-Control', 'no-cache');
 
     // Get company profile
     const company = db.prepare(`
@@ -188,6 +210,14 @@ router.get('/:id', (req, res) => {
 
     if (!company || [1, 11].includes(parseInt(id))) {
       return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Construct Google Maps embed URL (free, no API key needed)
+    let mapEmbedUrl = null;
+    if (company.location || company.country) {
+      const query = encodeURIComponent([company.location, company.country].filter(Boolean).join(', '));
+      // Using the embed API approach that doesn't require a key for basic embeds
+      mapEmbedUrl = `https://maps.google.com/maps?q=${query}&output=embed`;
     }
 
     // Get active jobs
@@ -226,13 +256,34 @@ router.get('/:id', (req, res) => {
       WHERE company_id = ? AND approved = 1
     `).get(id);
 
+    // Get related companies (same industry, excluding current company, limit 4)
+    let relatedCompanies = [];
+    if (company.industry) {
+      relatedCompanies = db.prepare(`
+        SELECT u.id, pe.company_name, pe.industry, pe.location, pe.logo_url, pe.verified,
+               (SELECT COUNT(*) FROM jobs WHERE employer_id = u.id AND status = 'active') as active_jobs_count
+        FROM users u
+        INNER JOIN profiles_employer pe ON u.id = pe.user_id
+        WHERE u.role = 'employer' 
+          AND u.id != ? 
+          AND u.id NOT IN (1, 11)
+          AND pe.industry = ?
+        ORDER BY pe.verified DESC, active_jobs_count DESC, pe.company_name ASC
+        LIMIT 4
+      `).all(id, company.industry);
+    }
+
     res.json({ 
-      company, 
+      company: {
+        ...company,
+        map_embed_url: mapEmbedUrl
+      },
       jobs, 
       stats,
       reviews,
       average_rating: avgRating?.avg_rating || 0,
-      review_count: avgRating?.review_count || 0
+      review_count: avgRating?.review_count || 0,
+      related_companies: relatedCompanies
     });
   } catch (error) {
     logger.error('Error fetching company', { error: error.message });
