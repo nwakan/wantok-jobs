@@ -51,7 +51,7 @@ Return ONLY a JSON object with these fields (use null for missing fields):
 CV TEXT:
 ${trimmedText}`;
 
-  const result = await aiRouter.generate(prompt, {
+  const result = await aiRouter.route(prompt, {
     task: 'cv_parse',
     maxTokens: 2000,
     temperature: 0.1
