@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { route, getUsageStats } = require('../lib/ai-router');
-const auth = require('../middleware/auth');
+const { authenticateToken: auth } = require('../middleware/auth');
 
 // GET /api/ai/status — usage stats (admin only)
 router.get('/status', auth, (req, res) => {
