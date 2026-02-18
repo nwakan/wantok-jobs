@@ -928,6 +928,149 @@ async function sendInterviewInviteEmail(user, job, companyName, interview) {
   });
 }
 
+// ─── 21. Payment Verified ────────────────────────────────────────────
+
+async function sendPaymentVerifiedEmail(user, payment, creditsAdded, newBalance) {
+  const pkg = require('../utils/jean/sme-pricing').PACKAGES[payment.package_key];
+  
+  return sendEmail({
+    to: user.email, 
+    toName: user.name, 
+    tags: ['payment', 'verified'],
+    subject: `✅ Payment Approved — K${payment.amount} | ${creditsAdded} Credit${creditsAdded > 1 ? 's' : ''} Added`,
+    html: layout({
+      preheader: `Your payment of K${payment.amount} has been approved! ${creditsAdded} credits added to your account.`,
+      body: `
+        ${greeting(user.name)}
+        <div style="text-align:center;margin:0 0 24px;">
+          <span style="display:inline-block;background:#16a34a;color:#ffffff;padding:8px 20px;border-radius:24px;font-size:15px;font-weight:600;">
+            ✅ Payment Approved
+          </span>
+        </div>
+        <p style="font-size:16px;color:#374151;line-height:1.7;">
+          Great news! Your payment has been successfully verified and credits have been added to your account.
+        </p>
+        
+        <div class="card" style="border:2px solid #16a34a;border-radius:12px;padding:20px;margin:20px 0;background:#f0fdf4;">
+          <h3 style="margin:0 0 14px;color:#111827;font-size:17px;">💰 Payment Details</h3>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+            <tr><td style="padding:6px 0;color:#6b7280;width:120px;">Reference Code</td><td style="padding:6px 0;color:#111827;"><strong>${payment.reference_code}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Amount Paid</td><td style="padding:6px 0;color:#111827;"><strong>K${payment.amount}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Package</td><td style="padding:6px 0;color:#111827;">${pkg?.name || payment.package_key}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Credits Added</td><td style="padding:6px 0;color:#16a34a;"><strong style="font-size:16px;">+${creditsAdded} credit${creditsAdded > 1 ? 's' : ''}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">New Balance</td><td style="padding:6px 0;color:#111827;"><strong>${newBalance} credit${newBalance > 1 ? 's' : ''}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Verified On</td><td style="padding:6px 0;color:#6b7280;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td></tr>
+          </table>
+        </div>
+
+        ${button('Post a Job Now', `${BASE_URL}/dashboard/employer/post-job`)}
+        ${button('View My Credits', `${BASE_URL}/dashboard/employer/billing`, true)}
+
+        <h3 style="color:#111827;font-size:15px;margin:24px 0 10px;">📝 How to use your credits:</h3>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            💼 <strong>Post jobs via website</strong> — Go to your dashboard and click "Post Job"
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            📱 <strong>Post via WhatsApp</strong> — Simply say "post a job" to our AI assistant
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            📊 <strong>Track applications</strong> — Manage candidates and schedule interviews
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            🔄 <strong>Credits last ${pkg?.duration_days || 30} days</strong> — Use them before they expire
+          </td></tr>
+        </table>
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin:20px 0;">
+          <p style="margin:0;font-size:13px;color:#1e40af;">
+            💡 <strong>Tip:</strong> Each credit = 1 job post. Complete job descriptions get 2x more quality applications!
+          </p>
+        </div>
+
+        <p style="font-size:14px;color:#6b7280;margin-top:24px;">
+          Questions? Reply to this email or contact us at <a href="mailto:${SUPPORT_EMAIL}" style="color:#16a34a;">${SUPPORT_EMAIL}</a>.
+        </p>
+      `,
+    }),
+  });
+}
+
+// ─── 22. Payment Rejected ────────────────────────────────────────────
+
+async function sendPaymentRejectedEmail(user, payment, reason) {
+  return sendEmail({
+    to: user.email, 
+    toName: user.name, 
+    tags: ['payment', 'rejected'],
+    subject: `⚠️ Payment Verification Issue — Ref: ${payment.reference_code}`,
+    html: layout({
+      preheader: `Your payment of K${payment.amount} could not be verified. ${reason}`,
+      body: `
+        ${greeting(user.name)}
+        <div style="text-align:center;margin:0 0 24px;">
+          <span style="display:inline-block;background:#dc2626;color:#ffffff;padding:8px 20px;border-radius:24px;font-size:15px;font-weight:600;">
+            ⚠️ Verification Issue
+          </span>
+        </div>
+        <p style="font-size:15px;color:#374151;line-height:1.7;">
+          We were unable to verify your payment. Here are the details:
+        </p>
+        
+        <div class="card" style="border:2px solid #dc2626;border-radius:12px;padding:20px;margin:20px 0;background:#fef2f2;">
+          <h3 style="margin:0 0 14px;color:#111827;font-size:17px;">Payment Information</h3>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+            <tr><td style="padding:6px 0;color:#6b7280;width:120px;">Reference Code</td><td style="padding:6px 0;color:#111827;"><strong>${payment.reference_code}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Amount</td><td style="padding:6px 0;color:#111827;"><strong>K${payment.amount}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Submitted On</td><td style="padding:6px 0;color:#6b7280;">${new Date(payment.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td></tr>
+          </table>
+          ${divider()}
+          <div style="background:#fee2e2;border-radius:8px;padding:12px;margin-top:12px;">
+            <p style="margin:0;font-size:13px;color:#7f1d1d;">
+              <strong>Reason:</strong> ${reason}
+            </p>
+          </div>
+        </div>
+
+        <h3 style="color:#111827;font-size:15px;margin:24px 0 10px;">What to do next:</h3>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            1️⃣ <strong>Check your payment details</strong> — Ensure the amount and reference code match
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            2️⃣ <strong>Contact your bank</strong> — Verify the transaction was processed
+          </td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#374151;">
+            3️⃣ <strong>Reach out to us</strong> — Email <a href="mailto:${SUPPORT_EMAIL}" style="color:#dc2626;">${SUPPORT_EMAIL}</a> with your receipt
+          </td></tr>
+        </table>
+
+        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:14px;margin:20px 0;">
+          <p style="margin:0 0 10px;font-size:14px;color:#92400e;"><strong>Common issues:</strong></p>
+          <ul style="margin:0;padding-left:20px;font-size:13px;color:#92400e;">
+            <li>Wrong reference code used in transfer</li>
+            <li>Amount doesn't match the package price</li>
+            <li>Payment not yet reflected in our bank account (can take 24-48h)</li>
+            <li>Transfer sent to wrong account</li>
+          </ul>
+        </div>
+
+        <p style="font-size:14px;color:#374151;line-height:1.7;">
+          If you've already made the payment correctly, please <strong>forward your bank receipt</strong> to us at 
+          <a href="mailto:${SUPPORT_EMAIL}" style="color:#16a34a;font-weight:600;">${SUPPORT_EMAIL}</a> and we'll investigate immediately.
+        </p>
+
+        ${button('Contact Support', `mailto:${SUPPORT_EMAIL}`)}
+        ${button('View Payment Details', `${BASE_URL}/dashboard/employer/billing`, true)}
+
+        <p style="font-size:13px;color:#6b7280;margin-top:24px;">
+          We're here to help! Our team will respond within 24 hours.
+        </p>
+      `,
+    }),
+  });
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -954,4 +1097,6 @@ module.exports = {
   sendNewJobAlerts,
   sendNotificationEmail,
   sendInterviewInviteEmail,
+  sendPaymentVerifiedEmail,
+  sendPaymentRejectedEmail,
 };

@@ -287,6 +287,73 @@ function getPaymentInstructions(db, userId, packageKey) {
   return { message: msg, reference_code: ref, amount: pkg.price };
 }
 
+/**
+ * Expire stale pending payments (older than 72 hours)
+ * @param {Object} db - Database instance
+ * @returns {Object} - { expired_count, notifications_sent }
+ */
+function expireStalePayments(db) {
+  try {
+    const logger = require('../logger');
+    const { sendWhatsAppNotification } = require('./whatsapp-notify');
+
+    // Find stale payments
+    const stalePayments = db.prepare(`
+      SELECT 
+        p.*,
+        u.phone as user_phone
+      FROM sme_payments p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.status = 'pending' 
+        AND p.created_at < datetime('now', '-72 hours')
+    `).all();
+
+    if (stalePayments.length === 0) {
+      logger.info('No stale payments to expire');
+      return { expired_count: 0, notifications_sent: 0 };
+    }
+
+    let notificationsSent = 0;
+
+    // Process each stale payment
+    stalePayments.forEach(payment => {
+      // Mark as expired
+      db.prepare(`
+        UPDATE sme_payments 
+        SET status = 'expired',
+            admin_notes = 'Auto-expired after 72 hours'
+        WHERE id = ?
+      `).run(payment.id);
+
+      // Create notification for employer
+      const notificationMsg = `Your payment reference ${payment.reference_code} has expired. Please make a new purchase if you still need credits.`;
+      
+      db.prepare(`
+        INSERT INTO notifications (user_id, type, title, message, link, created_at)
+        VALUES (?, 'payment_expired', 'Payment Expired', ?, '/dashboard/employer/billing', datetime('now'))
+      `).run(payment.user_id, notificationMsg);
+
+      // Send WhatsApp notification
+      if (payment.user_phone) {
+        const whatsappMsg = `⏰ *Payment Expired*\n\nYour payment reference *${payment.reference_code}* (K${payment.amount}) has expired after 72 hours.\n\nIf you still want to purchase credits, please say "pricing" to see packages and make a new payment. 🙏`;
+        const result = sendWhatsAppNotification(db, payment.user_phone, whatsappMsg);
+        if (result.success) notificationsSent++;
+      }
+
+      logger.info(`Payment ${payment.id} (${payment.reference_code}) expired and notification sent`);
+    });
+
+    return {
+      expired_count: stalePayments.length,
+      notifications_sent: notificationsSent,
+    };
+  } catch (error) {
+    const logger = require('../logger');
+    logger.error('Failed to expire stale payments:', error.message);
+    return { error: error.message, expired_count: 0, notifications_sent: 0 };
+  }
+}
+
 module.exports = {
   PACKAGES,
   PAYMENT_DETAILS,
@@ -297,4 +364,5 @@ module.exports = {
   getPackageRecommendation,
   formatPricingMessage,
   getPaymentInstructions,
+  expireStalePayments,
 };

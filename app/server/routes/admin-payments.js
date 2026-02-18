@@ -11,6 +11,7 @@ const logger = require('../utils/logger');
 const pricing = require('../utils/jean/sme-pricing');
 const { sendWhatsAppNotification } = require('../utils/jean/whatsapp-notify');
 const { getPaymentDigest } = require('../utils/jean/payment-digest');
+const { sendPaymentVerifiedEmail, sendPaymentRejectedEmail } = require('../lib/email');
 
 /**
  * GET /api/admin/payments
@@ -155,11 +156,19 @@ router.put('/:id/verify', authenticateToken, requireRole('admin'), (req, res) =>
         VALUES (?, 'payment_verified', 'Payment Approved', ?, '/dashboard/employer/billing', datetime('now'))
       `).run(payment.user_id, notificationMsg);
 
-      // Send WhatsApp notification
-      const user = db.prepare('SELECT phone FROM users WHERE id = ?').get(payment.user_id);
+      // Get user details for notifications
+      const user = db.prepare('SELECT name, email, phone FROM users WHERE id = ?').get(payment.user_id);
+
+      // Send WhatsApp notification (if phone exists)
       if (user && user.phone) {
         const whatsappMsg = `✅ *Payment Confirmed!*\n\nYour payment of K${payment.amount} (Ref: ${payment.reference_code}) has been verified!\n\n🎉 *${result.credits_added} credit${result.credits_added > 1 ? 's' : ''}* added to your account.\n💰 New balance: *${result.balance_after} credit${result.balance_after > 1 ? 's' : ''}*\n\nYou can now post jobs via WhatsApp! Just say "post a job" to get started. 🚀`;
         sendWhatsAppNotification(db, user.phone, whatsappMsg);
+      }
+
+      // Send email notification (if email exists)
+      if (user && user.email) {
+        sendPaymentVerifiedEmail(user, payment, result.credits_added, result.balance_after)
+          .catch(err => logger.error('Failed to send payment verified email:', err.message));
       }
 
       db.prepare('COMMIT').run();
@@ -221,11 +230,19 @@ router.put('/:id/reject', authenticateToken, requireRole('admin'), (req, res) =>
       VALUES (?, 'payment_rejected', 'Payment Issue', ?, '/dashboard/employer/billing', datetime('now'))
     `).run(payment.user_id, notificationMsg);
 
-    // Send WhatsApp notification
-    const user = db.prepare('SELECT phone FROM users WHERE id = ?').get(payment.user_id);
+    // Get user details for notifications
+    const user = db.prepare('SELECT name, email, phone FROM users WHERE id = ?').get(payment.user_id);
+
+    // Send WhatsApp notification (if phone exists)
     if (user && user.phone) {
       const whatsappMsg = `❌ *Payment Issue*\n\nYour payment of K${payment.amount} (Ref: ${payment.reference_code}) could not be verified.\n\n*Reason:* ${admin_notes}\n\nPlease contact us at support@wantokjobs.com if you need help, or make a new payment with the correct details. 🙏`;
       sendWhatsAppNotification(db, user.phone, whatsappMsg);
+    }
+
+    // Send email notification (if email exists)
+    if (user && user.email) {
+      sendPaymentRejectedEmail(user, payment, admin_notes)
+        .catch(err => logger.error('Failed to send payment rejected email:', err.message));
     }
 
     logger.info(`Payment ${id} rejected by admin ${req.user.id} for user ${payment.user_id}`);
@@ -234,6 +251,28 @@ router.put('/:id/reject', authenticateToken, requireRole('admin'), (req, res) =>
   } catch (error) {
     logger.error('Failed to reject payment:', error.message);
     res.status(500).json({ error: 'Failed to reject payment' });
+  }
+});
+
+/**
+ * POST /api/admin/payments/expire-stale
+ * Expire pending payments older than 72 hours (admin only)
+ * Auto-notifies employers via WhatsApp and in-app
+ */
+router.post('/expire-stale', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const result = pricing.expireStalePayments(db);
+    
+    logger.info(`Expired ${result.expired_count} stale payments, sent ${result.notifications_sent} WhatsApp notifications`);
+    
+    res.json({
+      success: true,
+      expired_count: result.expired_count,
+      notifications_sent: result.notifications_sent,
+    });
+  } catch (error) {
+    logger.error('Failed to expire stale payments:', error.message);
+    res.status(500).json({ error: 'Failed to expire stale payments' });
   }
 });
 
