@@ -68,6 +68,32 @@ export default function JobCard({ job, compact = false }) {
   // Task 3: Check if job is featured
   const isFeatured = !!job.is_featured && (!job.featured_until || new Date(job.featured_until) > new Date());
   
+  // Calculate days until closing
+  const getDaysRemaining = () => {
+    if (!job.application_deadline) return null;
+    const deadlineDate = new Date(job.application_deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(0, 0, 0, 0);
+    const diffTime = deadlineDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 ? diffDays : null;
+  };
+  
+  const daysRemaining = getDaysRemaining();
+  
+  // Get transparency badge for employer
+  const getTransparencyBadge = () => {
+    if (!job.transparency_score) return null;
+    const score = job.transparency_score;
+    if (score >= 90) return { icon: '✅', color: 'text-green-600', title: 'Excellent transparency' };
+    if (score >= 70) return { icon: '🟡', color: 'text-yellow-600', title: 'Good transparency' };
+    if (score >= 50) return { icon: '🔴', color: 'text-red-600', title: 'Limited transparency' };
+    return { icon: '⚫', color: 'text-gray-600', title: 'No transparency data' };
+  };
+  
+  const transparencyBadge = getTransparencyBadge();
+  
   return (
     <article className="relative" aria-label={`${job.title} at ${getDisplayCompanyName(job)}`}>
     <Link
@@ -168,10 +194,29 @@ export default function JobCard({ job, compact = false }) {
 
           {/* Footer */}
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-medium">
-              {job.created_at && timeAgo(job.created_at)}
-            </span>
             <div className="flex items-center gap-3">
+              <span className="font-medium">
+                {job.created_at && timeAgo(job.created_at)}
+              </span>
+              {/* Closing deadline badge */}
+              {daysRemaining !== null && (
+                <span className={`font-semibold ${
+                  daysRemaining < 3 ? 'text-red-600' :
+                  daysRemaining < 7 ? 'text-yellow-600' :
+                  'text-green-600'
+                }`}>
+                  {daysRemaining === 0 ? 'Closes today!' :
+                   daysRemaining === 1 ? 'Closes tomorrow' :
+                   `Closes in ${daysRemaining} days`}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {transparencyBadge && (
+                <span className={transparencyBadge.color} title={transparencyBadge.title}>
+                  {transparencyBadge.icon}
+                </span>
+              )}
               {job.views_count > 0 ? (
                 <span>👁️ {job.views_count}</span>
               ) : null}

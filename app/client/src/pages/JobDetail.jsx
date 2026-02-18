@@ -77,6 +77,45 @@ export default function JobDetail() {
     return map[type.toLowerCase()] || 'FULL_TIME';
   };
 
+  // Calculate days until closing
+  const getDaysRemaining = (deadline) => {
+    if (!deadline) return null;
+    const deadlineDate = new Date(deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(0, 0, 0, 0);
+    const diffTime = deadlineDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getClosingBadge = () => {
+    if (!job.application_deadline) return null;
+    const daysRemaining = getDaysRemaining(job.application_deadline);
+    if (daysRemaining === null || daysRemaining < 0) return null;
+    
+    let bgColor, textColor, icon;
+    if (daysRemaining < 3) {
+      bgColor = 'bg-red-100';
+      textColor = 'text-red-800';
+      icon = '🔥';
+    } else if (daysRemaining < 7) {
+      bgColor = 'bg-yellow-100';
+      textColor = 'text-yellow-800';
+      icon = '⚠️';
+    } else {
+      bgColor = 'bg-green-100';
+      textColor = 'text-green-800';
+      icon = '✓';
+    }
+    
+    const label = daysRemaining === 0 ? 'Closes today!' : 
+                  daysRemaining === 1 ? 'Closes tomorrow' :
+                  `Closes in ${daysRemaining} days`;
+    
+    return { bgColor, textColor, icon, label };
+  };
+
   // Add structured data for SEO (Google for Jobs)
   useEffect(() => {
     if (!job) return;
@@ -671,9 +710,22 @@ export default function JobDetail() {
         />
       )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Link to="/jobs" className="text-primary-600 hover:text-primary-700 mb-4 inline-flex items-center gap-1 font-medium">
-          ← Back to jobs
-        </Link>
+        {/* Breadcrumbs */}
+        <nav className="flex items-center text-sm mb-4 text-gray-600">
+          <Link to="/" className="hover:text-primary-600">Home</Link>
+          <span className="mx-2">›</span>
+          <Link to="/jobs" className="hover:text-primary-600">Jobs</Link>
+          {job?.category_slug && (
+            <>
+              <span className="mx-2">›</span>
+              <Link to={`/jobs?category=${job.category_slug}`} className="hover:text-primary-600 capitalize">
+                {job.category_slug.replace(/-/g, ' ')}
+              </Link>
+            </>
+          )}
+          <span className="mx-2">›</span>
+          <span className="text-gray-900 font-medium truncate max-w-xs">{job?.title}</span>
+        </nav>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content - Left Column (65%) */}
@@ -696,6 +748,16 @@ export default function JobDetail() {
                           </span>
                         ) : null}
                       </h1>
+                      {/* Time remaining badge */}
+                      {(() => {
+                        const closingBadge = getClosingBadge();
+                        return closingBadge ? (
+                          <div className={`inline-flex items-center gap-1 px-3 py-1 ${closingBadge.bgColor} ${closingBadge.textColor} rounded-full text-sm font-semibold mb-2`}>
+                            <span>{closingBadge.icon}</span>
+                            <span>{closingBadge.label}</span>
+                          </div>
+                        ) : null;
+                      })()}
                       {job.company_name && job.company_name !== 'Various Employers' && (
                         <p className="text-lg text-gray-700 font-medium flex items-center gap-2">
                           {job.company_name}
@@ -1060,16 +1122,26 @@ export default function JobDetail() {
 
             {/* About the Role */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">About the Role</h2>
-              {hasHTML ? (
+              {/* Use formatted_description if available, otherwise fall back to raw description */}
+              {job.formatted_description ? (
                 <div 
                   className="prose prose-sm max-w-none text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(job.description) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(job.formatted_description) }}
                 />
               ) : (
-                <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {job.description}
-                </div>
+                <>
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">About the Role</h2>
+                  {hasHTML ? (
+                    <div 
+                      className="prose prose-sm max-w-none text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(job.description) }}
+                    />
+                  ) : (
+                    <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {job.description}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

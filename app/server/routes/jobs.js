@@ -10,6 +10,8 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { events: notifEvents } = require('../lib/notifications');
+const { formatJobDescription } = require('../lib/job-formatter');
+const { validateJobData } = require('../middleware/jobValidator');
 
 const cache = require('../lib/cache');
 
@@ -544,7 +546,7 @@ router.patch('/:id/status', authenticateToken, requireRole('employer', 'admin'),
 });
 
 // Create job (employer only)
-router.post('/', authenticateToken, requireRole('employer'), validate(schemas.postJob), (req, res) => {
+router.post('/', authenticateToken, requireRole('employer'), validateJobData, validate(schemas.postJob), (req, res) => {
   try {
     // Check plan limits (only for active jobs, not drafts)
     const status = req.body.status || 'active';
@@ -686,6 +688,25 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
     // Log activity
     try { db.prepare('INSERT INTO activity_log (user_id, action, entity_type, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'job_posted', 'job', job.id, JSON.stringify({ title, status })); } catch(e) {}
 
+    // Auto-format job description asynchronously (don't block response)
+    if (status === 'active' && safeDescription && safeDescription.length > 100) {
+      (async () => {
+        try {
+          const companyName = employer?.company_name || req.user.name || '';
+          const formatted = await formatJobDescription(safeDescription, safeTitle, companyName);
+          db.prepare(`
+            UPDATE jobs 
+            SET formatted_description = ?, format_status = 'formatted'
+            WHERE id = ?
+          `).run(formatted.formatted_html, job.id);
+          logger.info('Job formatted', { jobId: job.id });
+        } catch (formatError) {
+          logger.error('Job formatting failed', { jobId: job.id, error: formatError.message });
+          db.prepare(`UPDATE jobs SET format_status = 'failed' WHERE id = ?`).run(job.id);
+        }
+      })();
+    }
+
     cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
     res.status(201).json({ data: job, id: job.id });
   } catch (error) {
@@ -695,7 +716,7 @@ router.post('/', authenticateToken, requireRole('employer'), validate(schemas.po
 });
 
 // Update job (owner only)
-router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
+router.put('/:id', authenticateToken, requireRole('employer'), validateJobData, (req, res) => {
   try {
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
 
@@ -794,6 +815,25 @@ router.put('/:id', authenticateToken, requireRole('employer'), (req, res) => {
     );
 
     const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+    
+    // Re-format job description if description changed
+    if (description && safeDescription.length > 100) {
+      (async () => {
+        try {
+          const companyName = updated.company_display_name || updated.company_name || '';
+          const formatted = await formatJobDescription(safeDescription, safeTitle, companyName);
+          db.prepare(`
+            UPDATE jobs 
+            SET formatted_description = ?, format_status = 'formatted'
+            WHERE id = ?
+          `).run(formatted.formatted_html, req.params.id);
+          logger.info('Job reformatted', { jobId: req.params.id });
+        } catch (formatError) {
+          logger.error('Job formatting failed', { jobId: req.params.id, error: formatError.message });
+        }
+      })();
+    }
+    
     cache.invalidate('jobs'); cache.invalidate('categories'); cache.invalidate('stats'); cache.invalidate('featured');
     res.json(updated);
   } catch (error) {
