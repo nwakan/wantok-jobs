@@ -1,4 +1,4 @@
-import { Check, X, HelpCircle, Zap, TrendingUp, Building2, Crown, Bell, Sparkles, Shield, Smartphone, FileText, Users, Calculator } from 'lucide-react';
+import { Check, CheckCircle, X, HelpCircle, Zap, TrendingUp, Building2, Crown, Bell, Sparkles, Shield, Smartphone, FileText, Users, Calculator } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHead from '../components/PageHead';
 import { useState, useEffect, useMemo } from 'react';
