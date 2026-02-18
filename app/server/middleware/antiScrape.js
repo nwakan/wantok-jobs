@@ -82,6 +82,9 @@ function getIpData(ip) {
 function botBlocker(req, res, next) {
   const ua = req.get('User-Agent') || '';
   
+  // Exempt monitoring endpoints from bot blocking
+  if (req.path === '/health' || req.path === '/api/health') return next();
+  
   // Allow known good bots
   if (ALLOWED_BOTS.some(p => p.test(ua))) return next();
   
