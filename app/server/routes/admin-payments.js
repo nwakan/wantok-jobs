@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const pricing = require('../utils/jean/sme-pricing');
 
@@ -14,7 +14,7 @@ const pricing = require('../utils/jean/sme-pricing');
  * GET /api/admin/payments
  * List all pending payments (admin only)
  */
-router.get('/', requireAuth, requireRole('admin'), (req, res) => {
+router.get('/', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const { status = 'pending', limit = 50, offset = 0 } = req.query;
 
@@ -54,7 +54,7 @@ router.get('/', requireAuth, requireRole('admin'), (req, res) => {
  * GET /api/admin/payments/stats
  * Get payment stats (admin only)
  */
-router.get('/stats', requireAuth, requireRole('admin'), (req, res) => {
+router.get('/stats', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const stats = db.prepare(`
       SELECT 
@@ -92,7 +92,7 @@ router.get('/stats', requireAuth, requireRole('admin'), (req, res) => {
  * PUT /api/admin/payments/:id/verify
  * Approve a payment and add credits (admin only)
  */
-router.put('/:id/verify', requireAuth, requireRole('admin'), (req, res) => {
+router.put('/:id/verify', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const { id } = req.params;
     const { admin_notes } = req.body;
@@ -161,7 +161,7 @@ router.put('/:id/verify', requireAuth, requireRole('admin'), (req, res) => {
  * PUT /api/admin/payments/:id/reject
  * Reject a payment with reason (admin only)
  */
-router.put('/:id/reject', requireAuth, requireRole('admin'), (req, res) => {
+router.put('/:id/reject', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const { id } = req.params;
     const { admin_notes } = req.body;
@@ -210,7 +210,7 @@ router.put('/:id/reject', requireAuth, requireRole('admin'), (req, res) => {
  * GET /api/admin/payments/:id
  * Get single payment details (admin only)
  */
-router.get('/:id', requireAuth, requireRole('admin'), (req, res) => {
+router.get('/:id', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const { id } = req.params;
 
