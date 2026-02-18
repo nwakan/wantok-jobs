@@ -10,10 +10,10 @@ export default function RateLimits() {
   const fetchData = useCallback(async () => {
     try {
       const res = await api.get('/api/admin/rate-limits');
-      setData(res.data);
+      setData(res);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load data');
+      setError(err.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }

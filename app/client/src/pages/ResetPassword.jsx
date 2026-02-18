@@ -58,7 +58,7 @@ export default function ResetPassword() {
     } catch (error) {
       setStatus({
         type: 'error',
-        message: error.response?.data?.message || 'Failed to reset password. Please try again or request a new link.',
+        message: error.message || 'Failed to reset password. Please try again or request a new link.',
       });
     } finally {
       setLoading(false);

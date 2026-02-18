@@ -513,6 +513,7 @@ if (process.env.NODE_ENV === 'production') {
     // Only do SSR injection for crawlers on specific routes
     if (isCrawler) {
       try {
+        const db = require('./database');
         const baseUrl = process.env.APP_URL || 'https://wantokjobs.com';
 
         // Job detail pages: /jobs/:id

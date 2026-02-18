@@ -71,7 +71,7 @@ export default function EmployerClaims() {
     } catch (error) {
       console.error('Failed to update claim:', error);
       showToast(
-        error.response?.data?.error || 'Failed to update claim',
+        error.message || 'Failed to update claim',
         'error'
       );
     } finally {
@@ -100,7 +100,7 @@ export default function EmployerClaims() {
     } catch (error) {
       console.error('Failed to override claim:', error);
       showToast(
-        error.response?.data?.error || 'Failed to assign employer profile',
+        error.message || 'Failed to assign employer profile',
         'error'
       );
     } finally {

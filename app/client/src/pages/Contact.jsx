@@ -27,7 +27,7 @@ export default function Contact() {
       setStatus({ type: 'success', message: 'Thank you! Your message has been sent successfully. We\'ll get back to you soon.' });
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      setStatus({ type: 'error', message: error.response?.data?.message || 'Failed to send message. Please try again.' });
+      setStatus({ type: 'error', message: error.message || 'Failed to send message. Please try again.' });
     } finally {
       setLoading(false);
     }

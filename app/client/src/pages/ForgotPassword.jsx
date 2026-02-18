@@ -24,7 +24,7 @@ export default function ForgotPassword() {
     } catch (error) {
       setStatus({
         type: 'error',
-        message: error.response?.data?.message || 'Failed to send reset email. Please try again.',
+        message: error.message || 'Failed to send reset email. Please try again.',
       });
     } finally {
       setLoading(false);

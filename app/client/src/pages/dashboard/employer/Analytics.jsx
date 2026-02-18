@@ -18,7 +18,7 @@ export default function AnalyticsNew() {
     try {
       setLoading(true);
       const res = await api.get(`/employer/analytics?period=${period}`);
-      setAnalytics(res.data);
+      setAnalytics(res);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {

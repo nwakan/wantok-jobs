@@ -76,13 +76,13 @@ export default function AdminFeatureRequests() {
         method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
-      if (!res.ok) { const d = await res.json(); throw { response: { data: d } }; }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to update'); }
       toast.success('Feature request updated');
       setSelectedFeature(null);
       loadFeatures();
       loadStats();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to update feature request');
+      toast.error(error.message || 'Failed to update feature request');
     }
   };
 
@@ -95,12 +95,12 @@ export default function AdminFeatureRequests() {
       const res = await fetch(`${API_URL}/api/features/${featureId}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) { const d = await res.json(); throw { response: { data: d } }; }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to delete'); }
       toast.success('Feature request deleted');
       loadFeatures();
       loadStats();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to delete feature request');
+      toast.error(error.message || 'Failed to delete feature request');
     }
   };
 

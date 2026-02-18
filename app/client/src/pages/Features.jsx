@@ -98,12 +98,12 @@ export default function Features() {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       const data = await res.json();
-      if (!res.ok) throw { response: { data } };
+      if (!res.ok) throw new Error(data.error || 'Failed to vote');
       toast.success(data.message);
       loadFeatures();
       loadStats();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to vote');
+      toast.error(error.message || 'Failed to vote');
     }
   };
 
@@ -119,14 +119,14 @@ export default function Features() {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      if (!res.ok) { const d = await res.json(); throw { response: { data: d } }; }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to submit'); }
       toast.success('Feature request submitted!');
       setShowSubmitForm(false);
       setFormData({ title: '', description: '', category: 'general' });
       loadFeatures();
       loadStats();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to submit feature request');
+      toast.error(error.message || 'Failed to submit feature request');
     }
   };
 
@@ -151,13 +151,13 @@ export default function Features() {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment: newComment })
       });
-      if (!res.ok) { const d = await res.json(); throw { response: { data: d } }; }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to add comment'); }
       toast.success('Comment added!');
       setNewComment('');
       loadComments(selectedFeature.id);
       loadFeatures();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to add comment');
+      toast.error(error.message || 'Failed to add comment');
     }
   };
 
