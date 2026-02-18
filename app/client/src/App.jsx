@@ -119,6 +119,7 @@ const AdminJeanSettings = lazy(() => import('./pages/dashboard/admin/JeanSetting
 const AdminWallet = lazy(() => import('./pages/dashboard/admin/WalletAdmin'));
 const AdminReviewManagement = lazy(() => import('./pages/dashboard/admin/ReviewManagement'));
 const AdminFeatureRequests = lazy(() => import('./pages/dashboard/admin/FeatureRequests'));
+const AdminMarketing = lazy(() => import('./pages/dashboard/admin/Marketing'));
 
 function App() {
   return (
@@ -230,6 +231,7 @@ function App() {
                 <Route path="rate-limits" element={<Lazy component={AdminRateLimits} />} />
                 <Route path="wallet" element={<Lazy component={AdminWallet} />} />
                 <Route path="feature-requests" element={<Lazy component={AdminFeatureRequests} />} />
+                <Route path="marketing" element={<Lazy component={AdminMarketing} />} />
                 <Route path="settings" element={<Lazy component={AdminSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
               </Route>

@@ -386,6 +386,9 @@ app.use('/api/admin', authenticateToken, require('./routes/admin'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/account', require('./routes/account'));
 
+// Marketing Dashboard (admin only)
+app.use('/api/marketing', require('./routes/marketing'));
+
 // Sitemap routes (SEO)
 app.use('/', require('./routes/sitemap'));
 
