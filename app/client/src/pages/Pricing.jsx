@@ -193,6 +193,62 @@ const jobseekerPackages = [
   },
 ];
 
+// ─── SME Packages ──────────────────────────────────────────────────
+
+const smePackages = [
+  {
+    name: 'Free Trial',
+    icon: Zap,
+    price: '0',
+    period: '7-day duration',
+    jobs: 1,
+    perJob: null,
+    description: 'Try it out — post 1 job free for 7 days',
+    features: ['1 job posting', '7-day listing', 'WhatsApp posting', 'Basic support'],
+  },
+  {
+    name: 'Single Post',
+    icon: FileText,
+    price: '50',
+    period: '30-day duration',
+    jobs: 1,
+    perJob: 50,
+    description: 'One job, one month — simple as that',
+    features: ['1 job posting', '30-day listing', 'WhatsApp posting', 'Email notifications'],
+  },
+  {
+    name: 'Starter 3-Pack',
+    icon: TrendingUp,
+    price: '120',
+    period: '30-day duration',
+    jobs: 3,
+    perJob: 40,
+    description: '3 jobs at K40 each — save K30',
+    features: ['3 job postings', '30-day listings', 'WhatsApp posting', 'Email notifications', 'K40 per job'],
+  },
+  {
+    name: 'Starter 5-Pack',
+    icon: Sparkles,
+    price: '180',
+    period: '30-day duration',
+    jobs: 5,
+    perJob: 36,
+    description: '5 jobs at K36 each — best starter value',
+    features: ['5 job postings', '30-day listings', 'WhatsApp posting', 'Priority support', 'K36 per job'],
+    popular: true,
+  },
+  {
+    name: 'Monthly Plan',
+    icon: Crown,
+    price: '350',
+    period: '30-day duration',
+    jobs: 10,
+    perJob: 35,
+    description: '10 jobs at K35 each — for active hirers',
+    features: ['10 job postings', '30-day listings', 'WhatsApp posting', 'Priority support', 'K35 per job', 'Bulk posting'],
+  },
+];
+
 const faqs = [
   { q: 'How do credits work?', a: 'Credits are prepaid — buy a package, get credits instantly (after payment verification). Use 1 credit per job posting. Credits never expire until the annual reset. No recurring charges.' },
   { q: 'Do credits really never expire?', a: 'Credits persist for 24 months of account inactivity. As long as you log in or use the platform at least once every 2 years, your credits never expire.' },
@@ -201,7 +257,27 @@ const faqs = [
   { q: 'Is it free for job seekers?', a: 'Searching and applying for jobs is 100% free. Job alert packages are optional extras.' },
   { q: 'What are agency plans?', a: 'Agency plans are designed for recruitment agencies managing multiple client companies. You can post jobs on behalf of clients with their branding.' },
   { q: 'Do you offer refunds?', a: 'Unused credits can be refunded within 14 days of purchase. Contact support@wantokjobs.com.' },
+  { q: 'What are SME packages?', a: 'SME packages are designed for small and medium businesses in PNG. Post jobs via WhatsApp — no computer needed. Packages start from K0 (free trial) to K350/month.' },
 ];
+
+// ─── Employer Volume Tiers ─────────────────────────────────────────
+
+const employerVolumeTiers = [
+  { min: 1, max: 5, perJob: 100 },
+  { min: 6, max: 20, perJob: 90 },
+  { min: 21, max: 50, perJob: 80 },
+  { min: 51, max: 100, perJob: 75 },
+  { min: 101, max: 250, perJob: 65 },
+  { min: 251, max: 500, perJob: 55 },
+  { min: 501, max: Infinity, perJob: 50 },
+];
+
+function getEmployerPricePerJob(count) {
+  for (const tier of employerVolumeTiers) {
+    if (count >= tier.min && count <= tier.max) return tier.perJob;
+  }
+  return 50;
+}
 
 // ─── Components ────────────────────────────────────────────────────
 
@@ -284,11 +360,17 @@ function FAQItem({ question, answer }) {
   );
 }
 
-// ─── Interactive Price Calculator ──────────────────────────────────
+// ─── Interactive Price Calculator (Multi-Type) ─────────────────────
 
 function PriceCalculator() {
+  const [userType, setUserType] = useState('employer');
   const [jobCount, setJobCount] = useState(5);
+  const [jobCountInput, setJobCountInput] = useState('5');
   const [duration, setDuration] = useState(30);
+  const [clientCount, setClientCount] = useState(3);
+  const [billingMonthly, setBillingMonthly] = useState(true);
+  const [alertCount, setAlertCount] = useState(50);
+  const [smeJobCount, setSmeJobCount] = useState(3);
   const [addons, setAddons] = useState({
     aiMatching: false,
     featured: false,
@@ -296,19 +378,59 @@ function PriceCalculator() {
     socialBoost: false,
   });
 
-  const basePrice = useMemo(() => {
-    // Price per job based on volume
-    let perJob;
-    if (jobCount <= 5) perJob = 100;
-    else if (jobCount <= 20) perJob = 90;
-    else if (jobCount <= 50) perJob = 80;
-    else perJob = 75;
+  const handleJobCountInput = (val) => {
+    setJobCountInput(val);
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num >= 1) {
+      setJobCount(num);
+    }
+  };
 
-    // Duration multiplier
+  const handleJobCountSlider = (val) => {
+    const num = Number(val);
+    setJobCount(num);
+    setJobCountInput(String(num));
+  };
+
+  // Employer pricing
+  const employerTotal = useMemo(() => {
+    const perJob = getEmployerPricePerJob(jobCount);
     const durationMultiplier = { 7: 0.5, 14: 0.7, 30: 1, 60: 1.5, 90: 1.8 }[duration] || 1;
-
     return Math.round(perJob * jobCount * durationMultiplier);
   }, [jobCount, duration]);
+
+  // Agency pricing
+  const agencyTotal = useMemo(() => {
+    const perJob = getEmployerPricePerJob(jobCount);
+    const durationMultiplier = { 7: 0.5, 14: 0.7, 30: 1, 60: 1.5, 90: 1.8 }[duration] || 1;
+    const base = Math.round(perJob * jobCount * durationMultiplier);
+    const clientFee = clientCount > 3 ? (clientCount - 3) * 200 : 0;
+    return billingMonthly ? base + clientFee : Math.round((base + clientFee) * 10 * 0.85);
+  }, [jobCount, duration, clientCount, billingMonthly]);
+
+  // Jobseeker pricing
+  const jobseekerTotal = useMemo(() => {
+    if (alertCount <= 50) return 20;
+    if (alertCount <= 200) return 60;
+    if (alertCount <= 500) return 120;
+    return Math.round(alertCount * 0.22);
+  }, [alertCount]);
+
+  // SME recommendation
+  const smeRecommendation = useMemo(() => {
+    if (smeJobCount <= 1) return smePackages[1]; // Single Post
+    if (smeJobCount <= 3) return smePackages[2]; // 3-Pack
+    if (smeJobCount <= 5) return smePackages[3]; // 5-Pack
+    return smePackages[4]; // Monthly Plan
+  }, [smeJobCount]);
+
+  const smeCost = useMemo(() => {
+    if (smeJobCount <= 1) return 50;
+    if (smeJobCount <= 3) return 120;
+    if (smeJobCount <= 5) return 180;
+    if (smeJobCount <= 10) return 350;
+    return 350 + (smeJobCount - 10) * 35;
+  }, [smeJobCount]);
 
   const addonPrices = {
     aiMatching: 200,
@@ -321,9 +443,15 @@ function PriceCalculator() {
     return Object.entries(addons).reduce((sum, [key, on]) => sum + (on ? addonPrices[key] : 0), 0);
   }, [addons]);
 
-  const total = basePrice + addonTotal;
-
   const toggleAddon = (key) => setAddons(a => ({ ...a, [key]: !a[key] }));
+
+  const grandTotal = useMemo(() => {
+    if (userType === 'employer') return employerTotal + addonTotal;
+    if (userType === 'agency') return agencyTotal + addonTotal;
+    if (userType === 'jobseeker') return jobseekerTotal;
+    if (userType === 'sme') return smeCost;
+    return 0;
+  }, [userType, employerTotal, agencyTotal, addonTotal, jobseekerTotal, smeCost]);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
@@ -332,84 +460,358 @@ function PriceCalculator() {
         <h3 className="text-2xl font-bold text-gray-900">Build Your Custom Package</h3>
       </div>
 
+      {/* User Type Selector */}
+      <div className="mb-8">
+        <label className="block text-sm font-semibold text-gray-900 mb-2">I am a...</label>
+        <select
+          value={userType}
+          onChange={e => setUserType(e.target.value)}
+          className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 text-lg font-medium"
+        >
+          <option value="employer">Employer</option>
+          <option value="agency">Recruitment Agency</option>
+          <option value="jobseeker">Job Seeker</option>
+          <option value="sme">SME / Small Business</option>
+        </select>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-8">
         {/* Left: Controls */}
         <div className="space-y-6">
-          {/* Job count */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Number of Jobs: <span className="text-primary-600">{jobCount}</span>
-            </label>
-            <input
-              type="range" min={1} max={100} value={jobCount}
-              onChange={e => setJobCount(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-1"><span>1</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
-          </div>
 
-          {/* Duration */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Posting Duration</label>
-            <select
-              value={duration} onChange={e => setDuration(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500"
-            >
-              <option value={7}>7 days</option>
-              <option value={14}>14 days</option>
-              <option value={30}>30 days</option>
-              <option value={60}>60 days</option>
-              <option value={90}>90 days</option>
-            </select>
-          </div>
-
-          {/* Add-ons */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-3">Add-ons</label>
-            <div className="space-y-2">
-              {[
-                ['aiMatching', 'AI Matching', 200, 'Smart candidate-job matching'],
-                ['featured', 'Featured Listings', 500, 'Top placement in search results'],
-                ['candidateSearch', 'Candidate Search', 300, 'Browse candidate database'],
-                ['socialBoost', 'Social Boost', 400, 'Promote on social media'],
-              ].map(([key, label, price, desc]) => (
-                <label key={key} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition ${addons[key] ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" checked={addons[key]} onChange={() => toggleAddon(key)} className="w-4 h-4 text-primary-600 rounded" />
-                    <div>
-                      <span className="font-medium text-gray-900">{label}</span>
-                      <p className="text-xs text-gray-500">{desc}</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">+K{price.toLocaleString()}</span>
+          {/* ── Employer Controls ── */}
+          {userType === 'employer' && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Number of Jobs
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="flex items-center gap-3 mb-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={jobCountInput}
+                    onChange={e => handleJobCountInput(e.target.value)}
+                    className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-lg font-bold focus:ring-2 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-500">jobs</span>
+                </div>
+                <input
+                  type="range" min={1} max={500} value={Math.min(jobCount, 500)}
+                  onChange={e => handleJobCountSlider(e.target.value)}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>1</span><span>100</span><span>250</span><span>500</span>
+                </div>
+                {jobCount > 500 && (
+                  <p className="text-xs text-primary-600 mt-1">Slider maxes at 500 — use the input field for larger quantities.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Posting Duration</label>
+                <select
+                  value={duration} onChange={e => setDuration(Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={60}>60 days</option>
+                  <option value={90}>90 days</option>
+                </select>
+              </div>
+
+              {/* Volume Discount Tiers */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Volume Discount Tiers</label>
+                <div className="space-y-1">
+                  {employerVolumeTiers.map((tier, i) => {
+                    const isActive = jobCount >= tier.min && jobCount <= tier.max;
+                    return (
+                      <div key={i} className={`flex justify-between text-sm px-3 py-1.5 rounded ${isActive ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-gray-500'}`}>
+                        <span>{tier.max === Infinity ? `${tier.min}+` : `${tier.min}–${tier.max}`} jobs</span>
+                        <span>K{tier.perJob}/job</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Add-ons */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Add-ons</label>
+                <div className="space-y-2">
+                  {[
+                    ['aiMatching', 'AI Matching', 200, 'Smart candidate-job matching'],
+                    ['featured', 'Featured Listings', 500, 'Top placement in search results'],
+                    ['candidateSearch', 'Candidate Search', 300, 'Browse candidate database'],
+                    ['socialBoost', 'Social Boost', 400, 'Promote on social media'],
+                  ].map(([key, label, price, desc]) => (
+                    <label key={key} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition ${addons[key] ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <div className="flex items-center gap-3">
+                        <input type="checkbox" checked={addons[key]} onChange={() => toggleAddon(key)} className="w-4 h-4 text-primary-600 rounded" />
+                        <div>
+                          <span className="font-medium text-gray-900">{label}</span>
+                          <p className="text-xs text-gray-500">{desc}</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">+K{price.toLocaleString()}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Agency Controls ── */}
+          {userType === 'agency' && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Number of Jobs
+                </label>
+                <div className="flex items-center gap-3 mb-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={jobCountInput}
+                    onChange={e => handleJobCountInput(e.target.value)}
+                    className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-lg font-bold focus:ring-2 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-500">jobs</span>
+                </div>
+                <input
+                  type="range" min={1} max={500} value={Math.min(jobCount, 500)}
+                  onChange={e => handleJobCountSlider(e.target.value)}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>1</span><span>100</span><span>250</span><span>500</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Number of Client Companies</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={clientCount}
+                  onChange={e => setClientCount(Math.max(1, Number(e.target.value)))}
+                  className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-lg font-bold focus:ring-2 focus:ring-primary-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">First 3 clients included free. Additional clients K200/each.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Posting Duration</label>
+                <select
+                  value={duration} onChange={e => setDuration(Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={60}>60 days</option>
+                  <option value={90}>90 days</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Billing</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setBillingMonthly(true)}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${billingMonthly ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setBillingMonthly(false)}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${!billingMonthly ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    Annual (15% off)
+                  </button>
+                </div>
+              </div>
+
+              {/* Add-ons */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Add-ons</label>
+                <div className="space-y-2">
+                  {[
+                    ['aiMatching', 'AI Matching', 200, 'Smart candidate-job matching'],
+                    ['featured', 'Featured Listings', 500, 'Top placement in search results'],
+                    ['candidateSearch', 'Candidate Search', 300, 'Browse candidate database'],
+                    ['socialBoost', 'Social Boost', 400, 'Promote on social media'],
+                  ].map(([key, label, price, desc]) => (
+                    <label key={key} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition ${addons[key] ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <div className="flex items-center gap-3">
+                        <input type="checkbox" checked={addons[key]} onChange={() => toggleAddon(key)} className="w-4 h-4 text-primary-600 rounded" />
+                        <div>
+                          <span className="font-medium text-gray-900">{label}</span>
+                          <p className="text-xs text-gray-500">{desc}</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">+K{price.toLocaleString()}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Job Seeker Controls ── */}
+          {userType === 'jobseeker' && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Number of Job Alerts: <span className="text-primary-600">{alertCount}</span>
+                </label>
+                <input
+                  type="range" min={10} max={1000} step={10} value={alertCount}
+                  onChange={e => setAlertCount(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>10</span><span>250</span><span>500</span><span>750</span><span>1000</span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">What you get</h4>
+                <ul className="space-y-1 text-sm text-gray-700">
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> {alertCount} job alert credits</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Instant match notifications</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Custom alert filters</li>
+                  {alertCount >= 200 && <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Auto-apply feature</li>}
+                  {alertCount >= 500 && <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Priority notifications</li>}
+                  {alertCount >= 500 && <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Dedicated support</li>}
+                </ul>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                Searching and applying for jobs is always 100% free. Alert packs are optional extras.
+              </p>
+            </>
+          )}
+
+          {/* ── SME Controls ── */}
+          {userType === 'sme' && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Number of Jobs: <span className="text-primary-600">{smeJobCount}</span>
+                </label>
+                <input
+                  type="range" min={1} max={20} value={smeJobCount}
+                  onChange={e => setSmeJobCount(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>1</span><span>5</span><span>10</span><span>15</span><span>20</span>
+                </div>
+              </div>
+
+              {/* Recommendation */}
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-green-600" />
+                  <h4 className="font-semibold text-gray-900">Recommended Package</h4>
+                </div>
+                <p className="text-lg font-bold text-gray-900">{smeRecommendation.name}</p>
+                <p className="text-sm text-gray-600">{smeRecommendation.description}</p>
+                <p className="text-2xl font-bold text-primary-600 mt-2">K{smeRecommendation.price}</p>
+                {smeRecommendation.perJob && (
+                  <p className="text-xs text-gray-500">K{smeRecommendation.perJob} per job</p>
+                )}
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Smartphone className="w-5 h-5 text-blue-600" />
+                  <h4 className="font-semibold text-gray-900">WhatsApp-first</h4>
+                </div>
+                <p className="text-sm text-gray-600">Post jobs via WhatsApp — no computer needed. Message Jean to get started.</p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right: Summary */}
         <div className="bg-gray-50 rounded-xl p-6">
           <h4 className="text-lg font-bold text-gray-900 mb-4">Your Quote</h4>
-          
+
           <div className="space-y-3 mb-6">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{jobCount} jobs × {duration} days</span>
-              <span className="font-medium">K{basePrice.toLocaleString()}</span>
-            </div>
-            {Object.entries(addons).filter(([, on]) => on).map(([key]) => (
-              <div key={key} className="flex justify-between text-sm">
-                <span className="text-gray-600">
-                  {key === 'aiMatching' ? 'AI Matching' : key === 'featured' ? 'Featured Listings' : key === 'candidateSearch' ? 'Candidate Search' : 'Social Boost'}
-                </span>
-                <span className="font-medium">K{addonPrices[key].toLocaleString()}</span>
+            {userType === 'employer' && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">{jobCount} jobs × {duration} days (K{getEmployerPricePerJob(jobCount)}/job)</span>
+                  <span className="font-medium">K{employerTotal.toLocaleString()}</span>
+                </div>
+                {Object.entries(addons).filter(([, on]) => on).map(([key]) => (
+                  <div key={key} className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      {key === 'aiMatching' ? 'AI Matching' : key === 'featured' ? 'Featured Listings' : key === 'candidateSearch' ? 'Candidate Search' : 'Social Boost'}
+                    </span>
+                    <span className="font-medium">K{addonPrices[key].toLocaleString()}</span>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {userType === 'agency' && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">{jobCount} jobs × {duration} days</span>
+                  <span className="font-medium">K{Math.round(getEmployerPricePerJob(jobCount) * jobCount * ({ 7: 0.5, 14: 0.7, 30: 1, 60: 1.5, 90: 1.8 }[duration] || 1)).toLocaleString()}</span>
+                </div>
+                {clientCount > 3 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">{clientCount - 3} extra clients × K200</span>
+                    <span className="font-medium">K{((clientCount - 3) * 200).toLocaleString()}</span>
+                  </div>
+                )}
+                {!billingMonthly && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Annual discount (15% off × 10 months)</span>
+                    <span className="font-medium">Applied</span>
+                  </div>
+                )}
+                {Object.entries(addons).filter(([, on]) => on).map(([key]) => (
+                  <div key={key} className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      {key === 'aiMatching' ? 'AI Matching' : key === 'featured' ? 'Featured Listings' : key === 'candidateSearch' ? 'Candidate Search' : 'Social Boost'}
+                    </span>
+                    <span className="font-medium">K{addonPrices[key].toLocaleString()}</span>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {userType === 'jobseeker' && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">{alertCount} job alerts</span>
+                <span className="font-medium">K{jobseekerTotal.toLocaleString()}</span>
               </div>
-            ))}
+            )}
+
+            {userType === 'sme' && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">{smeJobCount} jobs — {smeRecommendation.name}</span>
+                <span className="font-medium">K{smeCost.toLocaleString()}</span>
+              </div>
+            )}
+
             <div className="border-t border-gray-300 pt-3 flex justify-between">
               <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-2xl font-bold text-primary-600">K{total.toLocaleString()}</span>
+              <span className="text-2xl font-bold text-primary-600">K{grandTotal.toLocaleString()}</span>
             </div>
-            <p className="text-xs text-gray-500">* All prices in PGK Kina. One-time payment.</p>
+            <p className="text-xs text-gray-500">
+              * All prices in PGK Kina. {userType === 'agency' && !billingMonthly ? 'Annual payment.' : 'One-time payment.'}
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -417,7 +819,7 @@ function PriceCalculator() {
               Get Quote
             </Link>
             <a
-              href={`https://wa.me/67570000000?text=${encodeURIComponent(`Hi, I'd like a quote for ${jobCount} jobs, ${duration} days. Total: K${total.toLocaleString()}`)}`}
+              href={`https://wa.me/67570000000?text=${encodeURIComponent(`Hi, I'd like a custom quote.\nType: ${userType}\nTotal: K${grandTotal.toLocaleString()}`)}`}
               target="_blank" rel="noopener noreferrer"
               className="block w-full py-3 bg-green-600 text-white rounded-lg font-semibold text-center hover:bg-green-700 transition"
             >
@@ -526,14 +928,14 @@ export default function Pricing() {
         {/* Tab Switcher */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
           <div className="flex justify-center mb-8">
-            <div className="bg-white rounded-lg shadow-sm p-1 inline-flex">
-              {['employer', 'agency', 'jobseeker', 'custom'].map(t => (
+            <div className="bg-white rounded-lg shadow-sm p-1 inline-flex flex-wrap justify-center gap-1">
+              {['employer', 'agency', 'jobseeker', 'sme', 'custom'].map(t => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
                   className={`px-5 py-2.5 rounded-md font-semibold transition text-sm ${tab === t ? 'bg-primary-600 text-white' : 'text-gray-600 hover:text-gray-900'}`}
                 >
-                  {t === 'employer' ? 'Employers' : t === 'agency' ? 'Agencies' : t === 'jobseeker' ? 'Job Seekers' : 'Build Custom'}
+                  {t === 'employer' ? 'Employers' : t === 'agency' ? 'Agencies' : t === 'jobseeker' ? 'Job Seekers' : t === 'sme' ? 'SME' : 'Build Custom'}
                 </button>
               ))}
             </div>
@@ -639,6 +1041,69 @@ export default function Pricing() {
                     <Link to="/register?type=jobseeker" className={`block w-full py-2.5 rounded-lg font-semibold text-center transition ${pkg.popular ? 'bg-primary-600 text-white hover:bg-primary-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}>
                       {pkg.price === '0' ? 'Sign Up Free' : 'Get Started'}
                     </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SME Packages */}
+        {tab === 'sme' && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+            <div className="mb-8 bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Smartphone className="w-6 h-6 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Post jobs via WhatsApp — no computer needed</h3>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Designed for small and medium businesses across PNG. Simple, affordable, mobile-first.
+              </p>
+              <a
+                href="https://wa.me/67570000000?text=Hi%20Jean%2C%20I%27d%20like%20to%20post%20a%20job%20on%20WantokJobs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition"
+              >
+                <Smartphone className="w-5 h-5" />
+                Message Jean on WhatsApp to Get Started
+              </a>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              {smePackages.map((pkg, idx) => (
+                <div key={idx} className={`relative bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105 ${pkg.popular ? 'ring-4 ring-primary-500' : ''}`}>
+                  {pkg.popular && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-bold px-4 py-1 rounded-bl-lg">BEST VALUE</div>
+                  )}
+                  <div className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg ${pkg.popular ? 'bg-primary-100' : 'bg-gray-100'}`}>
+                        <pkg.icon className={`w-6 h-6 ${pkg.popular ? 'text-primary-600' : 'text-gray-600'}`} />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900">{pkg.name}</h3>
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-1">
+                      <span className="text-3xl font-bold text-gray-900">K{pkg.price}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">{pkg.period} · {pkg.jobs} job{pkg.jobs > 1 ? 's' : ''}</p>
+                    {pkg.perJob && <p className="text-xs font-medium text-primary-600 mb-2">K{pkg.perJob}/job</p>}
+                    <p className="text-gray-600 text-sm mb-4">{pkg.description}</p>
+                    <ul className="space-y-2 mb-6">
+                      {pkg.features.map((f, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0" /> {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <a
+                      href={`https://wa.me/67570000000?text=${encodeURIComponent(`Hi Jean, I'd like the ${pkg.name} SME package (K${pkg.price})`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`block w-full py-2.5 rounded-lg font-semibold text-center transition ${pkg.popular ? 'bg-primary-600 text-white hover:bg-primary-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}
+                    >
+                      {pkg.price === '0' ? 'Try Free' : 'Get Started'}
+                    </a>
                   </div>
                 </div>
               ))}
