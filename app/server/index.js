@@ -452,6 +452,7 @@ app.use('/api/admin/analytics', authenticateToken, require('./routes/analytics-a
 // Marketing Dashboard (admin only)
 app.use('/api/marketing', require('./routes/marketing'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/cv', require('./routes/cv-parser'));
 
 // Sitemap routes (SEO)
 app.use('/', require('./routes/sitemap'));
