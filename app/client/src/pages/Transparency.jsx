@@ -325,7 +325,7 @@ export default function Transparency() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
               <p className="text-gray-700">
                 <strong>Want to see employer scores?</strong> Browse the{' '}
-                <Link to="/companies" className="text-primary-600 font-semibold hover:underline">company directory</Link>
+                <Link to="/companies" className="text-primary-600 font-semibold hover:underline">employer directory</Link>
                 {' '}— scores are shown on each employer profile.
               </p>
             </div>

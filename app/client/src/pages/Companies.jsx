@@ -232,7 +232,7 @@ export default function Companies() {
   return (
     <>
       <PageHead
-        title="Company Directory — PNG & Pacific Employers | WantokJobs"
+        title="Employer Directory — PNG & Pacific Islands | WantokJobs"
         description={`Browse ${stats?.totalEmployers?.toLocaleString() || '2,500'}+ verified employers hiring across Papua New Guinea and the Pacific Islands. Filter by country, industry, and transparency.`}
       />
 
@@ -240,7 +240,7 @@ export default function Companies() {
         {/* Hero */}
         <div className="bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3">Company Directory</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-3">Employer Directory</h1>
             <p className="text-primary-100 text-lg max-w-2xl mb-6">
               Discover verified employers hiring across Papua New Guinea and the Pacific Islands
             </p>
@@ -273,7 +273,7 @@ export default function Companies() {
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && fetchCompanies()}
-                  placeholder="Search companies by name..."
+                  placeholder="Search employers by name..."
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
@@ -423,7 +423,7 @@ export default function Companies() {
           {/* Results count */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {loading ? 'Loading...' : `Showing ${companies.length} of ${total.toLocaleString()} companies`}
+              {loading ? 'Loading...' : `Showing ${companies.length} of ${total.toLocaleString()} employers`}
               {filters.country && ` in ${filters.country}`}
             </p>
           </div>
