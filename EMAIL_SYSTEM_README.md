@@ -163,7 +163,7 @@ From the existing `server/lib/email.js`:
 Already configured in `.env`:
 
 ```env
-BREVO_API_KEY=xkeysib-...
+BREVO_API_KEY=[REDACTED]...
 FROM_EMAIL=noreply@wantokjobs.com
 FROM_NAME=WantokJobs
 APP_URL=https://wantokjobs.com
