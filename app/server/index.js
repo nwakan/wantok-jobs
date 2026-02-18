@@ -376,7 +376,6 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/companies', require('./routes/companies'));
 app.use('/api/employers', claimLimiter, require('./routes/employer-claims'));
-app.use('/api/admin/employer-claims', authenticateToken, require('./routes/employer-claims'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/activity', require('./routes/activity-feed'));
 app.use('/api/uploads', uploadLimiter, require('./routes/uploads'));
@@ -391,6 +390,7 @@ app.use('/api/insights', require('./routes/insights-market')); // Market insight
 app.use('/api/company-follows', require('./routes/company-follows'));
 app.use('/api/training', require('./routes/training'));
 app.use('/api/transparency', require('./routes/transparency'));
+app.use('/api/transparency-public', require('./routes/transparency-public'));
 app.use('/api/features', require('./routes/features'));
 
 // Agency & Claims routes
@@ -426,6 +426,7 @@ const { authenticateToken } = require('./middleware/auth');
 app.use('/api/testimonials', require('./routes/testimonials'));
 app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/admin', authenticateToken, require('./routes/admin'));
+app.use('/api/admin/employer-claims', authenticateToken, require('./routes/employer-claims'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/account', require('./routes/account'));
 app.use('/api/account', require('./routes/account-security')); // Account security endpoints
