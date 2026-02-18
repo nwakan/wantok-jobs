@@ -1,8 +1,21 @@
+import { useState, useEffect } from 'react';
 import { Shield, Users, Building2, TrendingUp, Eye, CheckCircle, Globe, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHead from '../components/PageHead';
 
 export default function About() {
+  const [stats, setStats] = useState({ totalEmployers: 0, governmentBodies: 0, transparentEmployers: 0, activeJobs: 0 });
+  useEffect(() => {
+    fetch('/api/stats').then(r => r.json()).then(d => {
+      setStats({
+        totalEmployers: d.totalEmployers || 0,
+        governmentBodies: d.governmentBodies || 0,
+        transparentEmployers: d.transparentEmployers || 0,
+        activeJobs: d.activeJobs || 0,
+      });
+    }).catch(() => {});
+  }, []);
+
   return (
     <>
       <PageHead
@@ -137,10 +150,10 @@ export default function About() {
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">WantokJobs By The Numbers</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { value: '463', label: 'Total Employers', icon: Building2 },
-              { value: '65', label: 'Government Bodies', icon: Globe },
-              { value: '112', label: 'Transparent Employers', icon: Shield },
-              { value: '360+', label: 'Active Jobs', icon: TrendingUp }
+              { value: stats.totalEmployers.toLocaleString(), label: 'Total Employers', icon: Building2 },
+              { value: stats.governmentBodies.toString(), label: 'Government Bodies', icon: Globe },
+              { value: stats.transparentEmployers.toString(), label: 'Transparent Employers', icon: Shield },
+              { value: `${stats.activeJobs}+`, label: 'Active Jobs', icon: TrendingUp }
             ].map((stat, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow-sm p-6 text-center">
                 <stat.icon className="w-8 h-8 text-primary-600 mx-auto mb-3" />
@@ -162,7 +175,7 @@ export default function About() {
               },
               {
                 title: '🤖 Employer Scout',
-                desc: 'We automatically build employer profiles from multiple sources — 65 public sector profiles already live.'
+                desc: `We automatically build employer profiles from multiple sources — ${stats.governmentBodies} public sector profiles already live.`
               },
               {
                 title: '💬 Jean AI Assistant',
@@ -208,7 +221,7 @@ export default function About() {
               <tbody className="text-gray-700">
                 {[
                   ['Transparency Framework', '✅', '❌', '❌'],
-                  ['Government Profiles', '65', '~10', '~15'],
+                  ['Government Profiles', stats.governmentBodies.toString(), '~10', '~15'],
                   ['Transparency Scoring', '✅', '❌', '❌'],
                   ['AI Assistant (Jean)', '✅', '❌', '❌'],
                   ['WhatsApp Alerts', '✅', '❌', '❌'],

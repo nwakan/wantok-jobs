@@ -124,7 +124,7 @@ export default function Home() {
   const [recType, setRecType] = useState('popular');
   const [categories, setCategories] = useState([]);
   const [topEmployers, setTopEmployers] = useState([]);
-  const [stats, setStats] = useState({ totalJobs: 0, activeJobs: 0, totalEmployers: 0, totalJobseekers: 0 });
+  const [stats, setStats] = useState({ totalJobs: 0, activeJobs: 0, totalEmployers: 0, totalJobseekers: 0, transparentEmployers: 0, governmentBodies: 0 });
   const [loading, setLoading] = useState(true);
   const [trendingSearches, setTrendingSearches] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -190,6 +190,8 @@ export default function Home() {
           activeJobs: statsResponse.activeJobs || 0,
           totalEmployers: statsResponse.totalEmployers || 0,
           totalJobseekers: statsResponse.totalJobseekers || 0,
+          transparentEmployers: statsResponse.transparentEmployers || 0,
+          governmentBodies: statsResponse.governmentBodies || 0,
         });
       }
       if (catResponse?.data) {
@@ -243,7 +245,7 @@ export default function Home() {
       <ActivityToast />
       <PageHead
         title="WantokJobs — PNG's First Transparent Hiring Platform | Fair Recruitment"
-        description={`PNG's leading transparent job platform. 463 employers, 112 transparent employers, 65 government bodies. Fair hiring, open processes. No other PNG platform has this. ${stats.activeJobs}+ jobs.`}
+        description={`PNG's leading transparent job platform. ${stats.totalEmployers.toLocaleString()}+ employers, ${stats.transparentEmployers} transparent employers, ${stats.governmentBodies} government bodies. Fair hiring, open processes. ${stats.activeJobs}+ jobs.`}
         keywords="jobs PNG, transparent hiring PNG, fair recruitment Papua New Guinea, government jobs PNG, Port Moresby jobs, Lae jobs, careers PNG, employment PNG"
         jsonLd={{
           "@context": "https://schema.org",
@@ -280,7 +282,7 @@ export default function Home() {
               <span className="text-secondary-400">Transparent Hiring Platform</span>
             </h1>
             <p className="text-lg md:text-2xl text-primary-100 mb-2">
-              {stats.totalEmployers.toLocaleString()}+ employers • {stats.totalJobseekers.toLocaleString()}+ job seekers • 112 transparent employers
+              {stats.totalEmployers.toLocaleString()}+ employers • {stats.totalJobseekers.toLocaleString()}+ job seekers • {stats.transparentEmployers} transparent employers
             </p>
             <p className="text-lg text-primary-200">
               Fair recruitment. Open processes. No more hidden wantok deals.
@@ -377,9 +379,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
             {[
-              { value: 463, label: 'Employers', icon: Building2 },
-              { value: 65, label: 'Government Bodies', icon: Landmark },
-              { value: 112, label: 'Transparent Employers', icon: Shield },
+              { value: stats.totalEmployers, label: 'Employers', icon: Building2 },
+              { value: stats.governmentBodies, label: 'Government Bodies', icon: Landmark },
+              { value: stats.transparentEmployers, label: 'Transparent Employers', icon: Shield },
               { value: stats.activeJobs, label: 'Active Jobs', icon: Briefcase },
               { value: stats.totalJobseekers, label: 'Job Seekers', icon: Users },
             ].map((stat, idx) => (
@@ -754,12 +756,12 @@ export default function Home() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { icon: Shield, title: 'Transparency Framework', desc: 'Only PNG platform with mandatory hiring transparency for public sector. Fair, merit-based recruitment.' },
-              { icon: UserCheck, title: 'Employer Scout', desc: 'Automated employer profile building from multiple sources — 65 public sector profiles and counting' },
+              { icon: UserCheck, title: 'Employer Scout', desc: `Automated employer profile building from multiple sources — ${stats.governmentBodies || 69} public sector profiles and counting` },
               { icon: Zap, title: 'Jean AI Assistant', desc: 'Chat widget on every page. Get instant help with job searches, applications, and career advice' },
               { icon: Bell, title: 'WhatsApp Job Alerts', desc: 'Get notified instantly when jobs matching your profile are posted — via email, SMS, or WhatsApp' },
               { icon: Globe, title: 'Province-Based Search', desc: 'Find jobs by province and region across PNG and the Pacific Islands' },
               { icon: DollarSign, title: 'Credit-Based Billing', desc: 'No subscriptions! Buy credits when you need them — they never expire. Fair pricing for employers.' },
-              { icon: Users, title: '65 Government Profiles', desc: 'All PNG government departments, SOEs, statutory authorities, and provincial governments' },
+              { icon: Users, title: `${stats.governmentBodies} Government Profiles`, desc: 'All PNG government departments, SOEs, statutory authorities, and provincial governments' },
               { icon: CheckCircle, title: 'Free for Job Seekers', desc: 'Search, apply, build your CV, track applications, and use Tok Pisin — all completely free' },
             ].map((item, idx) => (
               <motion.div

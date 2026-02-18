@@ -335,6 +335,9 @@ app.get('/api/stats', (req, res) => {
       totalEmployers: db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'employer' AND COALESCE(account_status, 'active') != 'spam'").get().count,
       totalJobs: db.prepare('SELECT COUNT(*) as count FROM jobs').get().count,
       activeJobs: db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'active'").get().count,
+      transparentEmployers: db.prepare("SELECT COUNT(*) as count FROM profiles_employer WHERE transparency_required = 1").get().count,
+      governmentBodies: db.prepare("SELECT COUNT(*) as count FROM profiles_employer WHERE employer_type IN ('government', 'soe')").get().count,
+      totalApplications: db.prepare("SELECT COUNT(*) as count FROM applications").get().count,
     };
     const result = { success: true, data: stats, ...stats };
     statsCache.set('stats:public', result, 300);

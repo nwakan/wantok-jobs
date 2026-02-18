@@ -505,7 +505,7 @@ export default function Pricing() {
         {/* Social Proof */}
         <div className="bg-white py-12 border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-gray-500 mb-8">Trusted by PNG's leading employers — including 65 government bodies</p>
+            <p className="text-gray-500 mb-8">Trusted by PNG's leading employers — including 69 government bodies</p>
             <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
               <div>
                 <div className="text-4xl font-bold text-primary-600 mb-2">{stats ? formatCount(stats.totalEmployers) : '...'}</div>

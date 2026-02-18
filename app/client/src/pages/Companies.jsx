@@ -70,7 +70,7 @@ export default function Companies() {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Discover {stats ? `${stats.totalEmployers.toLocaleString()}+` : ''} verified employers hiring across Papua New Guinea and the Pacific region.
               <br />
-              <span className="text-primary-600 font-semibold">112 employers with transparent hiring • 65 government bodies</span>
+              <span className="text-primary-600 font-semibold">{stats?.transparentEmployers || 140} employers with transparent hiring • {stats?.governmentBodies || 69} government bodies</span>
             </p>
           </div>
 
