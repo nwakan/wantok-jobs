@@ -36,7 +36,7 @@ export default function ClaimEmployer() {
         api.get(`/employers/${id}/claim-status`)
       ]);
       
-      const companyData = profileRes.data.company || profileRes.data;
+      const companyData = profileRes.company || profileRes;
       setEmployer(companyData);
       
       const statusData = statusRes.data;

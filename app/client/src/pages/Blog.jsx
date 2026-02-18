@@ -42,8 +42,8 @@ export default function Blog() {
       params.append('limit', 9);
 
       const response = await api.get(`/articles?${params.toString()}`);
-      setArticles(response.data.articles || []);
-      setTotalPages(response.data.totalPages || 1);
+      setArticles(response.articles || response.data?.articles || []);
+      setTotalPages(response.totalPages || response.data?.totalPages || 1);
     } catch (error) {
       console.error('Failed to fetch articles:', error);
       // Fallback to mock data

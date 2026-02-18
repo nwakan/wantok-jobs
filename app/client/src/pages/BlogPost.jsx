@@ -32,8 +32,8 @@ export default function BlogPost() {
     setLoading(true);
     try {
       const response = await api.get(`/articles/${slug}`);
-      setArticle(response.data.article);
-      setRelatedArticles(response.data.related || []);
+      setArticle(response.article || response.data?.article);
+      setRelatedArticles(response.related || response.data?.related || []);
     } catch (error) {
       console.error('Failed to fetch article:', error);
       // Fallback to mock data

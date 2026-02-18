@@ -20,11 +20,11 @@ export default function TransparencyLeaderboard() {
       // Load leaderboard
       const filterParam = filter !== 'all' ? `?employer_type=${filter}` : '';
       const leaderboardRes = await api.get(`/transparency-public/leaderboard${filterParam}`);
-      setLeaderboard(leaderboardRes.data.data || []);
+      setLeaderboard(leaderboardRes.data || leaderboardRes || []);
       
       // Load stats
       const statsRes = await api.get('/transparency-public/stats');
-      setStats(statsRes.data.data || null);
+      setStats(statsRes.data || statsRes || null);
       
       setError(null);
     } catch (err) {

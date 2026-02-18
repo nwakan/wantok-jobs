@@ -244,7 +244,8 @@ export default function JobDetail() {
     if (!job.employer_id) return;
     try {
       const response = await jobs.getAll({ employer_id: job.employer_id, limit: 5 });
-      setJobsByCompany(response.data.filter(j => j.id !== job.id).slice(0, 4));
+      const jobsList = response.data || response || [];
+      setJobsByCompany(jobsList.filter(j => j.id !== job.id).slice(0, 4));
     } catch (error) {
       console.error('Failed to load jobs by company:', error);
     }
