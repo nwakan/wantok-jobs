@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../utils/api';
+import api from '../api';
 
 export default function TransparencyLeaderboard() {
   const [leaderboard, setLeaderboard] = useState([]);
