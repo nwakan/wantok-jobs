@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { profile as profileAPI } from '../../../api';
 import { useToast } from '../../../components/Toast';
+import useLocationDetect from '../../../hooks/useLocationDetect';
 import {
-  Building2, MapPin, Globe, Users, CheckCircle2, Image, Plus, X,
+  Building2, MapPin, Globe, Users, CheckCircle2, Image, Plus, X, Navigation,
   Eye, EyeOff, TrendingUp, Briefcase, Phone, Mail, Facebook, Linkedin,
   Award, Star, Camera, FileText, Shield, Heart, Sparkles, ExternalLink
 } from 'lucide-react';
@@ -48,6 +49,7 @@ const SUGGESTED_BENEFITS = [
 
 export default function CompanyProfile() {
   const { showToast } = useToast();
+  const { location: detectedLocation, detecting: detectingLocation, detect: detectLocation } = useLocationDetect();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
@@ -411,6 +413,28 @@ export default function CompanyProfile() {
                       min="1900"
                       max={new Date().getFullYear()}
                     />
+                  </div>
+                  <div className="md:col-span-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const loc = await detectLocation();
+                        if (loc) {
+                          const update = {};
+                          if (loc.country) update.country = loc.country;
+                          if (loc.city) update.location = loc.province ? `${loc.city}, ${loc.province}` : loc.city;
+                          if (Object.keys(update).length) setFormData(prev => ({ ...prev, ...update }));
+                          showToast(`📍 Detected: ${loc.city || loc.country}`, 'success');
+                        } else {
+                          showToast('Could not detect location', 'info');
+                        }
+                      }}
+                      disabled={detectingLocation}
+                      className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 disabled:opacity-50 mb-2"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      {detectingLocation ? 'Detecting...' : '📍 Use my location'}
+                    </button>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>

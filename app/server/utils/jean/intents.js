@@ -122,6 +122,23 @@ const INTENTS = {
     requiresAuth: true,
     requiredRole: 'employer',
   },
+  hire_someone: {
+    patterns: [
+      /\b(i\s*need|need|looking\s*for|want|hiring|hire|recruiting|recruit)\b.*\b(a|an|someone|wanpela)\b/i,
+      /\bmi\s*nidim\s*(wanpela|sampela)/i, // Tok Pisin: I need someone
+      /\b(driver|mechanic|accountant|worker|staff|cleaner|security|cook|teacher|nurse|engineer)\b.*\b(in|at|for|long)\b/i,
+    ],
+    priority: 7,
+    requiresAuth: false, // Allow WhatsApp users to trigger this
+  },
+  need_worker: {
+    patterns: [
+      /\bneed\s*(a|an)?\s*(driver|mechanic|accountant|worker|staff)/i,
+      /\blooking\s*for\s*(staff|worker|employee|someone)/i,
+    ],
+    priority: 7,
+    requiresAuth: false,
+  },
   upload_job_document: {
     patterns: [
       /\b(upload|attach|send)\b.*\b(pdf|doc|document|file|jd|description)\b/i,
@@ -141,6 +158,26 @@ const INTENTS = {
     priority: 5,
     requiresAuth: true,
     requiredRole: 'employer',
+  },
+  check_my_jobs_wa: {
+    patterns: [
+      /\bhow\s*(are|is)\s*my\s*job/i,
+      /\bmy\s*post(s|ing)?/i,
+      /\bjob\s*stats?\b/i,
+      /\bhow.*doing\b/i,
+    ],
+    priority: 5,
+    requiresAuth: false, // WhatsApp users
+  },
+  payment_confirm: {
+    patterns: [
+      /\b(i'?ve?\s*)?(paid|sent|transferred|made\s*payment)/i,
+      /\bhere'?s?\s*(the)?\s*(receipt|proof|payment)/i,
+      /\bpayment\s*(done|sent|complete)/i,
+      /\bmi\s*pinis\s*pei/i, // Tok Pisin: I've paid
+    ],
+    priority: 8,
+    requiresAuth: false,
   },
   view_applicants: {
     patterns: [
@@ -212,6 +249,23 @@ const INTENTS = {
       /\b(price|pricing|cost|plan|package|credit|how\s*much|fee|pay|mani)\b/i,
     ],
     priority: 4,
+  },
+  buy_credits: {
+    patterns: [
+      /\b(buy|purchase|get|add)\b.*\b(credit|package|plan)\b/i,
+      /\bhow\s*much.*\bpost\b/i,
+      /\bwant\s*(more)?\s*credit/i,
+    ],
+    priority: 6,
+    requiresAuth: false, // WhatsApp users can inquire
+  },
+  sme_pricing: {
+    patterns: [
+      /\bsme\s*pricing\b/i,
+      /\bwhatsapp.*pric/i,
+      /\bsmall\s*business.*pric/i,
+    ],
+    priority: 6,
   },
 
   // ─── Auth ──────────────────────────────────────────────

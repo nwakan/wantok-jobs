@@ -99,8 +99,46 @@ class Jean {
       return { message: getResponse('feature_disabled', 'jean_disabled') };
     }
 
-    const { userId, user, pageContext, file } = opts;
+    const { userId, user, pageContext, file, channel, phoneNumber } = opts;
     const sessionToken = opts.sessionToken || crypto.randomBytes(16).toString('hex');
+
+    // WhatsApp employer flow routing
+    const isWhatsApp = channel === 'whatsapp' || phoneNumber;
+    if (isWhatsApp && phoneNumber) {
+      const waHandler = require('./whatsapp-employer');
+      
+      // Check if this is an employer or potential employer
+      const employer = actions.getEmployerByPhone(db, phoneNumber);
+      
+      // If no session but has phoneNumber, handle as WhatsApp employer
+      if (!userId && !employer) {
+        // New employer greeting/registration flow
+        const greeting = waHandler.handleEmployerGreeting(db, phoneNumber, null);
+        if (greeting.is_new) {
+          // Start registration flow
+          const flow = new FlowEngine(db, null, sessionToken);
+          const flowResult = await flow.start('wa-register-employer');
+          return { ...flowResult, sessionToken };
+        }
+      }
+      
+      // Existing employer — route through WhatsApp handler
+      if (employer || (user && user.role === 'employer')) {
+        const effectiveUserId = employer?.user_id || userId;
+        // Check for hire/posting intents
+        const { intent } = classify(message, { user: user || { role: 'employer' }, currentFlow: null });
+        
+        if (['hire_someone', 'need_worker'].includes(intent)) {
+          // Start quick job posting
+          const session = this.getSession(effectiveUserId, sessionToken);
+          const result = await waHandler.handleQuickJobPost(db, effectiveUserId, message, null);
+          if (result.flowState) {
+            this.updateFlow(session.id, 'wa-quick-post-active', result.flowState);
+          }
+          return { ...result, sessionToken: session.session_token };
+        }
+      }
+    }
 
     if (!userId && !actions.isFeatureEnabled(db, 'guest_chat_enabled')) {
       return { message: getResponse('needs_login', 'default') };
@@ -300,6 +338,65 @@ class Jean {
           quickReplies: ['Register Free', 'Post a Job', 'Contact Sales'],
           intent,
         };
+
+      case 'buy_credits':
+      case 'sme_pricing': {
+        if (!user) return { message: "To buy credits, I need to know who you are! Please log in or register first. 😊", intent };
+        const pricing = require('./sme-pricing');
+        return {
+          message: personality.humanize(pricing.formatPricingMessage(db, user.id)),
+          quickReplies: ['Free Trial', 'Single Post', 'Starter Pack', 'Monthly Plan'],
+          intent,
+        };
+      }
+
+      case 'hire_someone':
+      case 'need_worker': {
+        // WhatsApp employer quick post
+        if (!user || user.role !== 'employer') {
+          return {
+            message: personality.humanize("I can help you post a job! First, you'll need an employer account. Let me set that up quickly — just takes a minute. 😊"),
+            quickReplies: ['Set Up Account', 'Learn More'],
+            intent,
+          };
+        }
+        const waHandler = require('./whatsapp-employer');
+        const result = await waHandler.handleQuickJobPost(db, user.id, message, null);
+        if (result.flowState) {
+          this.updateFlow(session.id, 'wa-quick-post-active', result.flowState);
+        }
+        return result;
+      }
+
+      case 'check_my_jobs_wa': {
+        if (!user || user.role !== 'employer') {
+          return { message: getResponse('needs_role', 'employer'), intent };
+        }
+        return this.handleManageJobs(user);
+      }
+
+      case 'payment_confirm': {
+        if (!user) return { message: getResponse('needs_login', 'default'), intent };
+        // Extract reference code
+        const refMatch = message.match(/WJ\d+[A-Z0-9]+/i);
+        if (refMatch) {
+          return {
+            message: personality.humanize(
+              `✅ Payment confirmation received for ${refMatch[0]}!\n\n` +
+              `Mi bai checkim payment bilong yu. You'll get a notification when approved (usually within 2-24 hours).\n\n` +
+              `Need help? Contact support@wantokjobs.com 📧`
+            ),
+            quickReplies: ['Check My Credits', 'Post a Job'],
+            intent,
+          };
+        }
+        return {
+          message: personality.humanize(
+            "I didn't catch your reference code. When you made the payment, you should have received a code like 'WJ12345ABC'. Can you share that?"
+          ),
+          intent,
+        };
+      }
 
       case 'help_register':
         return {

@@ -590,6 +590,218 @@ const actions = {
     const completed = db.prepare("SELECT COUNT(*) as c FROM feature_requests WHERE status = 'completed'").get().c;
     return { total, planned, inProgress, completed };
   },
+
+  // ─── WhatsApp Employers ────────────────────────────────
+  getEmployerByPhone(db, phoneNumber) {
+    try {
+      return db.prepare(`
+        SELECT we.*, u.id as user_id, u.name, u.email, u.role, pe.company_name, pe.location
+        FROM whatsapp_employers we
+        JOIN users u ON we.user_id = u.id
+        LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+        WHERE we.phone_number = ?
+      `).get(phoneNumber);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  linkPhoneToEmployer(db, phoneNumber, userId) {
+    try {
+      db.prepare(`
+        INSERT OR REPLACE INTO whatsapp_employers (phone_number, user_id, verified, created_at)
+        VALUES (?, ?, 0, datetime('now'))
+      `).run(phoneNumber, userId);
+      return { success: true };
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  createQuickEmployer(db, phoneNumber, companyName, location) {
+    try {
+      const email = `whatsapp_${phoneNumber.replace(/\+/g, '')}@temp.wantokjobs.com`;
+      const userResult = db.prepare(`
+        INSERT INTO users (email, name, role, password_hash, account_status, email_verified, created_at)
+        VALUES (?, ?, 'employer', '', 'unverified', 0, datetime('now'))
+      `).run(email, companyName);
+
+      const userId = userResult.lastInsertRowid;
+
+      db.prepare(`
+        INSERT INTO profiles_employer (user_id, company_name, location, country, profile_complete)
+        VALUES (?, ?, ?, 'Papua New Guinea', 0)
+      `).run(userId, companyName, location || null);
+
+      db.prepare(`
+        INSERT INTO whatsapp_employers (phone_number, user_id, verified, created_at)
+        VALUES (?, ?, 0, datetime('now'))
+      `).run(phoneNumber, userId);
+
+      db.prepare(`
+        INSERT INTO credit_wallets (user_id, balance, reserved_balance)
+        VALUES (?, 0, 0)
+      `).run(userId);
+
+      return { success: true, user_id: userId };
+    } catch (e) {
+      logger.error('Failed to create quick employer:', e.message);
+      return { error: e.message };
+    }
+  },
+
+  getLocationStats(db, location) {
+    if (!location) return { jobseekers: 0, active_jobs: 0 };
+    try {
+      const jobseekers = db.prepare(`
+        SELECT COUNT(DISTINCT pj.user_id) as count
+        FROM profiles_jobseeker pj
+        JOIN users u ON pj.user_id = u.id
+        WHERE pj.location LIKE ? AND u.account_status = 'active'
+      `).get(`%${location}%`);
+
+      const jobs = db.prepare(`
+        SELECT COUNT(*) as count FROM jobs 
+        WHERE location LIKE ? AND status = 'active'
+      `).get(`%${location}%`);
+
+      return {
+        jobseekers: jobseekers?.count || 0,
+        active_jobs: jobs?.count || 0,
+      };
+    } catch (e) {
+      return { jobseekers: 0, active_jobs: 0 };
+    }
+  },
+
+  getJobPerformanceStats(db, category, location) {
+    try {
+      const params = [];
+      let where = "WHERE j.status IN ('active', 'closed') AND j.created_at >= datetime('now', '-90 days')";
+      
+      if (category) {
+        where += " AND j.category_slug = ?";
+        params.push(category);
+      }
+      if (location) {
+        where += " AND j.location LIKE ?";
+        params.push(`%${location}%`);
+      }
+
+      const stats = db.prepare(`
+        SELECT 
+          AVG(COALESCE((SELECT COUNT(*) FROM applications WHERE job_id = j.id), 0)) as avg_applications
+        FROM jobs j
+        ${where}
+      `).get(...params);
+
+      return {
+        avg_applications: Math.round(stats?.avg_applications || 0),
+      };
+    } catch (e) {
+      return { avg_applications: 0 };
+    }
+  },
+
+  getAlertSubscribers(db, category, location) {
+    try {
+      const params = [];
+      let where = "WHERE active = 1";
+      
+      if (category) {
+        where += " AND (categories LIKE ? OR categories IS NULL)";
+        params.push(`%${category}%`);
+      }
+      if (location) {
+        where += " AND (location LIKE ? OR location IS NULL)";
+        params.push(`%${location}%`);
+      }
+
+      const count = db.prepare(`
+        SELECT COUNT(*) as count FROM job_alerts ${where}
+      `).get(...params);
+
+      return count?.count || 0;
+    } catch (e) {
+      return 0;
+    }
+  },
+
+  // ─── Upsell & Retention ────────────────────────────────
+  getExpiringJobs(db, days = 3) {
+    try {
+      return db.prepare(`
+        SELECT j.id, j.title, j.employer_id, j.application_deadline,
+               u.name as employer_name, pe.company_name
+        FROM jobs j
+        JOIN users u ON j.employer_id = u.id
+        LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+        WHERE j.status = 'active' 
+          AND j.application_deadline IS NOT NULL
+          AND date(j.application_deadline) <= date('now', '+' || ? || ' days')
+          AND date(j.application_deadline) > date('now')
+        ORDER BY j.application_deadline ASC
+      `).all(days);
+    } catch (e) {
+      return [];
+    }
+  },
+
+  getInactiveEmployers(db, days = 30) {
+    try {
+      return db.prepare(`
+        SELECT DISTINCT u.id, u.name, u.email, pe.company_name,
+               MAX(j.created_at) as last_post
+        FROM users u
+        JOIN profiles_employer pe ON u.id = pe.user_id
+        LEFT JOIN jobs j ON u.id = j.employer_id
+        WHERE u.role = 'employer' 
+          AND u.account_status = 'active'
+        GROUP BY u.id
+        HAVING last_post IS NULL OR date(last_post) < date('now', '-' || ? || ' days')
+        ORDER BY last_post DESC
+      `).all(days);
+    } catch (e) {
+      return [];
+    }
+  },
+
+  generateUpsellMessage(db, userId) {
+    const jobs = db.prepare(`
+      SELECT COUNT(*) as total, 
+             SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active
+      FROM jobs WHERE employer_id = ?
+    `).get(userId);
+
+    const balance = db.prepare('SELECT balance FROM credit_wallets WHERE user_id = ?').get(userId);
+    const credits = balance?.balance || 0;
+
+    if (credits > 0) {
+      return `You have ${credits} credit${credits > 1 ? 's' : ''} available! Time to post ${credits === 1 ? 'another job' : 'more jobs'}? 🚀`;
+    }
+
+    if (jobs.active === 0 && jobs.total > 0) {
+      return `Your previous jobs did well! Ready to hire again? Mi stap hia long helpim yu! 💼`;
+    }
+
+    return `Need to post more jobs? Mi save helpim yu! Check out our packages — bulk discounts available. 💰`;
+  },
+
+  generateRetentionMessage(db, userId) {
+    const lastJob = db.prepare(`
+      SELECT j.title, j.created_at,
+             (SELECT COUNT(*) FROM applications WHERE job_id = j.id) as applicant_count
+      FROM jobs j
+      WHERE j.employer_id = ?
+      ORDER BY j.created_at DESC LIMIT 1
+    `).get(userId);
+
+    if (!lastJob) {
+      return `Haven't posted in a while? The PNG job market is active — plenty of quality candidates waiting! Mi ken helpim yu! 🙌`;
+    }
+
+    return `Last time you posted "${lastJob.title}" you got ${lastJob.applicant_count || 0} applicants! Ready to find more great people? 🌟`;
+  },
 };
 
 module.exports = actions;

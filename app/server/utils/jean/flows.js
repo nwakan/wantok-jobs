@@ -578,6 +578,87 @@ const FLOW_DEFS = {
       };
     },
   },
+
+  // ─── WhatsApp Quick Post ───────────────────────────────
+  'wa-quick-post': {
+    steps: [
+      {
+        key: 'job_description',
+        ask: "Tell me about the job you want to post. Include:\n• Job title\n• Location\n• Salary (optional)\n\nFor example: 'Driver in Lae, K800 per fortnight'",
+        field: 'job_description',
+        validate: (v) => v.length < 10 ? 'Please give me more detail about the job.' : null,
+      },
+    ],
+    onStart: async (ctx) => {
+      return { message: getResponse('post_job', 'wa_start') || "Orait! Let's post your job. This will be quick — only takes a minute! 😊" };
+    },
+    onComplete: async (ctx, collected) => {
+      // The actual posting is handled by whatsapp-employer.js
+      return {
+        message: 'Processing your job post...',
+        awaitingJobPost: collected.job_description,
+      };
+    },
+  },
+
+  // ─── WhatsApp Register Employer ────────────────────────
+  'wa-register-employer': {
+    steps: [
+      {
+        key: 'company_name',
+        ask: "What's your company name?",
+        field: 'company_name',
+        validate: (v) => v.length < 2 ? 'Company name is too short.' : null,
+      },
+      {
+        key: 'location',
+        ask: "Where is your company based? (e.g. 'Lae, Morobe' or 'Port Moresby, NCD')",
+        field: 'location',
+      },
+    ],
+    onStart: async (ctx) => {
+      return { message: personality.humanize("Great! Let's set up your account. Just need a couple details — em i isi tasol! 😊") };
+    },
+    onComplete: async (ctx, collected) => {
+      return {
+        message: 'Setting up your account...',
+        registrationData: collected,
+      };
+    },
+  },
+
+  // ─── WhatsApp Buy Credits ──────────────────────────────
+  'wa-buy-credits': {
+    steps: [
+      {
+        key: 'package_selection',
+        ask: (ctx) => {
+          const pricing = require('./sme-pricing');
+          return pricing.formatPricingMessage(ctx.db, ctx.userId);
+        },
+        field: 'package_key',
+        transform: (input) => {
+          const lower = input.toLowerCase();
+          if (/free|trial/.test(lower)) return 'free_trial';
+          if (/single|one|1/.test(lower)) return 'single';
+          if (/starter.*3|3.*pack/.test(lower)) return 'starter_3';
+          if (/business|starter.*5|5.*pack/.test(lower)) return 'starter_5';
+          if (/monthly|month|10/.test(lower)) return 'monthly';
+          return null;
+        },
+        validate: (v) => !v ? 'Please choose a package (e.g. "Single Post" or "Starter Pack")' : null,
+      },
+    ],
+    onStart: async (ctx) => {
+      return { message: personality.humanize("Let's get you some credits! Here are the options:") };
+    },
+    onComplete: async (ctx, collected) => {
+      return {
+        message: 'Processing payment details...',
+        selectedPackage: collected.package_key,
+      };
+    },
+  },
 };
 
 // ─── Flow Engine ─────────────────────────────────────────

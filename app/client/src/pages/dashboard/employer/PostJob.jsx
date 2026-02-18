@@ -3,9 +3,10 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { jobs as jobsAPI } from '../../../api';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../components/Toast';
+import useLocationDetect from '../../../hooks/useLocationDetect';
 import { 
   Sparkles, AlertCircle, Check, X, Plus, Info, 
-  Globe, Mail, ExternalLink, HelpCircle 
+  Globe, Mail, ExternalLink, HelpCircle, MapPin, Navigation 
 } from 'lucide-react';
 
 const CLIENT_API = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
@@ -17,6 +18,7 @@ export default function PostJob() {
   const { showToast } = useToast();
   const descriptionRef = useRef(null);
 
+  const { location: detectedLocation, detecting: detectingLocation, detect: detectLocation } = useLocationDetect();
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -522,6 +524,31 @@ export default function PostJob() {
               </p>
             </div>
 
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const loc = await detectLocation();
+                  if (loc) {
+                    const update = {};
+                    if (loc.country) update.country = loc.country;
+                    if (loc.city) update.location = loc.province ? `${loc.city}, ${loc.province}` : loc.city;
+                    if (Object.keys(update).length) setFormData(prev => ({ ...prev, ...update }));
+                    showToast(`📍 Detected: ${loc.city || loc.country}`, 'success');
+                  } else {
+                    showToast('Could not detect location — please select manually', 'info');
+                  }
+                }}
+                disabled={detectingLocation}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 disabled:opacity-50"
+              >
+                <Navigation className="w-4 h-4" />
+                {detectingLocation ? 'Detecting...' : '📍 Use my location'}
+              </button>
+              {detectedLocation && (
+                <span className="text-xs text-green-600">✓ {detectedLocation.city || detectedLocation.country}</span>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
