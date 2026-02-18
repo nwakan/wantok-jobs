@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { profile, savedResumes } from '../../../api';
 import { useToast } from '../../../components/Toast';
 import { Link } from 'react-router-dom';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function CandidateSearch() {
   const [candidates, setCandidates] = useState([]);
@@ -298,7 +299,7 @@ export default function CandidateSearch() {
                         </div>
                         <p className="text-gray-700 font-medium mb-2">{candidate.headline}</p>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span>📍 {candidate.location}</span>
+                          <span>{getFlag(candidate)} {candidate.location}</span>
                           <span>💼 {candidate.experience_years} years experience</span>
                           <span>⏰ Available: {candidate.availability}</span>
                         </div>

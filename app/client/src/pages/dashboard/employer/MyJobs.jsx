@@ -4,6 +4,7 @@ import { jobs as jobsAPI } from '../../../api';
 import { useToast } from '../../../components/Toast';
 import { timeAgo } from '../../../utils/helpers';
 import { Download } from 'lucide-react';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function MyJobs() {
   const { showToast } = useToast();
@@ -253,7 +254,7 @@ export default function MyJobs() {
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
-                        📍 {job.location || 'Remote'}, {job.country}
+                        {getFlag(job)} {job.location || 'Remote'}, {job.country}
                       </span>
                       <span className="flex items-center gap-1">
                         💼 {job.job_type}

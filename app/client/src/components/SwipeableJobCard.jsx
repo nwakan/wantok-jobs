@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Heart, X } from 'lucide-react';
 import { timeAgo, stripHTML, truncate, isNewJob, isHotJob } from '../utils/helpers';
 import { formatPNGSalary, needsLogoPlaceholder, generateCompanyLogoPlaceholder, getDisplayCompanyName } from '../utils/pngHelpers';
+import { getFlag } from '../utils/countryFlags';
 import OptimizedImage from './OptimizedImage';
 import { useSwipeActions } from '../hooks/useSwipeActions';
 import { useLanguage } from '../context/LanguageContext';
@@ -141,7 +142,7 @@ export default function SwipeableJobCard({
             <div className="flex flex-wrap gap-2 mb-3">
               {job.location && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
-                  📍 {job.location}
+                  {getFlag(job)} {job.location}
                 </span>
               )}
               {job.job_type && (

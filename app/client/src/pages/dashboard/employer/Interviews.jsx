@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../../api';
+import { getFlag } from '../../../utils/countryFlags';
 
 const STATUS_COLORS = {
   proposed: 'bg-yellow-100 text-yellow-800',
@@ -177,7 +178,7 @@ export default function Interviews() {
                     </p>
                   )}
 
-                  {i.location && <p className="text-sm text-gray-500 mt-1">📍 {i.location}</p>}
+                  {i.location && <p className="text-sm text-gray-500 mt-1">{getFlag(i)} {i.location}</p>}
                   {i.video_link && <p className="text-sm text-blue-500 mt-1"><a href={i.video_link} target="_blank" rel="noreferrer">🔗 Video Link</a></p>}
                   {i.notes && <p className="text-sm text-gray-500 mt-1 italic">"{i.notes}"</p>}
                 </div>

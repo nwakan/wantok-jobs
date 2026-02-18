@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { savedResumes } from '../../../api';
 import { useToast } from '../../../components/Toast';
 import { Link } from 'react-router-dom';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function SavedCandidates() {
   const [savedList, setSavedList] = useState([]);
@@ -119,7 +120,7 @@ export default function SavedCandidates() {
                   </div>
                   <p className="text-gray-700 font-medium mb-1">{candidate.headline}</p>
                   <p className="text-sm text-gray-600 mb-2">
-                    📍 {candidate.location} • {candidate.experience_years} years experience
+                    {getFlag(candidate)} {candidate.location} • {candidate.experience_years} years experience
                   </p>
                   <p className="text-xs text-gray-500">
                     Saved {new Date(candidate.saved_at).toLocaleDateString()}

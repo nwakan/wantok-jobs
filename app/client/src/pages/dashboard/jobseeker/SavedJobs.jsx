@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { savedJobs as savedJobsAPI, applications } from '../../../api';
 import { useToast } from '../../../components/Toast';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function SavedJobs() {
   const { showToast } = useToast();
@@ -120,7 +121,7 @@ export default function SavedJobs() {
                   {/* Details */}
                   <div className="space-y-2 text-sm text-gray-600 mb-4 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📍</span>
+                      <span className="text-lg">{getFlag(job)}</span>
                       <span>{job.location}</span>
                     </div>
                     <div className="flex items-center gap-2">

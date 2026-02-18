@@ -5,6 +5,7 @@ import PageHead from '../components/PageHead';
 import { CompanyCardSkeleton } from '../components/SkeletonLoader';
 import api from '../api';
 import OptimizedImage from '../components/OptimizedImage';
+import { getFlag, getCountryFlag, COUNTRY_FLAGS } from '../utils/countryFlags';
 
 const COUNTRIES = [
   { value: '', label: '🌏 All Countries' },
@@ -74,24 +75,8 @@ const LOCATIONS = [
 
 const PER_PAGE = 24;
 
-// Country emoji map
-const COUNTRY_EMOJI_MAP = {
-  'Papua New Guinea': '🇵🇬',
-  'Fiji': '🇫🇯',
-  'Solomon Islands': '🇸🇧',
-  'Vanuatu': '🇻🇺',
-  'Samoa': '🇼🇸',
-  'Tonga': '🇹🇴',
-  'Tuvalu': '🇹🇻',
-  'Palau': '🇵🇼',
-  'Kiribati': '🇰🇮',
-  'Nauru': '🇳🇷',
-  'Marshall Islands': '🇲🇭',
-  'Federated States of Micronesia': '🇫🇲',
-  'Cook Islands': '🇨🇰',
-  'Niue': '🇳🇺',
-  'New Caledonia': '🇳🇨',
-};
+// Country emoji map (imported from shared utility)
+const COUNTRY_EMOJI_MAP = COUNTRY_FLAGS;
 
 // Browse by Country Component
 function BrowseByCountry({ onCountryClick }) {
@@ -514,7 +499,7 @@ export default function Companies() {
                       {/* Location + Country */}
                       {(company.location || company.country) && (
                         <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="flex-shrink-0">{getFlag(company)}</span>
                           <span className="truncate">{[company.location, company.country].filter(Boolean).join(', ')}</span>
                         </div>
                       )}

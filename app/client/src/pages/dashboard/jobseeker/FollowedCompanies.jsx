@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { companyFollows } from '../../../api';
 import { useToast } from '../../../components/Toast';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function FollowedCompanies() {
   const { showToast } = useToast();
@@ -89,7 +90,7 @@ export default function FollowedCompanies() {
                     <p className="text-sm text-gray-600">{company.industry}</p>
                   )}
                   {company.location && (
-                    <p className="text-sm text-gray-500">📍 {company.location}</p>
+                    <p className="text-sm text-gray-500">{getFlag(company)} {company.location}</p>
                   )}
                 </div>
               </div>

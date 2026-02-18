@@ -11,6 +11,7 @@ import {
   CheckSquare, Square, ChevronDown, ChevronUp, Search,
   Eye, Calendar, Award, TrendingUp, Clock, Users
 } from 'lucide-react';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function Applicants() {
   const { jobId } = useParams();
@@ -686,7 +687,7 @@ export default function Applicants() {
                   <p className="text-gray-600">{selectedApplicant.applicant_email}</p>
                   {selectedApplicant.phone && <p className="text-gray-600">{selectedApplicant.phone}</p>}
                   {selectedApplicant.applicant_location && (
-                    <p className="text-sm text-gray-500 mt-1">📍 {selectedApplicant.applicant_location}</p>
+                    <p className="text-sm text-gray-500 mt-1">{getFlag({location: selectedApplicant.applicant_location})} {selectedApplicant.applicant_location}</p>
                   )}
                   <div className="mt-3 flex items-center gap-3">
                     <ApplicationStatusBadge status={selectedApplicant.status} />

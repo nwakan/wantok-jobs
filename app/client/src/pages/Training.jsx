@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { training } from '../api';
 import PageHead from '../components/PageHead';
 import OptimizedImage from '../components/OptimizedImage';
+import { getFlag } from '../utils/countryFlags';
 
 export default function Training() {
   const [providers, setProviders] = useState([]);
@@ -208,7 +209,7 @@ export default function Training() {
                     )}
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">{provider.name}</h3>
-                      {provider.location && <p className="text-sm text-gray-500">📍 {provider.location}</p>}
+                      {provider.location && <p className="text-sm text-gray-500">{getFlag({location: provider.location})} {provider.location}</p>}
                       {provider.category && <p className="text-sm text-primary-600">{provider.category}</p>}
                     </div>
                   </div>

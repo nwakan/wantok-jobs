@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../../api';
+import { getFlag } from '../../../utils/countryFlags';
 
 const STATUS_COLORS = {
   proposed: 'bg-yellow-100 text-yellow-800',
@@ -84,7 +85,7 @@ export default function JobseekerInterviews() {
                     </div>
 
                     {i.type && <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Type: <strong>{i.type}</strong></p>}
-                    {i.location && <p className="text-sm text-gray-600 mb-1">📍 {i.location}</p>}
+                    {i.location && <p className="text-sm text-gray-600 mb-1">{getFlag({location: i.location})} {i.location}</p>}
                     {i.video_link && <p className="text-sm mb-1"><a href={i.video_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">🔗 Video Link</a></p>}
                     {i.notes && <p className="text-sm text-gray-500 italic mb-3">"{i.notes}"</p>}
                     {i.duration_minutes && <p className="text-sm text-gray-500 mb-3">Duration: {i.duration_minutes} minutes</p>}
@@ -136,7 +137,7 @@ export default function JobseekerInterviews() {
                       {i.duration_minutes && ` · ${i.duration_minutes} min`}
                       {i.type && ` · ${i.type}`}
                     </p>
-                    {i.location && <p className="text-sm text-gray-500 mt-1">📍 {i.location}</p>}
+                    {i.location && <p className="text-sm text-gray-500 mt-1">{getFlag({location: i.location})} {i.location}</p>}
                     {i.video_link && (
                       <a href={i.video_link} target="_blank" rel="noreferrer"
                         className="inline-block mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">

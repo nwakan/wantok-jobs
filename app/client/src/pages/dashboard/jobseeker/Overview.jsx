@@ -14,6 +14,7 @@ import {
 import ReferralSection from '../../../components/ReferralSection';
 import BadgeGrid from '../../../components/BadgeGrid';
 import { useBadgeCheck } from '../../../hooks/useBadgeCheck';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function JobseekerOverview() {
   const { user } = useAuth();
@@ -574,7 +575,7 @@ export default function JobseekerOverview() {
                       <p className="text-sm text-gray-700 mb-2">{app.company_name}</p>
                       <div className="flex items-center gap-3 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
-                          📍 {app.location}
+                          {getFlag({location: app.location})} {app.location}
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
@@ -650,7 +651,7 @@ export default function JobseekerOverview() {
                         </div>
                         <p className="text-gray-700 font-medium mb-2">{job.company_name}</p>
                         <div className="flex flex-wrap gap-3 text-sm text-gray-600">
-                          <span className="flex items-center gap-1">📍 {job.location}</span>
+                          <span className="flex items-center gap-1">{getFlag(job)} {job.location}</span>
                           <span className="flex items-center gap-1">💼 {job.job_type}</span>
                           {job.salary_min && job.salary_max && (
                             <span className="flex items-center gap-1 font-semibold text-green-700">

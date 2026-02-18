@@ -7,6 +7,7 @@ import SearchFilters from '../components/SearchFilters';
 import { Flame, Sparkles, Globe, Bell, Briefcase, SlidersHorizontal, X, Bookmark } from 'lucide-react';
 import PageHead from '../components/PageHead';
 import { JobSearchSkeleton } from '../components/SkeletonLoader';
+import { getFlag } from '../utils/countryFlags';
 
 export default function JobSearch() {
   const { user } = useAuth();
@@ -401,7 +402,7 @@ export default function JobSearch() {
                     
                     {filters.location && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200">
-                        📍 {filters.location}
+                        {getFlag({location: filters.location})} {filters.location}
                         <button onClick={() => removeFilter('location')} className="ml-1 hover:text-primary-900" aria-label={`Remove location filter: ${filters.location}`}>×</button>
                       </span>
                     )}

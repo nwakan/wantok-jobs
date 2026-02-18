@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { jobs, profile, applications, savedJobs as savedJobsAPI } from '../../../api';
 import { useToast } from '../../../components/Toast';
 import { Link } from 'react-router-dom';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function Recommendations() {
   const [recommendedJobs, setRecommendedJobs] = useState([]);
@@ -284,7 +285,7 @@ export default function Recommendations() {
                   <p className="text-gray-700 font-medium mb-3">{job.company_name}</p>
                   
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-                    <span>📍 {job.location}</span>
+                    <span>{getFlag(job)} {job.location}</span>
                     <span>💼 {job.type}</span>
                     {job.salary_min && job.salary_max && (
                       <span>💰 K{job.salary_min.toLocaleString()} - K{job.salary_max.toLocaleString()}</span>

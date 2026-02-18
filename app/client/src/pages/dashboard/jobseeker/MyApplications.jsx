@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { applications } from '../../../api';
+import { getFlag } from '../../../utils/countryFlags';
 
 export default function MyApplications() {
   const [myApplications, setMyApplications] = useState([]);
@@ -340,7 +341,7 @@ export default function MyApplications() {
                   </div>
                   
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span>📍 {app.location}</span>
+                    <span>{getFlag({location: app.location})} {app.location}</span>
                     <span>💼 {app.job_type}</span>
                     {app.salary_min && app.salary_max && (
                       <span>💰 {app.salary_currency || 'K'}{app.salary_min.toLocaleString()} - {app.salary_currency || 'K'}{app.salary_max.toLocaleString()}</span>
