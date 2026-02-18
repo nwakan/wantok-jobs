@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -30,6 +31,7 @@ import JobDetail from './pages/JobDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import AdminLogin from './pages/AdminLogin';
 
 // === Public pages (lazy — secondary) ===
 const About = lazy(() => import('./pages/About'));
@@ -141,6 +143,7 @@ function App() {
               <Route path="jobs/:id" element={<JobDetail />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
+              <Route path="admin" element={<AdminLogin />} />
 
               {/* Public routes — lazy */}
               <Route path="about" element={<Lazy component={About} />} />
@@ -219,7 +222,7 @@ function App() {
               </Route>
 
               {/* Admin dashboard */}
-              <Route path="dashboard/admin" element={<ProtectedRoute role="admin" />}>
+              <Route path="dashboard/admin" element={<AdminRoute />}>
                 <Route index element={<Lazy component={AdminOverview} />} />
                 <Route path="users" element={<Lazy component={ManageUsers} />} />
                 <Route path="jobs" element={<Lazy component={ManageJobs} />} />

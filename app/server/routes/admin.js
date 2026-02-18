@@ -9,7 +9,28 @@ const rateLimitMonitor = require('../lib/rate-limit-monitor');
 
 const router = express.Router();
 
-// All routes require auth + admin role
+// Admin verification endpoint (before role check middleware)
+router.get('/verify', authenticateToken, (req, res) => {
+  try {
+    const user = db.prepare('SELECT id, email, role, name, email_verified, account_type, created_at FROM users WHERE id = ?').get(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied. Admin role required.' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    logger.error('Admin verify error', { error: error.message });
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// All other routes require auth + admin role
 router.use(authenticateToken, requireRole('admin'));
 
 // GET /rate-limits — Rate limit monitoring dashboard data
