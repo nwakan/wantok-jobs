@@ -478,24 +478,28 @@ if (process.env.NODE_ENV === 'production') {
 
   function injectMetaIntoHtml(htmlPath, meta, jsonLd) {
     let html = fs.readFileSync(htmlPath, 'utf-8');
-    const injected = [];
     if (meta) {
-      injected.push(`<title>${meta.title}</title>`);
-      injected.push(`<meta name="description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
-      injected.push(`<meta property="og:title" content="${(meta.title || '').replace(/"/g, '&quot;')}">`);
-      injected.push(`<meta property="og:description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
-      injected.push(`<meta property="og:image" content="${meta.image || ''}">`);
-      injected.push(`<meta property="og:url" content="${meta.url || ''}">`);
-      injected.push(`<meta property="og:type" content="${meta.type || 'website'}">`);
-      injected.push(`<meta name="twitter:card" content="summary_large_image">`);
-      injected.push(`<meta name="twitter:title" content="${(meta.title || '').replace(/"/g, '&quot;')}">`);
-      injected.push(`<meta name="twitter:description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
+      // Replace existing title
+      html = html.replace(/<title>[^<]*<\/title>/, `<title>${meta.title}</title>`);
+      // Replace existing meta description
+      html = html.replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
+      // Replace existing OG tags
+      html = html.replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${(meta.title || '').replace(/"/g, '&quot;')}">`);
+      html = html.replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
+      html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${meta.image || ''}">`);
+      html = html.replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="${meta.url || ''}">`);
+      html = html.replace(/<meta property="og:type"[^>]*>/, `<meta property="og:type" content="${meta.type || 'website'}">`);
+      // Replace existing Twitter tags
+      html = html.replace(/<meta name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${(meta.title || '').replace(/"/g, '&quot;')}">`);
+      html = html.replace(/<meta name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${(meta.description || '').replace(/"/g, '&quot;')}">`);
     }
     if (jsonLd) {
-      injected.push(`<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`);
-    }
-    if (injected.length) {
-      html = html.replace('</head>', injected.join('\n') + '\n</head>');
+      // Replace existing JSON-LD or add before </head>
+      if (html.includes('application/ld+json')) {
+        html = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`);
+      } else {
+        html = html.replace('</head>', `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>\n</head>`);
+      }
     }
     return html;
   }
