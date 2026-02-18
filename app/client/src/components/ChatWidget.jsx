@@ -7,6 +7,33 @@ import {
 
 const API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
 
+// CSRF token cache
+let csrfToken = null;
+async function getCsrfToken() {
+  if (csrfToken) return csrfToken;
+  try {
+    const res = await fetch('/api/csrf-token', { credentials: 'same-origin' });
+    const data = await res.json();
+    csrfToken = data.token;
+    return csrfToken;
+  } catch { return null; }
+}
+
+async function chatFetch(url, options = {}) {
+  const token = await getCsrfToken();
+  const headers = { ...options.headers };
+  if (token) headers['X-CSRF-Token'] = token;
+  const res = await fetch(url, { ...options, headers, credentials: 'same-origin' });
+  // If CSRF expired, refresh and retry once
+  if (res.status === 403) {
+    csrfToken = null;
+    const newToken = await getCsrfToken();
+    if (newToken) headers['X-CSRF-Token'] = newToken;
+    return fetch(url, { ...options, headers, credentials: 'same-origin' });
+  }
+  return res;
+}
+
 function getAuthHeader() {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -144,7 +171,7 @@ export default function ChatWidget() {
       } else {
         // No history — send a greeting via the API to get dynamic personality
         try {
-          const greetRes = await fetch(`${API_URL}/chat`, {
+          const greetRes = await chatFetch(`${API_URL}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
             body: JSON.stringify({ message: 'hi', sessionToken: data.sessionToken || sessionToken }),
@@ -172,7 +199,7 @@ export default function ChatWidget() {
     } catch (e) {
       // Fetch greeting from the chat API to get the dynamic personality-driven one
       try {
-        const greetRes = await fetch(`${API_URL}/chat`, {
+        const greetRes = await chatFetch(`${API_URL}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify({ message: 'hi', sessionToken }),
@@ -210,7 +237,7 @@ export default function ChatWidget() {
         jobId: location.pathname.match(/\/jobs\/(\d+)/)?.[1] || null,
       };
 
-      const res = await fetch(`${API_URL}/chat`, {
+      const res = await chatFetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({ message: text, sessionToken, pageContext }),
@@ -259,7 +286,7 @@ export default function ChatWidget() {
       formData.append('sessionToken', sessionToken);
       formData.append('pageContext', JSON.stringify({ path: location.pathname }));
 
-      const res = await fetch(`${API_URL}/chat/upload`, {
+      const res = await chatFetch(`${API_URL}/chat/upload`, {
         method: 'POST',
         headers: getAuthHeader(),
         body: formData,
