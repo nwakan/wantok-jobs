@@ -225,6 +225,26 @@ router.post('/register', validate(schemas.register), async (req, res) => {
       db.prepare('INSERT INTO profiles_employer (user_id) VALUES (?)').run(userId);
     }
 
+    // Auto-detect location from IP and prefill profile
+    try {
+      const { validateFromIP, toProfileLocation } = require('../lib/location-validator');
+      const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+      validateFromIP(clientIp).then(ipResult => {
+        if (ipResult && ipResult.country) {
+          const loc = toProfileLocation(ipResult);
+          if (loc) {
+            const table = role === 'jobseeker' ? 'profiles_jobseeker' : 'profiles_employer';
+            const sets = ['country = ?'];
+            const vals = [loc.country];
+            if (loc.location) { sets.push('location = ?'); vals.push(loc.location); }
+            vals.push(userId);
+            db.prepare(`UPDATE ${table} SET ${sets.join(', ')} WHERE user_id = ?`).run(...vals);
+            logger.info('Auto-filled location from IP', { userId, country: loc.country, city: loc.location, method: 'ip_geolocation' });
+          }
+        }
+      }).catch(() => {});
+    } catch (e) { /* non-critical */ }
+
     // Generate token
     const token = jwt.sign({ id: userId, email: safeEmail, role }, JWT_SECRET, { expiresIn: '7d' });
 

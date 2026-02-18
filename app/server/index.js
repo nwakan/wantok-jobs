@@ -323,6 +323,35 @@ app.get('/health', (req, res) => {
 });
 
 // Public stats endpoint
+// Auto-detect location from IP (for frontend auto-fill)
+app.get('/api/location/detect', async (req, res) => {
+  try {
+    const { validateFromIP } = require('./lib/location-validator');
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const result = await validateFromIP(clientIp);
+    if (result) {
+      res.json({ success: true, ...result });
+    } else {
+      res.json({ success: false, message: 'Could not determine location' });
+    }
+  } catch (error) {
+    res.json({ success: false, message: 'Location detection unavailable' });
+  }
+});
+
+// Validate location from multiple signals (used by WhatsApp handler + registration)
+app.post('/api/location/validate', async (req, res) => {
+  try {
+    const { validate } = require('./lib/location-validator');
+    const { phoneNumber, lat, lng, selfReported } = req.body;
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const result = await validate({ phoneNumber, ip: clientIp, lat, lng, selfReported });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.json({ success: false, message: 'Validation failed' });
+  }
+});
+
 app.get('/api/stats', (req, res) => {
   try {
     const statsCache = require('./lib/cache');
