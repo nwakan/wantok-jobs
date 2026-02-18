@@ -189,7 +189,7 @@ TEST_EMAIL=nick.wakan@gmail.com
 **Production Mode:**
 ```env
 EMAIL_MODE=live
-BREVO_API_KEY=xkeysib-...
+BREVO_API_KEY=[REDACTED]...
 ```
 - Emails sent to real recipients
 - Requires explicit `EMAIL_MODE=live` to activate
@@ -357,7 +357,7 @@ No errors detected. Service running cleanly.
 
 ```env
 # Brevo API (already configured)
-BREVO_API_KEY=xkeysib-...
+BREVO_API_KEY=[REDACTED]...
 FROM_EMAIL=noreply@wantokjobs.com
 FROM_NAME=WantokJobs
 

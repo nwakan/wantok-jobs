@@ -8,3 +8,8 @@ legacy-dump.sql
 candidates.json
 jobs.json
 app/.env
+FUNCTIONAL-AUDIT.md
+AUDIT-SUMMARY.md
+TASK-COMPLETE.md
+CRITICAL-FIX.sh
+FIX-VERIFICATION.md

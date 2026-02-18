@@ -299,7 +299,7 @@ NODE_ENV=production
 PORT=3001
 
 # Brevo Email (existing)
-BREVO_API_KEY=xkeysib-...
+BREVO_API_KEY=[REDACTED]...
 FROM_EMAIL=noreply@wantokjobs.com
 FROM_NAME=WantokJobs
 
