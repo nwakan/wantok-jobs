@@ -122,7 +122,7 @@ const PROVIDERS = {
     // NOTE: HuggingFace deprecated api-inference.huggingface.co (HTTP 410)
     // New endpoint router.huggingface.co does not resolve (DNS error)
     // Fallback disabled until HuggingFace provides working endpoint
-    baseUrl: 'router.huggingface.co', // DNS does not resolve as of 2026-02-18
+    baseUrl: 'router.huggingface.co', // DNS does not resolve - DISABLED, see canUseProvider override below
     path: '/models/sentence-transformers/all-MiniLM-L6-v2',
     maxBatch: 1,
     dailyLimit: { requests: 10000, embeddings: 10000 },
@@ -526,7 +526,7 @@ function getUsageStats() {
       name: provider.name,
       model: provider.model,
       dimensions: provider.dimensions,
-      available: name === 'huggingface' || !!provider.getKey(),
+      available: name !== 'huggingface' && !!provider.getKey(), // huggingface disabled - DNS broken
       requests: u.requests,
       embeddings: u.embeddings,
       errors: u.errors,

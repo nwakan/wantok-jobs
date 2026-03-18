@@ -1,0 +1,11 @@
+Legacy Dump SQLite Conversion Report
+File processed: legacy-dump-sqlite.sql
+Output SQL: legacy-dump-sqlite-FINAL.sql
+---
+CREATE TABLE blocks auto-patched: 130
+LOCK/UNLOCK lines removed: 260
+_binary token removals: 30
+Problematic/invalid INSERT or lines auto-commented: 11
+Malformed/Table definition lines auto-commented: 0
+
+Review for remaining MySQLisms or manual errors not caught by automation.

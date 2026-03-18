@@ -1,0 +1,25 @@
+npm error Missing script: "start"
+npm error
+npm error Did you mean one of these?
+npm error   npm star # Mark your favorite packages
+npm error   npm stars # View packages marked as favorites
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-03-02T06_12_32_517Z-debug-0.log
+npm warn exec The following package was not found and will be installed: serve@14.2.5
+/root/.npm/_npx/aab42732f01924e5/node_modules/arg/index.js:132
+						throw new ArgError(
+						      ^
+
+ArgError: unknown or unexpected option: --port
+    at arg (/root/.npm/_npx/aab42732f01924e5/node_modules/arg/index.js:132:13)
+    at parseArguments (file:///root/.npm/_npx/aab42732f01924e5/node_modules/serve/build/main.js:414:28)
+    at file:///root/.npm/_npx/aab42732f01924e5/node_modules/serve/build/main.js:503:40
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  code: 'ARG_UNKNOWN_OPTION'
+}
+
+Node.js v20.20.0

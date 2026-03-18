@@ -61,14 +61,10 @@ const apiCache = require('./middleware/cache');
 
 // Anti-scraping protection
 const { botBlocker, behaviorDetector, sanitizeResponse, honeypotSetup, securityHeaders } = require('./middleware/antiScrape');
-// Security headers apply globally to all responses
-app.use(securityHeaders);
-// Response sanitization applies globally
+app.use(botBlocker);
+app.use(behaviorDetector);
 app.use(sanitizeResponse);
-// Bot blocking and behavior detection scoped to /api/* only
-// Prevents false positives blocking frontend HTML pages and static assets
-app.use('/api', botBlocker);
-app.use('/api', behaviorDetector);
+app.use(securityHeaders);
 honeypotSetup(app);
 
 // Security headers (enhanced CSRF protection)

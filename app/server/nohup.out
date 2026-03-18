@@ -1,0 +1,48 @@
+
+> wantokjobs@1.0.0 start
+> node server/index.js
+
+📦 Database connection closed
+
+/a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/methods/wrappers.js:9
+	this[cppdb].exec(sql);
+	            ^
+SqliteError: no such column: category_slug
+    at Database.exec (/a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+    at initializeDatabase (/a0/usr/projects/project_1_-_wantokjobs/app/app/server/database.js:50:6)
+    at Object.<anonymous> (/a0/usr/projects/project_1_-_wantokjobs/app/app/server/database.js:790:1)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (/a0/usr/projects/project_1_-_wantokjobs/app/app/server/index.js:277:1) {
+  code: 'SQLITE_ERROR'
+}
+
+Node.js v20.20.0
+
+> wantokjobs@1.0.0 start
+> node server/index.js --port 4010
+
+📦 Database connection closed
+
+/a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/methods/wrappers.js:9
+	this[cppdb].exec(sql);
+	            ^
+SqliteError: no such column: category_slug
+    at Database.exec (/a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+    at initializeDatabase (/a0/usr/projects/project_1_-_wantokjobs/app/app/server/database.js:50:6)
+    at Object.<anonymous> (/a0/usr/projects/project_1_-_wantokjobs/app/app/server/database.js:790:1)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (/a0/usr/projects/project_1_-_wantokjobs/app/app/server/index.js:277:1) {
+  code: 'SQLITE_ERROR'
+}
+
+Node.js v20.20.0

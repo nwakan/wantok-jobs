@@ -47,6 +47,8 @@ const PACKAGES = {
   },
 };
 
+// ⚠️ ACTION REQUIRED: Replace placeholder bank account numbers before go-live!
+// Contact Nick to confirm real BSP and MiBank account details.
 const PAYMENT_DETAILS = {
   bsp: {
     bank: 'BSP',
