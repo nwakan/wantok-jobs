@@ -12,3 +12,8 @@ server/public/index.html
 
 # WhatsApp web.js auth
 .wwebjs_auth/
+
+# Backup files
+*.bak
+*.bak_*
+*.bak-*

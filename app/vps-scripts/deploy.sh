@@ -51,6 +51,10 @@ cd "$REPO_DIR" || {
 log "Stashing local changes..."
 git stash push -m "Auto-stash before deploy $(date +%s)" 2>&1 | tee -a "$LOGFILE" || true
 
+# Remove untracked files (backup/tmp files) that block git merge
+log "Cleaning untracked backup files..."
+git clean -fd --exclude=".env" --exclude="*.db" --exclude="uploads/" --exclude="data/" 2>&1 | tee -a "LOGFILE" || true
+
 # Pull latest code
 log "Pulling latest code from main branch..."
 if ! git pull origin main 2>&1 | tee -a "$LOGFILE"; then
