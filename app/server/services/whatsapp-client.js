@@ -1,4 +1,20 @@
 /**
+ * DUAL SYSTEM WARNING
+ * This file uses whatsapp-web.js (QR code auth).
+ * server/index.js ALSO loads whatsapp-webhook.js (Meta Cloud API).
+ *
+ * DO NOT run both on the same WhatsApp number - causes DOUBLE RESPONSES.
+ *
+ * PRODUCTION CHOICE:
+ *   A) Meta Cloud API (recommended): use whatsapp-webhook.js ONLY
+ *      -> Do NOT start jean-whatsapp.service on the VPS
+ *   B) QR Code (standalone/testing): run this file ONLY
+ *      -> Comment out line 467 in server/index.js
+ *
+ * Current setup: server/index.js line 467 loads webhook.js
+ * Therefore jean-whatsapp.service should be DISABLED in production.
+ */
+/**
  * WhatsApp Client Service for Jean AI
  * Uses whatsapp-web.js to connect a WhatsApp number as Jean's interface.
  * 
