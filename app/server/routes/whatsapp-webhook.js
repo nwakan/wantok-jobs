@@ -345,7 +345,7 @@ async function handleAccountLinking(session, message, phone) {
  * Handle WhatsApp-specific commands
  * Returns { handled: true, message: string } if handled
  */
-async function handleWhatsAppCommands(session, message, user) {
+async function handleWhatsAppCommands(session, message, user, phone) {
   const lower = message.toLowerCase().trim();
   
   // ─── Help / Menu ───────────────────────────────────────
@@ -768,7 +768,7 @@ async function handleIncomingMessage(msg) {
   }
 
   // ─── WhatsApp-Specific Commands ────────────────────────
-  const commandResult = await handleWhatsAppCommands(session, messageText, user);
+  const commandResult = await handleWhatsAppCommands(session, messageText, user, phone);
   if (commandResult.handled) {
     await sendWhatsAppMessage(phone, commandResult.message);
     return;
@@ -781,6 +781,8 @@ async function handleIncomingMessage(msg) {
       user: user || null,
       sessionToken: session.session_token,
       pageContext: 'whatsapp',
+      channel: 'whatsapp',
+      phoneNumber: phone,
     });
 
     const formattedText = formatForWhatsApp(response.message);

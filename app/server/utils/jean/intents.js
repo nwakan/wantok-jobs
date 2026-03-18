@@ -20,6 +20,13 @@ const INTENTS = {
     priority: 1,
   },
 
+  check_registration: {
+    patterns: [
+      /\b(is my number registered|check.*my.*number|am i registered|number.*linked|account.*linked|registered.*account|do i have.*account)\b/i,
+    ],
+    priority: 9,
+    requiresAuth: false,
+  },
   // ─── Job Search ────────────────────────────────────────
   search_jobs: {
     patterns: [

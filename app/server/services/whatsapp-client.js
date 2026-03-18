@@ -100,6 +100,15 @@ function formatForWhatsApp(text) {
     .trim();
 }
 
+
+// ─── Send message helper (avoids quoted/echo reply) ────────────────
+// IMPORTANT: Always use sendMsg() instead of msg.reply()
+// msg.reply() creates a quoted message that echoes the user's text
+async function sendMsg(from, text) {
+  const chatId = from.includes('@') ? from : from + '@c.us';
+  await client.sendMessage(chatId, text);
+}
+
 // ─── Account linking flow ───────────────────────────────────────
 
 async function handleAccountLinking(msg, session, text) {
@@ -115,15 +124,15 @@ async function handleAccountLinking(msg, session, text) {
           .run(user.id, session.id);
         // Update user's phone number
         db.prepare("UPDATE users SET phone = ? WHERE id = ?").run(session.phone_number, user.id);
-        await msg.reply(`✅ *Account linked!* You're now connected as *${user.name.split(' ')[0]}*.\n\nI can help you search jobs, apply, track applications, and more. Type *help* for a list of commands.`);
+        await sendMsg(msg.from, `✅ *Account linked!* You're now connected as *${user.name.split(' ')[0]}*.\n\nI can help you search jobs, apply, track applications, and more. Type *help* for a list of commands.`);
         return true;
       }
     } else if (session.otp_expires && new Date(session.otp_expires) <= new Date()) {
       db.prepare("UPDATE whatsapp_sessions SET flow_state = NULL, otp = NULL, otp_expires = NULL WHERE id = ?").run(session.id);
-      await msg.reply('⏰ That code has expired. Send your email again to get a new one.');
+      await sendMsg(msg.from, '⏰ That code has expired. Send your email again to get a new one.');
       return true;
     } else {
-      await msg.reply('❌ Wrong code. Please try again or send your email to get a new code.');
+      await sendMsg(msg.from, '❌ Wrong code. Please try again or send your email to get a new code.');
       return true;
     }
   }
@@ -137,10 +146,10 @@ async function handleAccountLinking(msg, session, text) {
       const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
       db.prepare("UPDATE whatsapp_sessions SET otp = ?, otp_expires = ?, flow_state = ? WHERE id = ?")
         .run(otp, expires, JSON.stringify({ step: 'awaiting_otp', pending_user_id: user.id }), session.id);
-      await msg.reply(`📧 Found your account, *${user.name.split(' ')[0]}*!\n\nYour verification code is: *${otp}*\n\nReply with this code to link your account. Expires in 10 minutes.`);
+      await sendMsg(msg.from, `📧 Found your account, *${user.name.split(' ')[0]}*!\n\nYour verification code is: *${otp}*\n\nReply with this code to link your account. Expires in 10 minutes.`);
       return true;
     } else {
-      await msg.reply(`❌ No account found for that email. Make sure you're using the email you registered with on WantokJobs.\n\nDon't have an account? Register at wantokjobs.com/register`);
+      await sendMsg(msg.from, `❌ No account found for that email. Make sure you're using the email you registered with on WantokJobs.\n\nDon't have an account? Register at wantokjobs.com/register`);
       return true;
     }
   }
@@ -178,7 +187,7 @@ async function handleJobSearch(msg, session, text) {
   `).all(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`);
   
   if (jobs.length === 0) {
-    await msg.reply(`🔍 No jobs found matching "${query}". Try different keywords or check wantokjobs.com for all listings.`);
+    await sendMsg(msg.from, `🔍 No jobs found matching "${query}". Try different keywords or check wantokjobs.com for all listings.`);
     return true;
   }
   
@@ -197,7 +206,7 @@ async function handleJobSearch(msg, session, text) {
   });
   response += `\n➡️ Reply *apply 1* to apply, or *more 1* for details.`;
   
-  await msg.reply(response);
+  await sendMsg(msg.from, response);
   return true;
 }
 
@@ -208,7 +217,7 @@ async function handleJobApply(msg, session, text) {
   if (!applyMatch) return false;
   
   if (!session.user_id) {
-    await msg.reply('📋 You need to link your account first to apply. Send me your WantokJobs email address to get started.');
+    await sendMsg(msg.from, '📋 You need to link your account first to apply. Send me your WantokJobs email address to get started.');
     return true;
   }
   
@@ -227,7 +236,7 @@ async function handleJobApply(msg, session, text) {
   }
   
   if (!jobId) {
-    await msg.reply('❓ Which job? Try *apply 1* (from search results) or *apply #123* (job ID).');
+    await sendMsg(msg.from, '❓ Which job? Try *apply 1* (from search results) or *apply #123* (job ID).');
     return true;
   }
   
@@ -239,23 +248,23 @@ async function handleJobApply(msg, session, text) {
   `).get(jobId);
   
   if (!job) {
-    await msg.reply('❌ Job not found or no longer active.');
+    await sendMsg(msg.from, '❌ Job not found or no longer active.');
     return true;
   }
   
   // Check if already applied
   const existing = db.prepare('SELECT id FROM applications WHERE job_id = ? AND jobseeker_id = ?').get(jobId, session.user_id);
   if (existing) {
-    await msg.reply(`📋 You've already applied for *${job.title}* at ${job.company_name || 'this employer'}.`);
+    await sendMsg(msg.from, `📋 You've already applied for *${job.title}* at ${job.company_name || 'this employer'}.`);
     return true;
   }
   
   // Create application
   try {
     db.prepare("INSERT INTO applications (job_id, jobseeker_id, status, applied_at) VALUES (?, ?, 'applied', datetime('now'))").run(jobId, session.user_id);
-    await msg.reply(`✅ *Applied!* Your application for *${job.title}* at ${job.company_name || 'employer'} has been submitted.\n\nType *my applications* to track your status.`);
+    await sendMsg(msg.from, `✅ *Applied!* Your application for *${job.title}* at ${job.company_name || 'employer'} has been submitted.\n\nType *my applications* to track your status.`);
   } catch(e) {
-    await msg.reply('❌ Something went wrong. Please try again or apply at wantokjobs.com.');
+    await sendMsg(msg.from, '❌ Something went wrong. Please try again or apply at wantokjobs.com.');
   }
   return true;
 }
@@ -266,7 +275,7 @@ async function handleApplicationStatus(msg, session, text) {
   if (!/^(?:my applications|check status|applications|status|ol aplai bilong mi)/i.test(text)) return false;
   
   if (!session.user_id) {
-    await msg.reply('📋 Link your account first by sending me your WantokJobs email.');
+    await sendMsg(msg.from, '📋 Link your account first by sending me your WantokJobs email.');
     return true;
   }
   
@@ -282,7 +291,7 @@ async function handleApplicationStatus(msg, session, text) {
   `).all(session.user_id);
   
   if (apps.length === 0) {
-    await msg.reply("📋 You haven't applied to any jobs yet. Type *search [keyword]* to find jobs!");
+    await sendMsg(msg.from, "📋 You haven't applied to any jobs yet. Type *search [keyword]* to find jobs!");
     return true;
   }
   
@@ -294,7 +303,52 @@ async function handleApplicationStatus(msg, session, text) {
     response += `\n${i + 1}. *${a.title}* at ${a.company_name || 'Employer'}\n   ${emoji} ${a.status.charAt(0).toUpperCase() + a.status.slice(1)}`;
   });
   
-  await msg.reply(response);
+  await sendMsg(msg.from, response);
+  return true;
+}
+
+
+// ─── Phone registration check ──────────────────────────────────────
+async function handlePhoneCheck(from, session, text) {
+  if (!/\b(registered|linked|my number|check.*number|number.*registered|account.*linked|is my|am i registered|do i have)\b/i.test(text)) return false;
+
+  const phone = from.replace('@c.us', '');
+  const user = findUserByPhone(phone);
+
+  if (user || session.user_id) {
+    const linkedUser = user || (session.user_id ? db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id) : null);
+    if (linkedUser) {
+      await sendMsg(from,
+        `✅ *Yes, your number is registered!*
+
+` +
+        `👤 Name: ${linkedUser.name}
+` +
+        `📧 Email: ${linkedUser.email}
+` +
+        `🎭 Role: ${linkedUser.role}
+
+` +
+        `Your WhatsApp is linked to your WantokJobs account. Type *help* to see what I can do for you!`
+      );
+      return true;
+    }
+  }
+
+  // Not registered
+  await sendMsg(from,
+    `❌ *Your number is not yet registered.*
+
+` +
+    `To get started:
+` +
+    `1️⃣ Register at https://wantokjobs.com/register
+` +
+    `2️⃣ Then send me your email address here to link your account
+
+` +
+    `Already have an account? Send me your *email address* and I'll link it! 📧`
+  );
   return true;
 }
 
@@ -303,7 +357,7 @@ async function handleApplicationStatus(msg, session, text) {
 async function handleHelp(msg, text) {
   if (!/^(?:help|menu|commands|helpim mi|helpim|start|\?|hi|hello|hey)$/i.test(text.trim())) return false;
   
-  await msg.reply(
+  await sendMsg(msg.from, 
     `🤖 *Jean — WantokJobs Assistant* 🇵🇬\n\n` +
     `Here's what I can do:\n\n` +
     `🔍 *Search* — "search accountant jobs in Lae"\n` +
@@ -344,6 +398,7 @@ async function handleMessage(msg) {
   }
   
   // Handle commands in order of priority
+  if (await handlePhoneCheck(msg.from, session, text)) return;
   if (await handleHelp(msg, text)) return;
   if (await handleAccountLinking(msg, session, text)) return;
   if (await handleJobSearch(msg, session, text)) return;
@@ -362,10 +417,10 @@ async function handleMessage(msg) {
     });
     
     const formatted = formatForWhatsApp(response.message);
-    if (formatted) await msg.reply(formatted);
+    if (formatted) await sendMsg(msg.from, formatted);
   } catch(e) {
     console.error('Jean error:', e.message);
-    await msg.reply('Sorry, I had trouble with that. Try again or type *help* for commands. 🙏');
+    await sendMsg(msg.from, 'Sorry, I had trouble with that. Try again or type *help* for commands. 🙏');
   }
 }
 

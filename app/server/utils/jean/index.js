@@ -247,6 +247,37 @@ class Jean {
         return { message: personality.randomFrom(farewells), intent };
       }
 
+
+      case 'check_registration': {
+        // Check if user's phone/account is registered
+        const phone = opts && opts.phoneNumber ? opts.phoneNumber : null;
+        if (user) {
+          return {
+            message: 'Yes! Your account is registered.\n\n' +
+              'Name: ' + user.name + '\n' +
+              'Email: ' + user.email + '\n' +
+              'Role: ' + user.role + '\n\n' +
+              'Your account is active. Type help to see what I can do!',
+            intent
+          };
+        }
+        if (phone) {
+          const normalized = phone.replace(/^\+/, '').replace(/\s/g, '');
+          const phoneUser = db.prepare(
+            "SELECT id, name, email, role FROM users WHERE REPLACE(REPLACE(COALESCE(phone,''), '+', ''), ' ', '') = ? LIMIT 1"
+          ).get(normalized);
+          if (phoneUser) {
+            return {
+              message: 'Yes! Your number is registered.\n\nName: ' + phoneUser.name + '\nEmail: ' + phoneUser.email + '\n\nType help to get started!',
+              intent
+            };
+          }
+        }
+        return {
+          message: 'Your number is not yet registered on WantokJobs.\n\nVisit https://wantokjobs.com/register to sign up, then send your email here to link your account!',
+          intent
+        };
+      }
       case 'search_jobs':
         return this.handleJobSearch(params, user);
 

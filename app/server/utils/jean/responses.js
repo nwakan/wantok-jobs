@@ -189,7 +189,11 @@ const RESPONSES = {
 
   // ─── Fallback ──────────────────────────────────────────
   unknown: {
-    default: [
+    whatsapp: [
+      'Not sure about that via WhatsApp — but I can help! Try:\n\nsearch [keyword] — Find jobs\nmy applications — Check status\nSend your CV as PDF\nhelp — Full menu\n\nJust ask me anything about jobs in PNG!',
+      'I can help with that! Try rephrasing, or type help for all options.',
+    ],
+        default: [
       "Sori, mi no klia long dispela. But I can definitely help with:\n\n🔍 **Job search** — Find wok by keyword, location, category\n👤 **Profile** — Update your profile or import from LinkedIn\n📄 **CV/Resume** — Build or download your CV\n📨 **Apply** — Apply to jobs or set up auto-apply\n📋 **Post jobs** — Create listings or upload JDs\n💰 **Pricing** — Plans and credits info\n\nWhat would you like to do? Tokim mi tasol!",
       "Hmm, I didn't quite catch that — no worries! Could you rephrase? Or pick from:\n• Search for jobs\n• Update my profile\n• Post a job\n• Check my applications\n• Pricing info\n\nMi stap redi long helpim yu! 😊",
       "Mi no save gut long dispela — but em i orait! Try telling me in different words, or pick something:\n\n🔍 Find jobs\n👤 My profile\n📄 Build CV\n📨 Applications\n📋 Post a job\n\nMi stap hia — tokim mi!",
