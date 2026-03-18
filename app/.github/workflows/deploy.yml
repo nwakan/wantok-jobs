@@ -1,0 +1,39 @@
+name: Deploy to WantokJobs VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: srv1380615.hstgr.cloud
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: 120s
+          script: |
+            set -e
+            cd /opt/wantokjobs/app
+            git remote set-url origin https://github.com/nwakan/wantok-jobs.git 2>/dev/null || true
+            git pull origin main
+            cd app
+            npm install --production 2>&1 | tail -3
+            npm rebuild better-sqlite3 2>&1 || true
+            node server/migrations/runner.js 2>&1 || true
+            cd client && npm run build 2>&1 | tail -5 && cd ..
+            grep -q EMAIL_MODE .env && sed -i s/^EMAIL_MODE=.*/EMAIL_MODE=live/ .env || echo EMAIL_MODE=live >> .env
+            systemctl stop jean-whatsapp 2>/dev/null || true
+            systemctl disable jean-whatsapp 2>/dev/null || true
+            systemctl restart wantokjobs
+            sleep 5
+            systemctl is-active wantokjobs && echo SERVICE_OK || echo SERVICE_FAILED
+            curl -sf http://localhost:3001/health && echo HEALTH_OK || echo HEALTH_FAILED
