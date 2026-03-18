@@ -72,6 +72,24 @@ if git diff HEAD@{1} HEAD --name-only | grep -q "package.json"; then
   }
 fi
 
+
+# Rebuild native modules for current Node.js version
+log "Rebuilding native modules (better-sqlite3)..."
+if ! npm rebuild better-sqlite3 2>&1 | tee -a "$LOGFILE"; then
+  log_warning "better-sqlite3 rebuild failed — attempting clean install"
+  rm -rf node_modules/better-sqlite3
+  npm install better-sqlite3 --build-from-source 2>&1 | tee -a "$LOGFILE" || log_error "better-sqlite3 install failed"
+fi
+log "✓ Native modules ready"
+
+# Run database migrations
+log "Running database migrations..."
+if node server/migrations/runner.js 2>&1 | tee -a "$LOGFILE"; then
+  log "✓ Migrations complete"
+else
+  log_warning "Migration runner exited with error — check logs"
+fi
+
 # Build frontend
 log "Building frontend..."
 cd client || {

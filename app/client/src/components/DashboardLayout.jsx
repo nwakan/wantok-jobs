@@ -20,6 +20,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'My Profile', path: '/dashboard/jobseeker/profile', icon: '👤' },
     { name: 'Settings', path: '/dashboard/jobseeker/settings', icon: '⚙️' },
     { name: 'Change Password', path: '/dashboard/jobseeker/change-password', icon: '🔒' },
+    { name: '2FA Security', path: '/dashboard/jobseeker/2fa', icon: '🛡️' },
   ];
 
   const employerNav = [
@@ -36,6 +37,7 @@ export default function DashboardLayout({ role, children }) {
     { name: 'Company Profile', path: '/dashboard/employer/profile', icon: '🏢' },
     { name: 'Messages', path: '/dashboard/employer/messages', icon: '💬' },
     { name: 'Change Password', path: '/dashboard/employer/change-password', icon: '🔒' },
+    { name: '2FA Security', path: '/dashboard/employer/2fa', icon: '🛡️' },
   ];
 
   const adminNav = [
@@ -56,8 +58,10 @@ export default function DashboardLayout({ role, children }) {
     { name: 'Security', path: '/dashboard/admin/security', icon: '🔐' },
     { name: 'Rate Limits', path: '/dashboard/admin/rate-limits', icon: '🛡️' },
     { name: 'Wallet Admin', path: '/dashboard/admin/wallet', icon: '💰' },
+    { name: 'Payment Management', path: '/dashboard/admin/payments', icon: '💳' },
     { name: 'Settings', path: '/dashboard/admin/settings', icon: '⚙️' },
     { name: 'Change Password', path: '/dashboard/admin/change-password', icon: '🔒' },
+    { name: '2FA Security', path: '/dashboard/admin/2fa', icon: '🛡️' },
   ];
 
   const navItems = role === 'jobseeker' ? jobseekerNav : role === 'employer' ? employerNav : adminNav;
