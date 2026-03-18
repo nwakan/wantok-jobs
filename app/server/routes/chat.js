@@ -1,31 +1,97 @@
-// Jean Chat Streaming Route Handler - Production Patch
+/**
+ * Jean AI Chat Route
+ * Connects /api/chat endpoints to the Jean AI engine (server/utils/jean/index.js)
+ * Supports: SSE streaming (GET), JSON POST, conversation history, auth-aware responses
+ */
+
 const express = require('express');
 const router = express.Router();
+const jean = require('../utils/jean/index');
+const { authenticateToken } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
-// JSONL stream stub for POST and SSE fallback for GET
-debug = (...args) => process.env.DEBUG && console.log('[JeanChat]', ...args);
+const debug = (...args) => process.env.DEBUG && console.log('[JeanChat]', ...args);
 
-// GET: Server-sent events (simple stub)
-router.get('/stream', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-  debug('SSE stream opened.');
-  res.write(`data: {"message": "Welcome to Jean Chat streaming!"}\n\n`);
-  setTimeout(() => res.write(`data: {"message": "Test SSE reply from backend."}\n\n`), 1000);
-  req.on('close', () => { debug('SSE closed.'); res.end(); });
-});
+/**
+ * Optional auth middleware — doesn't reject unauthenticated users,
+ * just attaches user if token is valid (Jean handles guest vs. auth responses)
+ */
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+  try {
+    const { authenticateToken: auth, JWT_SECRET } = require('../middleware/auth');
+    const jwt = require('jsonwebtoken');
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+  } catch (e) {
+    // Invalid token — continue as guest
+  }
+  next();
+}
 
-// POST: JSONL fallback
-router.post('/stream', express.json(), (req, res) => {
-  res.setHeader('Content-Type', 'application/jsonlines');
-  debug('JSONL POST received.', req.body);
-  res.write(JSON.stringify({ message: 'Jean Chat: POST received', input: req.body }) + '\n');
-  setTimeout(() => {
-    res.write(JSON.stringify({ message: 'Jean Chat: Streaming reply.' }) + '\n');
-    res.end();
-  }, 1200);
-});
+/**
+ * POST /api/chat/stream
+ * Main chat endpoint — calls Jean AI processMessage and returns JSON response
+ * Also supports SSE streaming via Accept: text/event-stream header
+ */
+router.post('/stream', optionalAuth, express.json(), async (req, res) => {
+  const isSSE = req.headers['accept'] === 'text/event-stream';
 
-module.exports = router;
+  try {
+    const {
+      message,
+      sessionToken,
+      pageContext = 'web',
+      conversationHistory = [],
+      file,
+    } = req.body;
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const userId = req.user?.id || null;
+    const user = req.user || null;
+
+    debug('Processing message:', { userId, pageContext, msgLen: message.length });
+
+    // Call Jean AI engine
+    const response = await jean.processMessage(message.trim(), {
+      userId,
+      user,
+      pageContext,
+      sessionToken,
+      conversationHistory,
+      file,
+      channel: 'web',
+    });
+
+    if (isSSE) {
+      // Server-Sent Events streaming format
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+
+      // Stream the message word by word for a natural feel
+      const words = (response.message || '').split(' ');
+      for (let i = 0; i < words.length; i++) {
+        const chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+        res.write(`data: ${JSON.stringify({ chunk, type: 'token' })}
+
+`);
+        await new Promise(r => setTimeout(r, 18)); // ~55 words/sec
+      }
+
+      // Send final event with full response metadata
+      res.write(`data: ${JSON.stringify({
+        type: 'done',
+        message: response.message,
+        quickReplies: response.quickReplies || [],
+        intent: response.intent,
+        sessionToken: response.sessionToken,
+        actions: response.actions || [],
+      })}

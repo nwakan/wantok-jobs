@@ -526,6 +526,22 @@ class Jean {
         return this.handleConfirmOutOfFlow(session, user);
 
       default: {
+        // Try LLM first for natural, contextual responses
+        try {
+          const llmText = await this.getLLMResponse(message, user, `pageContext: ${pageContext || 'general'}`);
+          if (llmText) {
+            return {
+              message: llmText,
+              quickReplies: user
+                ? ['Search Jobs', 'My Profile', 'My Applications', 'Help']
+                : ['Search Jobs', 'Browse Categories', 'Register', 'Pricing'],
+              intent,
+            };
+          }
+        } catch(llmErr) {
+          // LLM failed, fall through to static response
+        }
+        // Static fallback when LLM unavailable
         const name = user?.name?.split(' ')[0] || 'there';
         const fallback = user
           ? `Sori ${name}, mi no klia long dispela. But no worries — I can help with:\n\n🔍 Finding jobs — just tell me what you're looking for\n👤 Your profile — I'll update it for you through chat\n📄 Your CV — I'll build it from scratch\n📨 Applying — I can apply to jobs for you\n💰 Pricing — I'll explain how it works\n\nJust tell me in your own words what you need — tokim mi tasol!`
@@ -1128,6 +1144,32 @@ class Jean {
       'UPDATE jean_sessions SET current_flow = NULL, flow_state = NULL WHERE id = ?'
     ).run(sessionId);
   }
+
+  /**
+   * Get LLM-powered response for unknown/complex intents
+   * Falls back gracefully if AI router fails
+   */
+  async getLLMResponse(message, user, context = '') {
+    try {
+      const aiRouter = require('../../lib/ai-router');
+      const name = user?.name?.split(' ')[0] || 'there';
+      const role = user?.role || 'jobseeker';
+      const systemPrompt = `You are Jean, a friendly AI assistant for WantokJobs — a job board serving Papua New Guinea and the Pacific region.
+You help ${role === 'employer' ? 'employers post jobs and manage applicants' : 'job seekers find work and build their profiles'}.
+User name: ${name}. Always be warm, helpful, and use occasional Tok Pisin phrases (gutpela, sori, wok, etc.).
+Keep responses concise (2-4 sentences max). Never make up job listings or company details.
+${context}`;
+
+      const response = await aiRouter.complete(
+        [{ role: 'user', content: message }],
+        { systemPrompt, maxTokens: 300, task: 'jean_chat' }
+      );
+      return response?.text || null;
+    } catch(e) {
+      return null; // Let caller use rule-based fallback
+    }
+  }
+
 }
 
 const jean = new Jean();

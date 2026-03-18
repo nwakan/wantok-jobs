@@ -388,8 +388,6 @@ app.use('/api/auth/register', registerLimiter);
 app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/auth/oauth/google', authLimiter);
 app.use('/api/auth/oauth/facebook', authLimiter);
-app.use('/api/auth/oauth/linkedin', authLimiter);
-app.use('/api/2fa', require('./routes/2fa'));
 app.use('/api/auth', require('./routes/auth'));
 
 // Force password reset middleware — blocks all non-auth routes for fpr users

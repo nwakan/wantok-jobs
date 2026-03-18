@@ -319,4 +319,34 @@ router.get('/:id', authenticateToken, requireRole('admin'), (req, res) => {
   }
 });
 
+
+
+/**
+ * POST /api/admin/payments/process-outbox
+ * Manually trigger WhatsApp outbox processor (admin only)
+ */
+router.post('/process-outbox', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { processOutbox } = require('../lib/whatsapp-outbox-processor');
+    const result = await processOutbox();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    logger.error('Outbox process failed:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/payments/outbox-stats
+ * Get WhatsApp outbox stats (admin only)
+ */
+router.get('/outbox-stats', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { getOutboxStats } = require('../lib/whatsapp-outbox-processor');
+    res.json(getOutboxStats());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

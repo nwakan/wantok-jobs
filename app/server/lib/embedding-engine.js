@@ -428,7 +428,9 @@ async function embed(texts, inputType = 'search_document') {
     }
   }
   
-  throw new Error('Cohere API failed and HuggingFace fallback is unavailable (DNS issues)');
+  // All providers failed - return null instead of crashing
+  logger.warn('Embedding Engine: All providers failed. Returning null (semantic search will be disabled).');
+  return null;
 }
 
 /**
@@ -545,7 +547,22 @@ function getUsageStats() {
   };
 }
 
+
+
+/**
+ * Safe embedding wrapper — never throws, returns null on failure.
+ * Use this for non-critical embedding calls (search, recommendations).
+ */
+async function embedSafe(texts) {
+  try {
+    return await embed(texts);
+  } catch(e) {
+    logger.warn('embedSafe: Embedding failed silently:', e.message);
+    return null;
+  }
+}
 module.exports = {
+  embedSafe,
   embed,
   batchEmbed,
   cosineSimilarity,

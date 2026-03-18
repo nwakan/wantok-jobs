@@ -123,6 +123,8 @@ const AdminFraudSecurity = lazy(() => import('./pages/dashboard/admin/FraudSecur
 const AdminRateLimits = lazy(() => import('./pages/dashboard/admin/RateLimits'));
 const AdminJeanSettings = lazy(() => import('./pages/dashboard/admin/JeanSettings'));
 const AdminWallet = lazy(() => import('./pages/dashboard/admin/WalletAdmin'));
+const AdminPayments = lazy(() => import('./pages/dashboard/admin/AdminPayments'));
+const TwoFactorSetup = lazy(() => import('./pages/auth/TwoFactorSetup'));
 const AdminReviewManagement = lazy(() => import('./pages/dashboard/admin/ReviewManagement'));
 const AdminFeatureRequests = lazy(() => import('./pages/dashboard/admin/FeatureRequests'));
 const AdminMarketing = lazy(() => import('./pages/dashboard/admin/Marketing'));
@@ -194,6 +196,7 @@ function App() {
                 <Route path="interviews" element={<Lazy component={JobseekerInterviews} />} />
                 <Route path="analytics" element={<Lazy component={JobseekerAnalytics} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
+                <Route path="2fa" element={<Lazy component={TwoFactorSetup} />} />
               </Route>
 
               {/* Employer dashboard */}
@@ -219,6 +222,7 @@ function App() {
                 <Route path="onboarding" element={<Lazy component={EmployerOnboarding} />} />
                 <Route path="settings" element={<Lazy component={EmployerSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
+                <Route path="2fa" element={<Lazy component={TwoFactorSetup} />} />
               </Route>
 
               {/* Admin dashboard */}
@@ -241,12 +245,14 @@ function App() {
                 <Route path="reviews" element={<Lazy component={AdminReviewManagement} />} />
                 <Route path="rate-limits" element={<Lazy component={AdminRateLimits} />} />
                 <Route path="wallet" element={<Lazy component={AdminWallet} />} />
+                <Route path="payments" element={<Lazy component={AdminPayments} />} />
                 <Route path="feature-requests" element={<Lazy component={AdminFeatureRequests} />} />
                 <Route path="marketing" element={<Lazy component={AdminMarketing} />} />
                 <Route path="employer-claims" element={<Lazy component={AdminEmployerClaims} />} />
                 <Route path="analytics" element={<Lazy component={AdminAnalytics} />} />
                 <Route path="settings" element={<Lazy component={AdminSettings} />} />
                 <Route path="change-password" element={<Lazy component={ChangePassword} />} />
+                <Route path="2fa" element={<Lazy component={TwoFactorSetup} />} />
               </Route>
 
               {/* 404 catch-all */}

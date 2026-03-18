@@ -4,8 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Briefcase, Users, Building2, Flag, 
   TrendingUp, MessageSquare, Lightbulb, BarChart3, Settings,
-  ChevronLeft, ChevronRight, LogOut, Shield, Menu, X
-} from 'lucide-react';
+  ChevronLeft, ChevronRight, LogOut, Shield, Menu, X, CreditCard} from 'lucide-react';
 
 export default function AdminLayout({ children }) {
   const location = useLocation();
@@ -95,6 +94,7 @@ export default function AdminLayout({ children }) {
         { name: 'AI Agents', path: '/dashboard/admin/ai-agents' },
         { name: 'Jean AI', path: '/dashboard/admin/jean' },
         { name: 'Wallet Admin', path: '/dashboard/admin/wallet' },
+        { name: 'Payment Management', path: '/dashboard/admin/payments' },
       ]
     },
   ];
