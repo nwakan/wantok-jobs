@@ -13,7 +13,6 @@ import { CompareFloatingBar } from './JobCard';
 import ChatWidget from './ChatWidget';
 import CookieConsent from './CookieConsent';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import JeanMobileSheet from './JeanMobileSheet';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -103,7 +102,6 @@ export default function Layout() {
           <p>{t('footer.copyright')}</p>
         </div>
       </footer>
-      <JeanMobileSheet />
       <ChatWidget />
       <MobileBottomNav />
       <CookieConsent />
