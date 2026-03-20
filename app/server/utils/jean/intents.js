@@ -396,10 +396,11 @@ const INTENTS = {
   // ── Security & 2FA ────────────────────────────────────────
   two_factor_auth: {
     patterns: [
-      'enable 2fa', 'setup 2fa', 'two factor', 'two-factor', '2fa',
-      'authenticator app', 'google authenticator', 'backup codes',
-      'disable 2fa', '2fa status', 'account security', 'totp',
-      'verify my account', 'secure my account', 'secure account',
+      /\b(enable|setup|set\s*up|disable|turn\s*on|turn\s*off|activate|deactivate)\s*2fa\b/i,
+      /\btwo[\s-]?factor(\s*auth(entication)?)?\b/i,
+      /\b2fa\b/i,
+      /\b(authenticator\s*app|google\s*authenticator|totp|backup\s*codes?)\b/i,
+      /\b(account\s*security|secure.*account|verify.*account)\b/i,
     ],
     priority: 6,
     requiresAuth: true,
@@ -408,9 +409,10 @@ const INTENTS = {
   // ── Badges & Achievements ─────────────────────────────────
   my_badges: {
     patterns: [
-      'my badges', 'my achievements', 'show my badges', 'what badges',
-      'achievements', 'my rewards', 'badge progress', 'earned badges',
-      'early adopter', 'top applicant badge', 'profile complete badge',
+      /\b(my\s+)?(badge|achievement|reward|award)s?\b/i,
+      /\b(show|view|check|see)\s+(my\s+)?badge/i,
+      /\b(early\s*adopter|top\s*applicant|profile\s*complete)\s*badge\b/i,
+      /\bbadge\s*progress\b/i,
     ],
     priority: 5,
     requiresAuth: false,
@@ -419,10 +421,11 @@ const INTENTS = {
   // ── AI Cover Letter ───────────────────────────────────────
   ai_cover_letter: {
     patterns: [
-      'write cover letter', 'generate cover letter', 'create cover letter',
-      'help me apply', 'cover letter for', 'ai cover letter',
-      'write me a cover letter', 'draft cover letter', 'cover letter help',
-      'application letter', 'write application',
+      /\b(write|generate|create|draft|make)\b.*\b(cover\s*letter|application\s*letter)\b/i,
+      /\b(cover\s*letter|application\s*letter)\b.*\b(help|write|create|for|draft)\b/i,
+      /\bai\s*cover\s*letter\b/i,
+      /\bhelp\s*me\s*apply\b/i,
+      /\bwrite.*application\b/i,
     ],
     priority: 6,
     requiresAuth: true,
@@ -431,10 +434,11 @@ const INTENTS = {
   // ── AI Job Match ──────────────────────────────────────────
   ai_job_match: {
     patterns: [
-      'how well do i match', 'job compatibility', 'am i a good fit',
-      'match score', 'check my match', 'job match', 'compatibility score',
-      'do i qualify', 'suitable for this job', 'fit for this role',
-      'match percentage', 'skill match', 'how compatible', 'job fit',
+      /\b(how\s*well|do\s*i|am\s*i)\b.*\b(match|fit|qualify|compatible|suitable)\b/i,
+      /\b(job|role)\b.*\b(match|compatibility|fit\s*score)\b/i,
+      /\b(match|compatibility|skill\s*match|job\s*fit)\s*(score|percentage|check)?\b/i,
+      /\bcheck\s*my\s*match\b/i,
+      /\bhow\s*compatible\b/i,
     ],
     priority: 6,
     requiresAuth: true,

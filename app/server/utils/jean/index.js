@@ -636,13 +636,16 @@ class Jean {
     };
   }
 
-  handleJobSearch(params, user) {
+  async handleJobSearch(params, user) {
     const searchParams = {};
     if (params.location) searchParams.location = params.location;
     if (params.job_type) searchParams.job_type = params.job_type;
     if (params.search) searchParams.search = params.search;
 
-    const result = actions.searchJobs(db, { ...searchParams, limit: 5 });
+    const rawResult = await actions.searchJobs(db, { ...searchParams, limit: 5 });
+    const result = rawResult || { jobs: [], total: 0 };
+    if (!Array.isArray(result.jobs)) result.jobs = [];
+    if (typeof result.total !== 'number') result.total = result.jobs.length;
 
     if (result.total === 0) {
       const response = {

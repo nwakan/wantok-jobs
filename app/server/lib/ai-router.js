@@ -136,6 +136,43 @@ const PROVIDERS = {
     }
   },
 
+
+  anthropic: {
+    name: 'Anthropic Claude',
+    models: {
+      fast: 'claude-haiku-4-5',
+      smart: 'claude-sonnet-4-5',
+    },
+    baseUrl: 'https://api.anthropic.com/v1',
+    dailyLimit: { requests: 10000, tokens: 5000000 },
+    getKey: () => process.env.ANTHROPIC_API_KEY,
+
+    async call(prompt, opts = {}) {
+      const key = this.getKey();
+      if (!key) throw new Error('ANTHROPIC_API_KEY not set');
+
+      const model = opts.model || this.models.fast;
+      const messages = opts.messages || [{ role: 'user', content: prompt }];
+
+      const body = {
+        model,
+        messages,
+        max_tokens: opts.maxTokens || 1024,
+      };
+      if (opts.systemPrompt) body.system = opts.systemPrompt;
+
+      const response = await httpPost('https://api.anthropic.com/v1/messages', body, {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      });
+
+      const text = response?.content?.[0]?.text || '';
+      const tokens = (response?.usage?.input_tokens || 0) + (response?.usage?.output_tokens || 0);
+      trackUsage('anthropic', tokens);
+      return { text, tokens, provider: 'anthropic', model };
+    }
+  },
   groq: {
     name: 'Groq',
     models: {
@@ -230,7 +267,7 @@ const PROVIDERS = {
 // Task-to-provider routing
 const TASK_ROUTES = {
   // Chat / conversational
-  chat:           ['groq', 'gemini', 'kimi', 'openrouter'],
+  chat:           ['anthropic', 'groq', 'gemini', 'openrouter'],
   // Content generation (marketing, descriptions)
   content:        ['gemini', 'kimi', 'openrouter'],
   // Job matching / semantic analysis
@@ -240,15 +277,16 @@ const TASK_ROUTES = {
   // Translation (Tok Pisin)
   translation:    ['gemini', 'kimi', 'openrouter'],
   // Classification (spam, category)
-  classification: ['groq', 'gemini', 'kimi', 'openrouter'],
+  classification: ['anthropic', 'groq', 'gemini', 'openrouter'],
   // Quick / simple tasks
-  quick:          ['groq', 'gemini', 'kimi', 'openrouter'],
+  quick:          ['anthropic', 'groq', 'gemini', 'openrouter'],
   // Cover letter generation
   coverletter:    ['gemini', 'kimi', 'openrouter'],
   // Job description improvement
   jobdesc:        ['gemini', 'kimi', 'openrouter'],
   // General fallback
-  general:        ['groq', 'gemini', 'kimi', 'openrouter'],
+    jean_chat:      ['anthropic', 'groq', 'openrouter'],
+  general:        ['anthropic', 'groq', 'openrouter'],
 };
 
 /**
@@ -374,4 +412,4 @@ function httpPost(url, body, headers = {}) {
   });
 }
 
-module.exports = { route, getUsageStats, PROVIDERS, TASK_ROUTES };
+module.exports = { route, complete: route, getUsageStats, PROVIDERS, TASK_ROUTES };
