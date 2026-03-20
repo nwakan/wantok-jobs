@@ -1,7 +1,7 @@
 node_modules
 .env
 server/data/*.db
-client/dist
+# client/dist TEMP INCLUDED
 .DS_Store
 .env
 test-e2e.js

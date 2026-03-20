@@ -506,10 +506,8 @@ app.use('/uploads', express.static(path.join(dataDir, 'uploads'), {
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  // Try server/public (Docker build) then client/dist (local dev)
-  const clientDist = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
-    ? path.join(__dirname, 'public')
-    : path.join(__dirname, '..', 'client', 'dist');
+  // Always use client/dist (built by Vite) — server/public is legacy
+  const clientDist = path.join(__dirname, '..', 'client', 'dist');
   // Hashed assets get long-lived cache (already handled by the global middleware above)
   app.use(express.static(clientDist, { index: false }));
 
