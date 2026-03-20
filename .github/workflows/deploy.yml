@@ -23,8 +23,7 @@ jobs:
             export GIT_SSH_COMMAND="ssh -i /root/.ssh/github_deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
             git fetch origin
             git reset --hard origin/main
-            cd client && npm ci --silent && npm run build 2>&1 | tail -3
-            cd ..
+            cd client && npm ci --silent && npm run build 2>&1 | tail -3 && cd ..
             systemctl restart wantokjobs
             sleep 3
-            curl -sf http://localhost:3001/health > /dev/null && echo "Deploy OK" || echo "Health check failed"
+            curl -sf http://localhost:3001/health > /dev/null && echo "Deploy OK - $(date)" || echo "Health check failed"
