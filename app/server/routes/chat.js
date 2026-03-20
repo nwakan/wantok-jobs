@@ -95,3 +95,43 @@ router.post('/stream', optionalAuth, express.json(), async (req, res) => {
         sessionToken: response.sessionToken,
         actions: response.actions || [],
       })}
+
+`);
+      res.end();
+
+    } else {
+      // Standard JSON response
+      return res.json({
+        message: response.message,
+        quickReplies: response.quickReplies || [],
+        intent: response.intent,
+        sessionToken: response.sessionToken,
+        actions: response.actions || [],
+      });
+    }
+
+  } catch (err) {
+    logger.error('[Jean Chat] Error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Chat service error. Please try again.' });
+    }
+  }
+});
+
+/**
+ * GET /api/chat/stream
+ * SSE GET endpoint — redirect to POST
+ */
+router.get('/stream', optionalAuth, (req, res) => {
+  res.status(405).json({ error: 'Use POST /api/chat/stream for chat messages' });
+});
+
+/**
+ * GET /api/chat/health
+ * Health check for Jean AI
+ */
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'jean-chat', timestamp: new Date().toISOString() });
+});
+
+module.exports = router;

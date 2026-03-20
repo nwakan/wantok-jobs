@@ -218,6 +218,32 @@ const RESPONSES = {
     ],
     skipped: "Skipped — movin' on! ➡️",
   },
+
+  // ── Security & 2FA ────────────────────────────────────────
+  two_factor_auth: {
+    enabled: '🔐 Two-factor authentication (2FA) is already enabled on your account. Your account is secured with an authenticator app. You can manage backup codes in **Account Settings → Security**.',
+    setup: '🔐 **Set up Two-Factor Authentication (2FA)**\n\nProtect your WantokJobs account with TOTP-based 2FA:\n\n1️⃣ Go to **Settings → Security → Enable 2FA**\n2️⃣ Scan the QR code with **Google Authenticator** or **Authy**\n3️⃣ Enter the 6-digit code to confirm\n4️⃣ Save your **backup codes** somewhere safe\n\nOnce enabled, you\'ll need your authenticator app every time you log in.',
+    guest: '🔐 To set up two-factor authentication, please **log in** to your WantokJobs account first, then go to **Settings → Security**.',
+  },
+
+  // ── Badges & Achievements ─────────────────────────────────
+  my_badges: {
+    intro: '🏆 **Your Achievement Badges**\n\nWantokJobs rewards active users with badges! Here are the badges you can earn:\n\n🎯 **Profile Complete** — Profile completeness reached 80%\n📝 **First Application** — Submitted your first job application\n🔥 **Active Seeker** — Applied to 10+ jobs\n⭐ **Top Applicant** — Applied to 25+ jobs\n📄 **Resume Ready** — Uploaded or built a resume\n🔔 **Alert Setter** — Set up job alerts\n👥 **Networker** — Followed 5+ companies\n🎓 **Learner** — Enrolled in a training course\n💬 **Communicator** — Sent your first message\n🏆 **Early Adopter** — One of the first 1,000 users\n\nView your badges in your **Profile → Achievements** section.',
+    guest: '🏆 **Badges & Achievements** are earned by active WantokJobs users! Sign up or log in to start earning. Complete your profile, apply for jobs, and set alerts to unlock rewards.',
+  },
+
+  // ── AI Cover Letter ───────────────────────────────────────
+  ai_cover_letter: {
+    intro: '✍️ **AI Cover Letter Generator**\n\nWantokJobs can write a professional cover letter tailored to any job!\n\nTo generate one:\n1️⃣ Open a job listing\n2️⃣ Click **"Apply"** → **"Generate Cover Letter with AI"**\n3️⃣ Review and edit before submitting\n\nThe AI uses your profile (skills, experience, location) and the job description to create a personalised, professional letter. 🇵🇬',
+    guest: '✍️ To generate an AI cover letter, please **log in** or **sign up** so Jean can use your profile details to personalise the letter for each job.',
+  },
+
+  // ── AI Job Match ──────────────────────────────────────────
+  ai_job_match: {
+    intro: '🎯 **AI Job Match Score**\n\nWantokJobs uses AI to calculate how well your profile matches a job listing!\n\nThe match score includes:\n• 💼 **Skill Match** — Your skills vs. job requirements\n• 📍 **Location Match** — Your location vs. job location\n• 🕐 **Experience Match** — Your experience level vs. required\n• 📊 **Overall Score** — Combined compatibility %\n\nTo see your match score, open any job listing and look for the **"Match Score"** indicator. Keep your profile updated for better matches!',
+    guest: '🎯 To see your **job match score**, please **log in** so Jean can compare your profile against the job requirements.',
+  },
+
 };
 
 /**

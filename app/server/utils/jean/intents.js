@@ -392,6 +392,54 @@ const INTENTS = {
     priority: 4,
     requiresAuth: true,
   },
+
+  // ── Security & 2FA ────────────────────────────────────────
+  two_factor_auth: {
+    patterns: [
+      'enable 2fa', 'setup 2fa', 'two factor', 'two-factor', '2fa',
+      'authenticator app', 'google authenticator', 'backup codes',
+      'disable 2fa', '2fa status', 'account security', 'totp',
+      'verify my account', 'secure my account', 'secure account',
+    ],
+    priority: 6,
+    requiresAuth: true,
+  },
+
+  // ── Badges & Achievements ─────────────────────────────────
+  my_badges: {
+    patterns: [
+      'my badges', 'my achievements', 'show my badges', 'what badges',
+      'achievements', 'my rewards', 'badge progress', 'earned badges',
+      'early adopter', 'top applicant badge', 'profile complete badge',
+    ],
+    priority: 5,
+    requiresAuth: false,
+  },
+
+  // ── AI Cover Letter ───────────────────────────────────────
+  ai_cover_letter: {
+    patterns: [
+      'write cover letter', 'generate cover letter', 'create cover letter',
+      'help me apply', 'cover letter for', 'ai cover letter',
+      'write me a cover letter', 'draft cover letter', 'cover letter help',
+      'application letter', 'write application',
+    ],
+    priority: 6,
+    requiresAuth: true,
+  },
+
+  // ── AI Job Match ──────────────────────────────────────────
+  ai_job_match: {
+    patterns: [
+      'how well do i match', 'job compatibility', 'am i a good fit',
+      'match score', 'check my match', 'job match', 'compatibility score',
+      'do i qualify', 'suitable for this job', 'fit for this role',
+      'match percentage', 'skill match', 'how compatible', 'job fit',
+    ],
+    priority: 6,
+    requiresAuth: true,
+  },
+
 };
 
 /**

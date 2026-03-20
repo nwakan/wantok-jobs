@@ -525,6 +525,57 @@ class Jean {
       case 'confirm':
         return this.handleConfirmOutOfFlow(session, user);
 
+      case 'two_factor_auth':
+        return this.handleTwoFactorAuth(user);
+
+      case 'my_badges':
+        return this.handleMyBadges(user);
+
+      case 'ai_cover_letter':
+        return this.handleAiCoverLetter(user);
+
+      case 'ai_job_match':
+        return this.handleAiJobMatch(user);
+
+      case 'kanban_pipeline': {
+        if (!user || user.role !== 'employer') {
+          return {
+            message: personality.humanize('The Kanban pipeline is for employers. [Sign up as an employer](/register?role=employer) to manage applicants with drag-and-drop! 🗂️'),
+            quickReplies: ['Register as Employer', 'Browse Jobs', 'Help'],
+            intent: 'kanban_pipeline',
+          };
+        }
+        return {
+          message: personality.humanize('🗂️ **Applicant Pipeline**\n\nYour Kanban board lets you drag applicants through 8 stages: Pending → Screening → Reviewed → Shortlisted → Interviewed → Offered → Hired → Rejected.\n\nOpen your [Employer Dashboard](/employer/applications) to manage your pipeline!'),
+          quickReplies: ['View Applicants', 'Post a Job', 'My Jobs'],
+          intent: 'kanban_pipeline',
+        };
+      }
+
+      case 'linkedin_connect': {
+        if (!user || user.role !== 'employer') {
+          return {
+            message: personality.humanize('LinkedIn auto-posting is available for employers. [Register as an employer](/register?role=employer) to connect your LinkedIn and auto-post jobs! 💼'),
+            quickReplies: ['Register as Employer', 'Browse Jobs', 'Help'],
+            intent: 'linkedin_connect',
+          };
+        }
+        return {
+          message: personality.humanize('💼 **LinkedIn Integration**\n\nConnect your LinkedIn to automatically post jobs when you publish on WantokJobs!\n\nGo to [Employer Settings → LinkedIn](/employer/settings) to connect your account.'),
+          quickReplies: ['Go to Settings', 'Post a Job', 'My Jobs'],
+          intent: 'linkedin_connect',
+        };
+      }
+
+      case 'claim_company': {
+        return {
+          message: personality.humanize('🏢 **Claim Your Company Profile**\n\nIs your company listed on WantokJobs? You can claim and verify ownership!\n\n1️⃣ Find your company in [Companies](/companies)\n2️⃣ Click **"Claim This Company"**\n3️⃣ Submit verification documents\n4️⃣ Admin reviews within 24-48 hours\n\nOnce verified, you control the company profile, logo, and job listings!'),
+          quickReplies: ['Browse Companies', 'Register as Employer', 'Contact Support'],
+          intent: 'claim_company',
+        };
+      }
+
+
       default: {
         // Try LLM first for natural, contextual responses
         try {
@@ -1113,6 +1164,70 @@ class Jean {
       message: personality.humanize(`🌟 **Top Feature Requests**\n\n${stats.total} total • ${stats.planned} planned • ${stats.completed} completed\n\n${list}\n\n[View all requests](/features) or tell me your idea!`),
       quickReplies: ['Submit a Request', 'View All Features', 'Search Jobs'],
       intent: 'view_features',
+    };
+  }
+
+  // ─── Two-Factor Authentication ─────────────────────────────
+  async handleTwoFactorAuth(user) {
+    if (!user) {
+      return {
+        message: getResponse('two_factor_auth', 'guest'),
+        quickReplies: ['Log In', 'Sign Up', 'Help'],
+        intent: 'two_factor_auth',
+      };
+    }
+    return {
+      message: getResponse('two_factor_auth', 'setup'),
+      quickReplies: ['Go to Security Settings', 'What is 2FA?', 'Help'],
+      intent: 'two_factor_auth',
+    };
+  }
+
+  // ─── Badges & Achievements ────────────────────────────────
+  async handleMyBadges(user) {
+    if (!user) {
+      return {
+        message: getResponse('my_badges', 'guest'),
+        quickReplies: ['Sign Up Free', 'Log In', 'Browse Jobs'],
+        intent: 'my_badges',
+      };
+    }
+    return {
+      message: getResponse('my_badges', 'intro'),
+      quickReplies: ['View My Profile', 'Browse Jobs', 'Complete My Profile'],
+      intent: 'my_badges',
+    };
+  }
+
+  // ─── AI Cover Letter ──────────────────────────────────────
+  async handleAiCoverLetter(user) {
+    if (!user) {
+      return {
+        message: getResponse('ai_cover_letter', 'guest'),
+        quickReplies: ['Sign Up Free', 'Log In', 'Browse Jobs'],
+        intent: 'ai_cover_letter',
+      };
+    }
+    return {
+      message: getResponse('ai_cover_letter', 'intro'),
+      quickReplies: ['Browse Jobs', 'Update My Profile', 'View Applications'],
+      intent: 'ai_cover_letter',
+    };
+  }
+
+  // ─── AI Job Match Score ───────────────────────────────────
+  async handleAiJobMatch(user) {
+    if (!user) {
+      return {
+        message: getResponse('ai_job_match', 'guest'),
+        quickReplies: ['Sign Up Free', 'Log In', 'Browse Jobs'],
+        intent: 'ai_job_match',
+      };
+    }
+    return {
+      message: getResponse('ai_job_match', 'intro'),
+      quickReplies: ['Browse Jobs', 'Update My Profile', 'Search Jobs'],
+      intent: 'ai_job_match',
     };
   }
 
