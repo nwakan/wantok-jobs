@@ -46,9 +46,9 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const CategoriesPage = lazy(() => import('./pages/Categories'));
 const CategoryLanding = lazy(() => import('./pages/CategoryLanding'));
-const CompaniesPage = lazy(() => import('./pages/Companies'));
-const CompanyProfilePage = lazy(() => import('./pages/CompanyProfile'));
-const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
+const EmployersPage = lazy(() => import('./pages/Employers'));
+const EmployerProfilePage = lazy(() => import('./pages/EmployerProfile'));
+const EmployerReviews = lazy(() => import('./pages/EmployerReviews'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const Stats = lazy(() => import('./pages/Stats'));
@@ -78,7 +78,7 @@ const JobAlerts = lazy(() => import('./pages/dashboard/jobseeker/JobAlerts'));
 const JobseekerMessages = lazy(() => import('./pages/dashboard/jobseeker/Messages'));
 const Recommendations = lazy(() => import('./pages/dashboard/jobseeker/Recommendations'));
 const JobseekerSettings = lazy(() => import('./pages/dashboard/jobseeker/Settings'));
-const FollowedCompanies = lazy(() => import('./pages/dashboard/jobseeker/FollowedCompanies'));
+const FollowedEmployers = lazy(() => import('./pages/dashboard/jobseeker/FollowedEmployers'));
 const JobseekerWallet = lazy(() => import('./pages/dashboard/jobseeker/Wallet'));
 const ResumeBuilder = lazy(() => import('./pages/dashboard/jobseeker/ResumeBuilder'));
 const JobseekerInterviews = lazy(() => import('./pages/dashboard/jobseeker/Interviews'));
@@ -160,10 +160,15 @@ function App() {
               <Route path="categories" element={<Lazy component={CategoriesPage} />} />
               <Route path="category/:slug" element={<Lazy component={CategoryLanding} />} />
               <Route path="industries/:slug" element={<Lazy component={IndustryLanding} />} />
-              <Route path="companies" element={<Lazy component={CompaniesPage} />} />
-              <Route path="companies/:id" element={<Lazy component={CompanyProfilePage} />} />
-              <Route path="companies/:id/reviews" element={<Lazy component={CompanyReviews} />} />
+              <Route path="employers" element={<Lazy component={EmployersPage} />} />
+              <Route path="employers/:id" element={<Lazy component={EmployerProfilePage} />} />
+              <Route path="employers/:id/reviews" element={<Lazy component={EmployerReviews} />} />
               <Route path="employers/:id/claim" element={<Lazy component={ClaimEmployer} />} />
+              {/* Legacy /companies redirects for SEO */}
+              <Route path="companies" element={<Navigate to="/employers" replace />} />
+              <Route path="companies/:id" element={<Navigate to="/employers/:id" replace />} />
+              <Route path="companies/:id/reviews" element={<Navigate to="/employers/:id/reviews" replace />} />
+              <Route path="followed-companies" element={<Navigate to="/followed-employers" replace />} />
               <Route path="blog" element={<Lazy component={Blog} />} />
               <Route path="blog/:slug" element={<Lazy component={BlogPost} />} />
               <Route path="stats" element={<Lazy component={Stats} />} />
@@ -190,7 +195,7 @@ function App() {
                 <Route path="messages" element={<Lazy component={JobseekerMessages} />} />
                 <Route path="profile" element={<Lazy component={JobseekerProfile} />} />
                 <Route path="settings" element={<Lazy component={JobseekerSettings} />} />
-                <Route path="followed-companies" element={<Lazy component={FollowedCompanies} />} />
+                <Route path="followed-companies" element={<Lazy component={FollowedEmployers} />} />
                 <Route path="wallet" element={<Lazy component={JobseekerWallet} />} />
                 <Route path="resume-builder" element={<Lazy component={ResumeBuilder} />} />
                 <Route path="interviews" element={<Lazy component={JobseekerInterviews} />} />

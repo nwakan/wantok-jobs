@@ -375,7 +375,7 @@ export default function Analytics() {
                   {employers.activeEmployers.slice(0, 10).map((employer) => (
                     <tr key={employer.id} className="border-b last:border-0">
                       <td className="py-3">
-                        <a href={`/companies/${employer.id}`} className="text-blue-600 hover:underline">
+                        <a href={`/employers/${employer.id}`} className="text-blue-600 hover:underline">
                           {employer.company_name}
                         </a>
                       </td>

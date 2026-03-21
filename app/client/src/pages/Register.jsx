@@ -21,7 +21,9 @@ export default function Register() {
   const [captcha, setCaptcha] = useState(null);
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -35,7 +37,15 @@ export default function Register() {
     if (refCode) {
       referrals.track(refCode).catch(() => {});
     }
-  }, [refCode]);
+  }, [refCode]);  useEffect(() => {
+    const linkedinPending = searchParams.get('linkedin_pending');
+    if (linkedinPending) {
+      setPendingOauthData({ provider: 'linkedin', pendingToken: linkedinPending });
+      setShowRoleDialog(true);
+    }
+  }, [searchParams]);
+
+
 
   // Fetch CAPTCHA
   const fetchCaptcha = async () => {
@@ -172,12 +182,12 @@ export default function Register() {
   
   const handleGoogleRegister = () => {
     setError('');
-    setOauthLoading(true);
+    setGoogleLoading(true);
     
     const googleProvider = oauthProviders.find(p => p.name === 'google');
     if (!googleProvider) {
       setError('Google registration not configured');
-      setOauthLoading(false);
+      setGoogleLoading(false);
       return;
     }
     
@@ -195,15 +205,21 @@ export default function Register() {
         setOauthLoading(false);
       }
     });
+  };  const handleLinkedinRegister = () => {
+    setError('');
+    setLinkedinLoading(true);
+    window.location.href = `/api/auth/oauth/linkedin?role=${formData.role}`;
   };
+
+
   
   const handleFacebookRegister = () => {
     setError('');
-    setOauthLoading(true);
+    setFacebookLoading(true);
     
     if (!window.FB) {
       setError('Facebook SDK not loaded');
-      setOauthLoading(false);
+      setFacebookLoading(false);
       return;
     }
     
@@ -211,60 +227,61 @@ export default function Register() {
       if (response.authResponse) {
         setPendingOauthData({ provider: 'facebook', accessToken: response.authResponse.accessToken });
         setShowRoleDialog(true);
-        setOauthLoading(false);
+        setFacebookLoading(false);
       } else {
-        setOauthLoading(false);
+        setFacebookLoading(false);
       }
     }, { scope: 'public_profile,email' });
   };
   
   const completeOAuthRegistration = async (selectedRole) => {
     if (!pendingOauthData) return;
-    
-    setOauthLoading(true);
+    if (pendingOauthData.provider === 'linkedin') setLinkedinLoading(true);
+    else if (pendingOauthData.provider === 'google') setGoogleLoading(true);
+    else setFacebookLoading(true);
     try {
-      const endpoint = pendingOauthData.provider === 'google' 
-        ? '/api/auth/oauth/google' 
-        : '/api/auth/oauth/facebook';
-      
-      const body = pendingOauthData.provider === 'google'
-        ? { idToken: pendingOauthData.idToken, role: selectedRole }
-        : { accessToken: pendingOauthData.accessToken, role: selectedRole };
-      
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
+      let res;
+      if (pendingOauthData.provider === 'linkedin') {
+        res = await fetch('/api/auth/oauth/linkedin/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pendingToken: pendingOauthData.pendingToken, role: selectedRole }),
+        });
+      } else {
+        const endpoint = pendingOauthData.provider === 'google'
+          ? '/api/auth/oauth/google' : '/api/auth/oauth/facebook';
+        const body = pendingOauthData.provider === 'google'
+          ? { idToken: pendingOauthData.idToken, role: selectedRole }
+          : { accessToken: pendingOauthData.accessToken, role: selectedRole };
+        res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
       }
-      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
       login(data.token, data.user);
       showToast('Welcome to WantokJobs!', 'success');
-      
-      // Redirect based on role
-      if (data.user.role === 'employer') {
-        navigate('/dashboard/employer/profile');
-      } else {
-        navigate('/dashboard/jobseeker/profile');
-      }
+      if (data.user.role === 'employer') navigate('/dashboard/employer/profile');
+      else navigate('/dashboard/jobseeker/profile');
     } catch (err) {
       console.error('OAuth registration error:', err);
       setError(err.message || 'Registration failed');
     } finally {
-      setOauthLoading(false);
+      setGoogleLoading(false);
+      setLinkedinLoading(false);
+      setFacebookLoading(false);
       setShowRoleDialog(false);
       setPendingOauthData(null);
     }
   };
 
-  const hasGoogleAuth = oauthProviders.some(p => p.name === 'google');
+  const hasGoogleAuth   = oauthProviders.some(p => p.name === 'google');
+  const hasLinkedinAuth = oauthProviders.some(p => p.name === 'linkedin');
   const hasFacebookAuth = oauthProviders.some(p => p.name === 'facebook');
-  const hasOAuth = hasGoogleAuth || hasFacebookAuth;
+  const hasOAuth        = hasGoogleAuth || hasLinkedinAuth || hasFacebookAuth;
+  const anyOauthLoading = googleLoading || linkedinLoading || facebookLoading;
 
   return (
     <>
@@ -289,7 +306,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={handleGoogleRegister}
-                  disabled={oauthLoading}
+                  disabled={anyOauthLoading}
                   className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -300,13 +317,36 @@ export default function Register() {
                   </svg>
                   <span className="text-sm font-medium text-gray-700">Continue with Google</span>
                 </button>
+              )}              {hasLinkedinAuth && (
+                <button
+                  type="button"
+                  onClick={handleLinkedinRegister}
+                  disabled={anyOauthLoading}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-transparent rounded-md shadow-sm bg-[#0A66C2] hover:bg-[#004182] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {linkedinLoading ? (
+                    <svg className="animate-spin w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="white" viewBox="0 0 24 24">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                  )}
+                  <span className="text-sm font-medium text-white">
+                    {linkedinLoading ? 'Redirecting...' : 'Continue with LinkedIn'}
+                  </span>
+                </button>
               )}
+
+
               
               {hasFacebookAuth && (
                 <button
                   type="button"
                   onClick={handleFacebookRegister}
-                  disabled={oauthLoading}
+                  disabled={anyOauthLoading}
                   className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-transparent rounded-md shadow-sm bg-[#1877F2] hover:bg-[#166FE5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-5 h-5" fill="white" viewBox="0 0 24 24">
@@ -542,7 +582,7 @@ export default function Register() {
             <div className="space-y-3">
               <button
                 onClick={() => completeOAuthRegistration('jobseeker')}
-                disabled={oauthLoading}
+                disabled={anyOauthLoading}
                 className="w-full px-4 py-3 border-2 border-primary-600 rounded-md hover:bg-primary-50 transition-colors disabled:opacity-50"
               >
                 <div className="font-medium">Job Seeker</div>
@@ -550,14 +590,14 @@ export default function Register() {
               </button>
               <button
                 onClick={() => completeOAuthRegistration('employer')}
-                disabled={oauthLoading}
+                disabled={anyOauthLoading}
                 className="w-full px-4 py-3 border-2 border-primary-600 rounded-md hover:bg-primary-50 transition-colors disabled:opacity-50"
               >
                 <div className="font-medium">Employer</div>
                 <div className="text-sm text-gray-600">I'm hiring</div>
               </button>
             </div>
-            {!oauthLoading && (
+            {!anyOauthLoading && (
               <button
                 onClick={() => {
                   setShowRoleDialog(false);

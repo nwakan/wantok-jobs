@@ -32,7 +32,7 @@ export default function ClaimEmployer() {
     setLoading(true);
     try {
       const [profileRes, statusRes] = await Promise.all([
-        api.get(`/companies/${id}`),
+        api.get(`/employers/${id}`),
         api.get(`/employers/${id}/claim-status`)
       ]);
       
@@ -47,7 +47,7 @@ export default function ClaimEmployer() {
     } catch (error) {
       console.error('Failed to fetch employer data:', error);
       showToast('Failed to load employer profile', 'error');
-      navigate('/companies');
+      navigate('/employers');
     } finally {
       setLoading(false);
     }
@@ -138,7 +138,7 @@ export default function ClaimEmployer() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Employer not found</h2>
           <button 
-            onClick={() => navigate('/companies')}
+            onClick={() => navigate('/employers')}
             className="text-primary-600 hover:text-primary-700"
           >
             Browse all companies
@@ -165,7 +165,7 @@ export default function ClaimEmployer() {
               This employer profile has already been claimed and verified.
             </p>
             <button 
-              onClick={() => navigate('/companies')}
+              onClick={() => navigate('/employers')}
               className="btn-primary"
             >
               Browse Companies
@@ -541,7 +541,7 @@ export default function ClaimEmployer() {
                       We'll email you at {verificationValue} when it's approved.
                     </p>
                     <button 
-                      onClick={() => navigate('/companies')}
+                      onClick={() => navigate('/employers')}
                       className="btn-primary"
                     >
                       Back to Companies

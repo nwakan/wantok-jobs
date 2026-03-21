@@ -713,7 +713,7 @@ export default function Home() {
               {topEmployers.slice(0, 12).map((employer) => (
                 <Link
                   key={employer.id}
-                  to={`/companies/${employer.id}`}
+                  to={`/employers/${employer.id}`}
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-600 hover:shadow-md transition group"
                 >
                   {employer.logo_url ? (
@@ -736,7 +736,7 @@ export default function Home() {
             </div>
 
             <div className="text-center mt-8">
-              <Link to="/companies" className="text-primary-600 hover:text-primary-700 font-semibold inline-flex items-center gap-2">
+              <Link to="/employers" className="text-primary-600 hover:text-primary-700 font-semibold inline-flex items-center gap-2">
                 View All Companies
                 <ChevronRight className="w-5 h-5" />
               </Link>

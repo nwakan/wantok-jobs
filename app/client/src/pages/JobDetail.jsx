@@ -1385,7 +1385,7 @@ export default function JobDetail() {
                       <div>
                         <div className="text-gray-600">Company</div>
                         {job.company_name !== 'Various Employers' && job.employer_id ? (
-                          <Link to={`/companies/${job.employer_id}`} className="font-medium text-primary-600 hover:text-primary-700 hover:underline">
+                          <Link to={`/employers/${job.employer_id}`} className="font-medium text-primary-600 hover:text-primary-700 hover:underline">
                             {job.company_name}
                           </Link>
                         ) : (

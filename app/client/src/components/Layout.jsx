@@ -78,7 +78,7 @@ export default function Layout() {
             <h3 className="text-lg font-bold mb-4">{t('footer.quickLinks')}</h3>
             <ul className="space-y-2">
               <li><Link to="/jobs" className="text-gray-400 hover:text-white">{t('footer.browseJobs')}</Link></li>
-              <li><Link to="/companies" className="text-gray-400 hover:text-white">{t('footer.companies')}</Link></li>
+              <li><Link to="/employers" className="text-gray-400 hover:text-white">{t('footer.companies')}</Link></li>
               <li><Link to="/categories" className="text-gray-400 hover:text-white">📂 Categories</Link></li>
               <li><Link to="/transparency" className="text-gray-400 hover:text-white">🛡️ Transparency</Link></li>
               <li><Link to="/pricing" className="text-gray-400 hover:text-white">💰 Pricing</Link></li>

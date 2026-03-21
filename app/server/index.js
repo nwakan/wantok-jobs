@@ -545,6 +545,20 @@ if (process.env.NODE_ENV === 'production') {
   }
 
   // index.html must never be cached — prevents stale JS after deploys
+  // Legacy /companies redirects for SEO (301 Permanent)
+  app.get('/employers/:id/reviews', (req, res) => {
+    res.redirect(301, `/employers/${req.params.id}/reviews`);
+  });
+  app.get('/employers/:id', (req, res) => {
+    res.redirect(301, `/employers/${req.params.id}`);
+  });
+  app.get('/companies', (req, res) => {
+    res.redirect(301, '/employers');
+  });
+  app.get('/followed-companies', (req, res) => {
+    res.redirect(301, '/followed-employers');
+  });
+
   app.get('*', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -586,7 +600,7 @@ if (process.env.NODE_ENV === 'production') {
               datePosted: job.created_at,
               validThrough: job.expires_at || new Date(Date.now() + 30*86400000).toISOString(),
               employmentType: employmentTypeMap[job.job_type] || 'FULL_TIME',
-              hiringOrganization: { "@type": "Organization", name: job.company_name || 'Unknown', sameAs: job.website || `${baseUrl}/companies/${job.employer_id}` },
+              hiringOrganization: { "@type": "Organization", name: job.company_name || 'Unknown', sameAs: job.website || `${baseUrl}/employers/${job.employer_id}` },
               jobLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: job.location || 'Papua New Guinea', addressCountry: "PG" } },
               identifier: { "@type": "PropertyValue", name: "WantokJobs", value: `WJ-${job.id}` },
               url: `${baseUrl}/jobs/${job.id}`,
@@ -601,9 +615,9 @@ if (process.env.NODE_ENV === 'production') {
           }
         }
 
-        // Company profile pages: /companies/:id
-        const companyMatch = req.path.match(/^\/companies\/(\d+)$/);
-        if (companyMatch) {
+        // Company profile pages: /employers/:id
+        const employerMatch = req.path.match(/^\/employers\/(\d+)$/);
+        if (employerMatch) {
           const company = db.prepare(`
             SELECT p.user_id as id, p.company_name, p.description as company_description, 
                    p.logo_url as logo, p.location, p.industry, p.country, p.website, 
@@ -611,20 +625,20 @@ if (process.env.NODE_ENV === 'production') {
             FROM profiles_employer p
             JOIN users u ON p.user_id = u.id
             WHERE p.user_id = ? AND u.role = 'employer'
-          `).get(companyMatch[1]);
+          `).get(employerMatch[1]);
           if (company) {
             // Get review stats for aggregate rating
             const reviewStats = db.prepare(`
               SELECT AVG(rating) as avg_rating, COUNT(*) as review_count
               FROM company_reviews
               WHERE company_id = ? AND approved = 1
-            `).get(companyMatch[1]);
+            `).get(employerMatch[1]);
 
             const meta = {
               title: `${company.company_name} - Jobs & Profile | WantokJobs`,
               description: (company.company_description || `${company.company_name} - ${company.industry || 'Employer'} in ${company.location || 'PNG'}`).substring(0, 160),
               image: company.logo ? (company.logo.startsWith('http') ? company.logo : `${baseUrl}${company.logo}`) : `${baseUrl}/og-image.png`,
-              url: `${baseUrl}/companies/${company.id}`,
+              url: `${baseUrl}/employers/${company.id}`,
               type: 'profile',
             };
             

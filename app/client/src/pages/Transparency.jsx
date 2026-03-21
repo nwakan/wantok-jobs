@@ -39,7 +39,7 @@ export default function Transparency() {
               Merit-based hiring. <strong>No more hidden wantok deals.</strong>
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/companies" className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+              <Link to="/employers" className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
                 Browse Transparent Employers
               </Link>
               <Link to="/jobs" className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition">
@@ -325,7 +325,7 @@ export default function Transparency() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
               <p className="text-gray-700">
                 <strong>Want to see employer scores?</strong> Browse the{' '}
-                <Link to="/companies" className="text-primary-600 font-semibold hover:underline">employer directory</Link>
+                <Link to="/employers" className="text-primary-600 font-semibold hover:underline">employer directory</Link>
                 {' '}— scores are shown on each employer profile.
               </p>
             </div>
@@ -409,7 +409,7 @@ export default function Transparency() {
               <Link to="/register?type=jobseeker" className="px-8 py-3 bg-white text-primary-600 font-semibold rounded-lg hover:bg-gray-100 transition">
                 Sign Up — It's Free
               </Link>
-              <Link to="/companies?transparency_only=true" className="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition">
+              <Link to="/employers?transparency_only=true" className="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition">
                 Browse Transparent Employers
               </Link>
             </div>
