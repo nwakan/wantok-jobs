@@ -8,12 +8,15 @@
 
 const express = require('express');
 const router = express.Router();
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, authenticateToken } = require('../middleware/auth');
 const { jeanAILimiter } = require('../middleware/rate-limit');
 const { validateChatMessage } = require('../middleware/validation');
 const chatPersistence = require('../lib/chat-persistence');
 const jean = require('../utils/jean/index');
 const { v4: uuidv4 } = require('uuid');
+const Groq = require('groq-sdk');
+const multer = require('multer');
+const fs = require('fs');
 
 /**
  * Health check endpoint
@@ -256,5 +259,60 @@ router.get(
     }
   }
 );
+
+
+// ============================================
+// GROQ WHISPER STT ENDPOINT (Task 9)
+// ============================================
+
+// Initialize Groq client
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// Configure multer for audio uploads
+const upload = multer({ 
+  dest: "/tmp/audio/",
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg"];
+    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error("Invalid audio format"));
+  }
+});
+
+// Ensure temp directory
+if (!fs.existsSync("/tmp/audio")) fs.mkdirSync("/tmp/audio", { recursive: true });
+
+/**
+ * POST /api/chat/transcribe
+ * Transcribe audio using Groq Whisper
+ */
+router.post("/transcribe", authenticateToken, upload.single("audio"), async (req, res) => {
+  let tempPath = null;
+  try {
+    if (!req.file) return res.status(400).json({ error: "No audio file" });
+    if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: "STT not configured" });
+
+    tempPath = req.file.path;
+    console.log();
+
+    const start = Date.now();
+    const transcription = await groq.audio.transcriptions.create({
+      file: fs.createReadStream(tempPath),
+      model: "whisper-large-v3-turbo",
+      language: req.body.language || "en",
+      response_format: "json",
+      temperature: 0.0
+    });
+
+    const duration = Date.now() - start;
+    console.log();
+
+    res.json({ text: transcription.text, duration_ms: duration });
+  } catch (err) {
+    console.error("[STT] Error:", err);
+    res.status(500).json({ error: "Transcription failed" });
+  } finally {
+    if (tempPath) try { fs.unlinkSync(tempPath); } catch {}
+  }
+});
 
 module.exports = router;

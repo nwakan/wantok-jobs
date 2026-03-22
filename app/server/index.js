@@ -441,7 +441,7 @@ app.use('/api', checkForcePasswordReset);
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/search', require('./routes/semantic-search')); // Semantic search (Phase 1)
 app.use('/api/applications', applicationLimiter, require('./routes/applications'));
-app.use('/api/offer-letters', require('./routes/offer-letters'));
+app.use('/api/offers', require('./routes/offers'));
 app.use('/api/interviews', require('./routes/interviews'));
 app.use('/api/profile', require('./routes/profiles'));
 app.use('/api/profile', require('./routes/profile-insights')); // Profile insights (Part 2.3)
