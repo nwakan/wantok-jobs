@@ -44,6 +44,51 @@ function authenticateToken(req, res, next) {
 }
 
 /**
+ * Optional authentication middleware
+ * Authenticates user if token is present, but allows request to continue if not
+ * Used for endpoints that work for both authenticated and anonymous users
+ */
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  // No token? That's fine, continue without user
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+
+    // Check if password was changed after token was issued
+    if (user.iat) {
+      try {
+        const db = require('../database');
+        const dbUser = db.prepare('SELECT password_changed_at FROM users WHERE id = ?').get(user.id);
+        if (dbUser && dbUser.password_changed_at) {
+          const changedAt = Math.floor(new Date(dbUser.password_changed_at).getTime() / 1000);
+          if (changedAt > user.iat) {
+            // Token invalidated, but don't error - just continue as anonymous
+            req.user = null;
+            return next();
+          }
+        }
+      } catch (e) {
+        // Column might not exist yet
+      }
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    // Invalid or expired token - continue as anonymous user
+    req.user = null;
+    next();
+  }
+}
+
+/**
  * Middleware to check if user must reset their password (force_password_reset flag).
  * Allows auth routes through, blocks everything else.
  */
@@ -52,14 +97,14 @@ function checkForcePasswordReset(req, res, next) {
   if (req.path.startsWith('/auth')) return next();
   // Only check if user is authenticated
   if (!req.user) return next();
-  
+
   try {
     const db = require('../database');
     const user = db.prepare('SELECT force_password_reset FROM users WHERE id = ?').get(req.user.id);
     if (user && user.force_password_reset) {
-      return res.status(403).json({ 
-        error: 'You must reset your password before continuing.', 
-        code: 'FORCE_PASSWORD_RESET' 
+      return res.status(403).json({
+        error: 'You must reset your password before continuing.',
+        code: 'FORCE_PASSWORD_RESET'
       });
     }
   } catch (e) {
@@ -77,4 +122,10 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authenticateToken, JWT_SECRET, checkForcePasswordReset, requireRole };
+module.exports = { 
+  authenticateToken, 
+  optionalAuth,
+  JWT_SECRET, 
+  checkForcePasswordReset, 
+  requireRole 
+};
