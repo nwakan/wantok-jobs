@@ -1,137 +1,260 @@
 /**
- * Jean AI Chat Route
- * Connects /api/chat endpoints to the Jean AI engine (server/utils/jean/index.js)
- * Supports: SSE streaming (GET), JSON POST, conversation history, auth-aware responses
+ * Jean AI Chat Routes - Production Grade
+ * Integrates rate limiting, validation, persistence, and comprehensive error handling
+ * 
+ * Author: Agent Zero (Top-notch Developer Mode)
+ * Date: 2026-03-22
  */
 
 const express = require('express');
 const router = express.Router();
+const { optionalAuth } = require('../middleware/auth');
+const { jeanAILimiter } = require('../middleware/rate-limit');
+const { validateChatMessage } = require('../middleware/validation');
+const chatPersistence = require('../lib/chat-persistence');
 const jean = require('../utils/jean/index');
-const { authenticateToken } = require('../middleware/auth');
-const logger = require('../utils/logger');
-
-const debug = (...args) => process.env.DEBUG && console.log('[JeanChat]', ...args);
+const { v4: uuidv4 } = require('uuid');
 
 /**
- * Optional auth middleware — doesn't reject unauthenticated users,
- * just attaches user if token is valid (Jean handles guest vs. auth responses)
+ * Health check endpoint
+ * No authentication or rate limiting required
  */
-function optionalAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
-  try {
-    const { authenticateToken: auth, JWT_SECRET } = require('../middleware/auth');
-    const jwt = require('jsonwebtoken');
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-  } catch (e) {
-    // Invalid token — continue as guest
-  }
-  next();
-}
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'jean-chat',
+    timestamp: new Date().toISOString(),
+  });
+});
 
 /**
- * POST /api/chat/stream
- * Main chat endpoint — calls Jean AI processMessage and returns JSON response
- * Also supports SSE streaming via Accept: text/event-stream header
+ * Main chat endpoint
+ * POST /api/chat
+ * 
+ * Applies:
+ * - Rate limiting (20 req/15min per IP)
+ * - Input validation and sanitization
+ * - Chat history persistence
+ * - Jean AI processing
  */
-router.post('/stream', optionalAuth, express.json(), async (req, res) => {
-  const isSSE = req.headers['accept'] === 'text/event-stream';
+router.post(
+  '/',
+  jeanAILimiter, // Rate limit: 20 requests per 15 minutes
+  optionalAuth, // Optional user authentication
+  validateChatMessage, // Validate and sanitize input
+  async (req, res) => {
+    const startTime = Date.now();
 
-  try {
-    const {
-      message,
-      sessionToken,
-      pageContext = 'web',
-      conversationHistory = [],
-      file,
-    } = req.body;
+    try {
+      const { message, conversationHistory = [], sessionId } = req.body;
+      const userId = req.user?.id || null;
 
-    if (!message || typeof message !== 'string' || !message.trim()) {
-      return res.status(400).json({ error: 'Message is required' });
+      // Generate or use provided session ID
+      const actualSessionId = sessionId || uuidv4();
+
+      // Save user message to database
+      await chatPersistence.saveMessage(
+        actualSessionId,
+        'user',
+        message,
+        {
+          userId,
+          platform: 'web',
+          ip: req.ip,
+        }
+      );
+
+      // Process with Jean AI
+      const response = await jean.processMessage(message, {
+        conversationHistory,
+        userId,
+        sessionId: actualSessionId,
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      // Save assistant response to database
+      await chatPersistence.saveMessage(
+        actualSessionId,
+        'assistant',
+        response.message || response.text || '',
+        {
+          intent: response.intent,
+          confidence: response.confidence,
+          tokensUsed: response.tokensUsed,
+          model: response.model,
+          responseTime,
+        }
+      );
+
+      // Return response with session ID
+      res.json({
+        success: true,
+        message: response.message || response.text || '',
+        intent: response.intent,
+        confidence: response.confidence,
+        sessionId: actualSessionId,
+        responseTime,
+      });
+
+    } catch (error) {
+      console.error('Jean AI chat error:', error);
+
+      // Log error but don't expose internals to client
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process message. Please try again.',
+        code: 'JEAN_ERROR',
+      });
     }
+  }
+);
 
-    const userId = req.user?.id || null;
-    const user = req.user || null;
+/**
+ * Streaming chat endpoint
+ * POST /api/chat/stream
+ * 
+ * Same as above but returns Server-Sent Events stream
+ */
+router.post(
+  '/stream',
+  jeanAILimiter,
+  optionalAuth,
+  validateChatMessage,
+  async (req, res) => {
+    const startTime = Date.now();
 
-    debug('Processing message:', { userId, pageContext, msgLen: message.length });
+    try {
+      const { message, conversationHistory = [], sessionId } = req.body;
+      const userId = req.user?.id || null;
+      const actualSessionId = sessionId || uuidv4();
 
-    // Call Jean AI engine
-    const response = await jean.processMessage(message.trim(), {
-      userId,
-      user,
-      pageContext,
-      sessionToken,
-      conversationHistory,
-      file,
-      channel: 'web',
-    });
+      // Save user message
+      await chatPersistence.saveMessage(
+        actualSessionId,
+        'user',
+        message,
+        { userId, platform: 'web', ip: req.ip }
+      );
 
-    if (isSSE) {
-      // Server-Sent Events streaming format
+      // Set up SSE headers
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-      res.flushHeaders();
 
-      // Stream the message word by word for a natural feel
-      const words = (response.message || '').split(' ');
-      for (let i = 0; i < words.length; i++) {
-        const chunk = words[i] + (i < words.length - 1 ? ' ' : '');
-        res.write(`data: ${JSON.stringify({ chunk, type: 'token' })}
+      let fullResponse = '';
+      let intent = null;
+      let confidence = null;
+
+      // Process with Jean AI (streaming)
+      const stream = await jean.processMessageStream(message, {
+        conversationHistory,
+        userId,
+        sessionId: actualSessionId,
+      });
+
+      // Stream tokens to client
+      for await (const chunk of stream) {
+        if (chunk.token) {
+          fullResponse += chunk.token;
+          res.write(`data: ${JSON.stringify({ token: chunk.token })}
 
 `);
-        await new Promise(r => setTimeout(r, 18)); // ~55 words/sec
+        }
+        if (chunk.intent) intent = chunk.intent;
+        if (chunk.confidence) confidence = chunk.confidence;
       }
 
-      // Send final event with full response metadata
-      res.write(`data: ${JSON.stringify({
-        type: 'done',
-        message: response.message,
-        quickReplies: response.quickReplies || [],
-        intent: response.intent,
-        sessionToken: response.sessionToken,
-        actions: response.actions || [],
-      })}
+      const responseTime = Date.now() - startTime;
+
+      // Save complete response
+      await chatPersistence.saveMessage(
+        actualSessionId,
+        'assistant',
+        fullResponse,
+        { intent, confidence, responseTime }
+      );
+
+      // Send final event
+      res.write(`data: ${JSON.stringify({ done: true, sessionId: actualSessionId })}
 
 `);
       res.end();
 
-    } else {
-      // Standard JSON response
-      return res.json({
-        message: response.message,
-        quickReplies: response.quickReplies || [],
-        intent: response.intent,
-        sessionToken: response.sessionToken,
-        actions: response.actions || [],
-      });
-    }
+    } catch (error) {
+      console.error('Jean AI stream error:', error);
+      res.write(`data: ${JSON.stringify({ error: 'Stream failed' })}
 
-  } catch (err) {
-    logger.error('[Jean Chat] Error:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Chat service error. Please try again.' });
+`);
+      res.end();
     }
   }
-});
+);
 
 /**
- * GET /api/chat/stream
- * SSE GET endpoint — redirect to POST
+ * Get conversation history
+ * GET /api/chat/history/:sessionId
  */
-router.get('/stream', optionalAuth, (req, res) => {
-  res.status(405).json({ error: 'Use POST /api/chat/stream for chat messages' });
-});
+router.get(
+  '/history/:sessionId',
+  optionalAuth,
+  async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const limit = parseInt(req.query.limit) || 20;
+
+      const history = await chatPersistence.getHistory(sessionId, limit);
+
+      res.json({
+        success: true,
+        sessionId,
+        messages: history,
+        count: history.length,
+      });
+
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch chat history',
+      });
+    }
+  }
+);
 
 /**
- * GET /api/chat/health
- * Health check for Jean AI
+ * Get session statistics
+ * GET /api/chat/stats/:sessionId
  */
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'jean-chat', timestamp: new Date().toISOString() });
-});
+router.get(
+  '/stats/:sessionId',
+  optionalAuth,
+  async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+
+      const stats = await chatPersistence.getSessionStats(sessionId);
+
+      if (!stats) {
+        return res.status(404).json({
+          success: false,
+          error: 'Session not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        stats,
+      });
+
+    } catch (error) {
+      console.error('Error fetching session stats:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch session statistics',
+      });
+    }
+  }
+);
 
 module.exports = router;
