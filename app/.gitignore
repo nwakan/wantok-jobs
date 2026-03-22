@@ -1,7 +1,11 @@
 node_modules
 .env
 server/data/*.db
-# client/dist TEMP INCLUDED
+
+# Build artifacts (frontend bundles)
+client/dist/
+server/dist/
+
 .DS_Store
 .env
 test-e2e.js
@@ -12,8 +16,13 @@ server/public/index.html
 
 # WhatsApp web.js auth
 .wwebjs_auth/
+.wwebjs_cache/
 
 # Backup files
 *.bak
 *.bak_*
 *.bak-*
+
+# Log files
+logs/
+*.log

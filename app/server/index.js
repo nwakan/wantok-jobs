@@ -587,10 +587,10 @@ if (process.env.NODE_ENV === 'production') {
 
   // index.html must never be cached — prevents stale JS after deploys
   // Legacy /companies redirects for SEO (301 Permanent)
-  app.get('/employers/:id/reviews', (req, res) => {
+  app.get('/companies/:id/reviews', (req, res) => {
     res.redirect(301, `/employers/${req.params.id}/reviews`);
   });
-  app.get('/employers/:id', (req, res) => {
+  app.get('/companies/:id', (req, res) => {
     res.redirect(301, `/employers/${req.params.id}`);
   });
   app.get('/companies', (req, res) => {
