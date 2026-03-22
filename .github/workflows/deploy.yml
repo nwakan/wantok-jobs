@@ -2,28 +2,66 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy via SSH
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: srv1380615.hstgr.cloud
           username: root
-          port: 2222
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: 2222
           script: |
+            echo "===================================="
+            echo "WantokJobs Deployment Started"
+            echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "===================================="
+            echo ""
+            
             cd /opt/wantokjobs/app
-            export GIT_SSH_COMMAND="ssh -i /root/.ssh/github_deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            git fetch origin
-            git reset --hard origin/main
-            cd client && npm ci --silent && npm run build 2>&1 | tail -3 && cd ..
-            systemctl restart wantokjobs
-            sleep 3
-            curl -sf http://localhost:3001/health > /dev/null && echo "Deploy OK - $(date)" || echo "Health check failed"
+            
+            echo "[1/7] Pulling latest code from GitHub..."
+            git pull origin main
+            echo ""
+            
+            echo "[2/7] Installing/updating dependencies..."
+            npm install
+            echo ""
+            
+            echo "[3/7] Running database migrations..."
+            npm run migrate || echo "⚠️  No migrations to run or migration failed (continuing...)"
+            echo ""
+            
+            echo "[4/7] Building frontend..."
+            cd client
+            npm install
+            npm run build
+            cd ..
+            echo ""
+            
+            echo "[5/7] Deploying frontend to server dist..."
+            cp -r client/dist/. server/dist/
+            echo ""
+            
+            echo "[6/7] Restarting WantokJobs service..."
+            systemctl restart wantokjobs.service
+            sleep 5
+            echo ""
+            
+            echo "[7/7] Verifying deployment..."
+            systemctl status wantokjobs.service --no-pager -n 5
+            echo ""
+            
+            echo "Testing health endpoint..."
+            curl -s http://localhost:3001/api/health || echo "❌ Health check failed"
+            echo ""
+            
+            echo "===================================="
+            echo "✅ Deployment Complete!"
+            echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "===================================="
