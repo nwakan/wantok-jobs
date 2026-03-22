@@ -326,6 +326,47 @@ app.get('/health', (req, res) => {
   }
 });
 
+// API health endpoint (alias for /health)
+app.get('/api/health', (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const db = require('./database');
+
+    // Test database connectivity
+    const dbCheck = db.prepare('SELECT 1 as healthy').get();
+    const dbLatency = Date.now() - startTime;
+
+    // Basic database health metrics
+    const jobCount = db.prepare('SELECT COUNT(*) as count FROM jobs').get().count;
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024), // MB
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) // MB
+      },
+      database: {
+        status: dbCheck && dbCheck.healthy === 1 ? 'connected' : 'error',
+        latency: `${dbLatency}ms`,
+        jobs: jobCount,
+        users: userCount
+      },
+      version: '1.0.0',
+      node: process.version
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
 // Public stats endpoint
 // Auto-detect location from IP (for frontend auto-fill)
 app.get('/api/location/detect', async (req, res) => {
