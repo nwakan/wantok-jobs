@@ -178,6 +178,50 @@ async function main() {
         // Update last_sent
         db.prepare("UPDATE job_alerts SET last_sent = datetime('now') WHERE id = ?").run(alert.id);
         sent++;
+
+        // ========== WHATSAPP MULTI-CHANNEL SUPPORT ==========
+        // Get notification channels (default to email only)
+        const channels = (alert.notification_channels || alert.channel || 'email')
+          .split(',')
+          .map(c => c.trim());
+
+        // Send WhatsApp notification if channel is enabled
+        if (channels.includes('whatsapp')) {
+          try {
+            // Get user's phone number
+            const userWithPhone = db.prepare('SELECT phone FROM users WHERE id = ?').get(alert.user_id);
+
+            if (userWithPhone && userWithPhone.phone) {
+              // Format WhatsApp message with top 3 jobs
+              const message = `🔔 *${jobs.length} New Jobs Matching Your Alert*\\n\\n` +
+                jobs.slice(0, 3).map(job =>
+                  `• *${job.title}* at ${job.company_name || 'Company'}\\n` +
+                  `  📍 ${job.location || 'PNG'}\\n` +
+                  `  💰 ${job.salary_min ? `K${job.salary_min}-${job.salary_max}` : 'Negotiable'}`
+                ).join('\\n\\n') +
+                `\\n\\n🔗 View all jobs: https://wantokjobs.com/jobs` +
+                (jobs.length > 3 ? `\\n\\n📊 Plus ${jobs.length - 3} more jobs!` : '');
+
+              // Queue WhatsApp message (processed by whatsapp-outbox-processor)
+              db.prepare(`
+                INSERT INTO whatsapp_outbox (phone, message, status, created_at)
+                VALUES (?, ?, 'pending', datetime('now'))
+              `).run(userWithPhone.phone, message);
+
+              log(`    ✅ WhatsApp alert queued for ${userWithPhone.phone}`);
+            } else {
+              log(`    ⚠️  User ${alert.user_id} has no phone number for WhatsApp`);
+            }
+          } catch (err) {
+            log(`    ❌ WhatsApp queueing failed: ${err.message}`);
+          }
+        }
+
+        // SMS support placeholder (requires Twilio integration)
+        if (channels.includes('sms')) {
+          log(`    ℹ️  SMS not yet implemented for user ${alert.user_id}`);
+        }
+        // ========== END WHATSAPP MULTI-CHANNEL ==========
       } else {
         log(`    [DRY RUN] Would send ${jobs.length} jobs to ${alert.email}`);
         sent++;
