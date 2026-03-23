@@ -11,6 +11,12 @@ import JobCard from '../components/JobCard';
 import OptimizedImage from '../components/OptimizedImage';
 import api from '../api';
 
+// Sanitize text to remove literal \r\n characters
+const sanitizeText = (text) => {
+  if (!text) return text;
+  return text.replace(/\\r\\n/g, '').replace(/\\n/g, '').replace(/\r/g, '').replace(/\n/g, '').trim();
+};
+
 export default function CompanyProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -134,7 +140,7 @@ export default function CompanyProfile() {
     <>
       <PageHead
         title={`${companyName} - Company Profile | WantokJobs`}
-        description={`${companyName} - ${company.industry || 'Employer'} in ${company.location || 'the Pacific Islands'}. ${stats.active_jobs || 0} active jobs. View company profile, jobs, and reviews.`}
+        description={`\1${sanitizeText(company.industry) || \'Employer\'}\2`}
       />
       
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6">
@@ -187,7 +193,7 @@ export default function CompanyProfile() {
                     </div>
                     
                     {company.industry && (
-                      <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">{company.industry}</p>
+                      <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">{sanitizeText(company.industry)}</p>
                     )}
 
                     {/* Rating */}
@@ -321,10 +327,10 @@ export default function CompanyProfile() {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">About {companyName}</h2>
                 <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-400">
                   {company.description || company.bio ? (
-                    <p>{company.description || company.bio}</p>
+                    <p>{sanitizeText(company.description || company.bio)}</p>
                   ) : (
                     <p>
-                      {companyName} is a {company.industry?.toLowerCase() || 'leading'} company based in {company.location || 'the Pacific Islands'}. 
+                      {companyName} is a {sanitizeText(company.industry)?.toLowerCase() || \'leading\'} company based in {company.location || 'the Pacific Islands'}. 
                       We are committed to excellence and are always looking for talented individuals to join our team.
                     </p>
                   )}
@@ -435,7 +441,7 @@ export default function CompanyProfile() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Similar Companies</h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Other companies in {company.industry}
+                    Other companies in {sanitizeText(company.industry)}
                   </p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     {related_companies.map((relatedCompany) => (
