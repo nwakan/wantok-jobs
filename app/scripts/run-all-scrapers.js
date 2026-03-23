@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 /**
- * Master Job Scraper - Runs all job scraping scripts
- * Added: 2026-03-23 (Task 16 Phase 4)
+ * WantokJobs Master Job Scraper
+ * Runs employer website scrapers only (NOT job boards)
+ * 
+ * Scrapers:
+ * - scrape-companies.js (7 employer career pages)
+ * 
  * Schedule: Daily at 6:00 AM PNG time
+ * 
+ * NOTE: Job board scrapers (PNGWorkforce, Pacific Jobs, etc.) are DISABLED
+ * per user directive 2026-03-23. Only scrape direct employer websites.
  */
 
 const { execSync } = require('child_process');
 const path = require('path');
 
 const SCRAPERS = [
-  'scrape-pngworkforce-new.js',
-  'scrape-global-png-jobs.js',
-  'scrape-pacific-jobs.js',
-  'scrape-reliefweb.js',
-  'scrape-remote-png.js',
-  'scrape-facebook-jobs.js'
+  'scrape-companies.js'  // ✅ Employer websites only (7 companies)
 ];
 
 const runScraper = (scriptName) => {
