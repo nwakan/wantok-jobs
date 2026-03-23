@@ -14,7 +14,8 @@
     "registerFree": "Sign Up Free",
     "logout": "Logout",
     "dashboard": "Dashboard",
-    "signedInAs": "Signed in as"
+    "signedInAs": "Signed in as",
+    "jobs": "Jobs"
   },
   "hero": {
     "title1": "Find Your Dream Job in",
