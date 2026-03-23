@@ -128,7 +128,7 @@ export default function JobCard({ job, compact = false }) {
         {job.logo_url && (
           <div className="flex-shrink-0">
             <OptimizedImage 
-              src={job.logo_url} 
+              src={job.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
               alt={`${job.company_name || job.employer_name} logo`} 
               width={56} height={56}
               className="w-14 h-14 rounded-lg object-cover border border-gray-200" 

@@ -165,7 +165,7 @@ export default function CompanyProfile() {
                 <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center">
                   {company.logo_url ? (
                     <OptimizedImage 
-                      src={company.logo_url} 
+                      src={company.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
                       alt={companyName} 
                       width={128} 
                       height={128} 
@@ -454,7 +454,7 @@ export default function CompanyProfile() {
                           <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
                             {relatedCompany.logo_url ? (
                               <OptimizedImage 
-                                src={relatedCompany.logo_url} 
+                                src={relatedCompany.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
                                 alt={relatedCompany.company_name} 
                                 width={48} 
                                 height={48} 

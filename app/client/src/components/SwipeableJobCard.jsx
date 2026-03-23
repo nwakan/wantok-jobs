@@ -111,7 +111,7 @@ export default function SwipeableJobCard({
           <div className="flex-shrink-0">
             {job.logo_url ? (
               <OptimizedImage 
-                src={job.logo_url} 
+                src={job.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
                 alt={job.company_name || job.employer_name} 
                 width={56} height={56}
                 className="w-14 h-14 rounded-lg object-cover border border-gray-200" 

@@ -456,7 +456,7 @@ export default function Companies() {
                         {/* Logo */}
                         <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20 transition">
                           {company.logo_url ? (
-                            <OptimizedImage src={company.logo_url} alt={name} width={48} height={48} className="w-12 h-12 object-contain rounded" />
+                            <OptimizedImage src={company.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} alt={name} width={48} height={48} className="w-12 h-12 object-contain rounded" />
                           ) : (
                             <Building2 className="w-7 h-7 text-gray-400 dark:text-gray-500" />
                           )}
