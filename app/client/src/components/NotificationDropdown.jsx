@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications as notificationsAPI } from '../api';
 import { Bell, ExternalLink, Briefcase, FileText, Users, CheckCircle2, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function NotificationDropdown() {
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -11,10 +13,11 @@ export default function NotificationDropdown() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!isAuthenticated) return; // Don't load for unauthenticated users
     loadUnreadCount();
     const interval = setInterval(loadUnreadCount, 30000); // Refresh count every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]); // Re-run when auth status changes
 
   useEffect(() => {
     if (isOpen) {

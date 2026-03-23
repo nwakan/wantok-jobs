@@ -10,11 +10,16 @@ async function handleResponse(response) {
   if (!response.ok) {
     // Handle JWT expiry / authentication failure
     if (response.status === 401) {
+      // Check if user previously had a token (expired session)
+      const hadToken = localStorage.getItem('token');
+
       // Clear local storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Redirect to login with session expired message
-      if (!window.location.pathname.includes('/login')) {
+
+      // Only redirect users who HAD a token (expired sessions)
+      // Don't redirect first-time visitors who never logged in
+      if (hadToken && !window.location.pathname.includes('/login')) {
         window.location.href = '/login?expired=true';
       }
     }
