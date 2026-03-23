@@ -463,7 +463,7 @@ app.use('/api/saved-resumes', require('./routes/saved-resumes'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/companies', require('./routes/companies'));
-app.use('/api/employers', claimLimiter, require('./routes/employer-claims'));
+app.use('/api/employers', require('./routes/companies'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/activity', require('./routes/activity-feed'));
 app.use('/api/uploads', uploadLimiter, require('./routes/uploads'));
