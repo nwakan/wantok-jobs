@@ -58,9 +58,9 @@ const SalaryCalculator = lazy(() => import('./pages/SalaryCalculator'));
 const CompareJobs = lazy(() => import('./pages/CompareJobs'));
 const SuccessStories = lazy(() => import('./pages/SuccessStories'));
 // === Subscription pages (lazy) ===
-const SubscriptionPlans = lazy(() => import("./pages/subscriptions/SubscriptionPlans"));
-const SubscriptionManagement = lazy(() => import("./pages/subscriptions/SubscriptionManagement"));
-const SubscriptionUpgrade = lazy(() => import("./pages/subscriptions/SubscriptionUpgrade"));
+const SubscriptionPlans = lazy(() => import("./components/SubscriptionPlans"));
+const SubscriptionManagement = lazy(() => import("./components/SubscriptionManagement"));
+const SubscriptionUpgrade = lazy(() => import("./components/SubscriptionUpgrade"));
 const IndustryLanding = lazy(() => import('./pages/IndustryLanding'));
 const Transparency = lazy(() => import('./pages/Transparency'));
 const TransparencyLeaderboard = lazy(() => import('./pages/TransparencyLeaderboard'));
