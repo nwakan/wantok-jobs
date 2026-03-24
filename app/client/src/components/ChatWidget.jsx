@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import {
 import { useAuth } from '../context/AuthContext';
+import {
   MessageCircle, X, Send, Mic, MicOff, Paperclip, Volume2, VolumeX,
   ChevronDown, Bot, User, Loader2, Minimize2
 } from 'lucide-react';
