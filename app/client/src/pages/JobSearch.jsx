@@ -28,6 +28,8 @@ export default function JobSearch() {
     country: searchParams.get('country') || '',
     company: searchParams.get('company') || '',
     company_size: searchParams.get('company_size') || '',
+    benefits: searchParams.get('benefits') || '',
+    remote_work_option: searchParams.get('remote_work_option') || '',
   });
   const [sortBy, setSortBy] = useState('relevance');
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
@@ -171,6 +173,8 @@ export default function JobSearch() {
       country: '',
       company: '',
       company_size: '',
+      benefits: '',
+      remote_work_option: '',
     };
     setFilters(clearedFilters);
     setSearchParams(new URLSearchParams());

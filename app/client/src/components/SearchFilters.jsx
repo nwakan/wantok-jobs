@@ -16,6 +16,8 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
     salary: false,
     date: false,
     companySize: false,
+    benefits: false,
+    remoteWorkOption: false,
     other: false,
   });
   
@@ -48,6 +50,31 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
     { label: 'Last 7 days', value: '7' },
     { label: 'Last 30 days', value: '30' },
   ];
+
+  const benefitOptions = [
+    { value: 'health_insurance', label: 'Health Insurance' },
+    { value: 'housing_allowance', label: 'Housing Allowance' },
+    { value: 'transport', label: 'Transport' },
+    { value: 'pension', label: 'Pension' },
+    { value: 'leave_benefits', label: 'Leave Benefits' },
+    { value: 'training_development', label: 'Training & Development' }
+  ];
+
+  const toggleBenefit = (benefit) => {
+    const current = filters.benefits ? filters.benefits.split(',').filter(Boolean) : [];
+    const index = current.indexOf(benefit);
+    if (index > -1) {
+      current.splice(index, 1);
+    } else {
+      current.push(benefit);
+    }
+    setFilters({ ...filters, benefits: current.join(',') });
+  };
+
+  const isBenefitSelected = (benefit) => {
+    const current = filters.benefits ? filters.benefits.split(',') : [];
+    return current.includes(benefit);
+  };
 
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
     if (key === 'keyword') return false; // Don't count keyword in sidebar count
@@ -278,6 +305,37 @@ export default function SearchFilters({ filters, setFilters, onSearch, onClear }
             <option value="medium">Medium (51-200)</option>
             <option value="large">Large (201-1000)</option>
             <option value="enterprise">Enterprise (1000+)</option>
+          </select>
+        </FilterSection>
+
+        {/* Benefits */}
+        <FilterSection title="🎁 Benefits" section="benefits">
+          <div className="space-y-2">
+            {benefitOptions.map(benefit => (
+              <label key={benefit.value} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isBenefitSelected(benefit.value)}
+                  onChange={() => toggleBenefit(benefit.value)}
+                  className="text-primary-600 focus:ring-primary-500 rounded"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{benefit.label}</span>
+              </label>
+            ))}
+          </div>
+        </FilterSection>
+
+        {/* Remote Work Option */}
+        <FilterSection title="🏠 Work Location" section="remoteWorkOption">
+          <select
+            value={filters.remote_work_option || ''}
+            onChange={(e) => setFilters({ ...filters, remote_work_option: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">Any location</option>
+            <option value="0">On-site only</option>
+            <option value="1">Fully remote</option>
+            <option value="2">Hybrid</option>
           </select>
         </FilterSection>
 

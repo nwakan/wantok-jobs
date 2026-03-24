@@ -351,6 +351,31 @@ router.get('/', (req, res) => {
         )`;
         params.push(range[0], range[1], containsPattern(company_size));
       }
+
+    // Benefits filter (Task 22: Advanced Search Filters)
+    if (req.query.benefits) {
+      const benefitsList = req.query.benefits.split(',').map(b => b.trim()).filter(Boolean);
+      if (benefitsList.length > 0) {
+        const benefitConditions = benefitsList.map(() => "(j.benefits LIKE ? ESCAPE '\\\\')").join(' OR ');
+        query += ` AND (${benefitConditions})`;
+        benefitsList.forEach(benefit => {
+          params.push(containsPattern(`"${benefit}"`)); // Search for JSON string value
+        });
+      }
+    }
+
+    // Enhanced remote work option filter (Task 22: Advanced Search Filters)
+    if (req.query.remote_work_option) {
+      const options = req.query.remote_work_option.split(',').map(o => parseInt(o.trim())).filter(o => !isNaN(o));
+      if (options.length === 1) {
+        query += ' AND j.remote_work_option = ?';
+        params.push(options[0]);
+      } else if (options.length > 1) {
+        const placeholders = options.map(() => '?').join(',');
+        query += ` AND j.remote_work_option IN (${placeholders})`;
+        params.push(...options);
+      }
+    }
     }
 
     // Count total
