@@ -193,6 +193,7 @@ export default function Login() {
         }
       },
     });
+      window.google.accounts.id.prompt();
 
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
