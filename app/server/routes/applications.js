@@ -314,6 +314,31 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
         fraudDetector.close();
       } catch (err) {
         logger.error('Bot detection failed', { userId: req.user.id, error: err.message });
+
+        // Task 18: Smart Matching System
+        const MatchmakerAgent = require('../../system/agents/matchmaker-agent');
+        const ScreenerAgent = require('../../system/agents/screener-agent');
+        const RankerAgent = require('../../system/agents/ranker-agent');
+
+        // 1. Calculate and save match score
+        const matchScore = await MatchmakerAgent.calculateMatchScore(application.id);
+        if (matchScore) await MatchmakerAgent.saveMatch(application.id, matchScore);
+
+        // 2. Score screening answers if provided
+        if (screening_answers && Array.isArray(screening_answers) && screening_answers.length > 0) {
+          for (const qa of screening_answers) {
+            if (qa.question_id && qa.answer) {
+              await ScreenerAgent.scoreScreeningAnswer(qa.question_id, application.id, qa.answer);
+            }
+          }
+          await ScreenerAgent.calculateScreeningScore(application.id);
+        }
+
+        // 3. Rank applicants if >= 10 applications
+        const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(job.id)?.n;
+        if (appCount >= 10) {
+          await RankerAgent.rankApplicants(job.id);
+        }
       }
     })();
 
