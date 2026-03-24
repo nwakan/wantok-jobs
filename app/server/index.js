@@ -431,6 +431,8 @@ app.use('/api/auth/oauth/google', authLimiter);
 app.use('/api/auth/oauth/facebook', authLimiter);
 app.use('/api/auth/oauth/linkedin', authLimiter);
 app.use('/api/2fa', require('./routes/2fa'));
+// OAuth routes (Google, Facebook, LinkedIn)
+app.use('/api/auth/oauth', require('./routes/oauth'));
 app.use('/api/auth', require('./routes/auth'));
 
 // Force password reset middleware — blocks all non-auth routes for fpr users

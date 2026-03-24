@@ -2,8 +2,9 @@
  * Jean AI Chat Persistence Service
  * Handles storing and retrieving chat sessions and messages
  * 
+ * FIXED: Converted from Knex to better-sqlite3 syntax
  * Author: Agent Zero (Top-notch Developer Mode)
- * Date: 2026-03-22
+ * Date: 2026-03-24
  */
 
 const db = require('../database');
@@ -13,30 +14,37 @@ class ChatPersistenceService {
   /**
    * Create or get a chat session
    */
-  async getOrCreateSession(sessionId, platform = 'web', metadata = {}) {
+  getOrCreateSession(sessionId, platform = 'web', metadata = {}) {
     try {
       // Check if session exists
-      let session = await db('chat_sessions')
-        .where({ session_id: sessionId })
-        .first();
+      let session = db.prepare(
+        'SELECT * FROM chat_sessions WHERE session_id = ?'
+      ).get(sessionId);
 
       if (!session) {
         // Create new session
-        const [id] = await db('chat_sessions').insert({
-          session_id: sessionId,
-          platform: platform,
-          metadata: JSON.stringify(metadata),
-          created_at: new Date(),
-          last_activity_at: new Date(),
-          is_active: true,
-        });
+        const now = new Date().toISOString();
+        const result = db.prepare(`
+          INSERT INTO chat_sessions (
+            session_id, platform, metadata, created_at, last_activity_at, is_active
+          ) VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+          sessionId,
+          platform,
+          JSON.stringify(metadata),
+          now,
+          now,
+          1
+        );
 
-        session = await db('chat_sessions').where({ id }).first();
+        session = db.prepare(
+          'SELECT * FROM chat_sessions WHERE id = ?'
+        ).get(result.lastInsertRowid);
       } else {
         // Update last activity
-        await db('chat_sessions')
-          .where({ id: session.id })
-          .update({ last_activity_at: new Date() });
+        db.prepare(
+          'UPDATE chat_sessions SET last_activity_at = ? WHERE id = ?'
+        ).run(new Date().toISOString(), session.id);
       }
 
       return session;
@@ -49,24 +57,29 @@ class ChatPersistenceService {
   /**
    * Save a chat message
    */
-  async saveMessage(sessionId, role, content, metadata = {}) {
+  saveMessage(sessionId, role, content, metadata = {}) {
     try {
-      const session = await this.getOrCreateSession(sessionId);
+      const session = this.getOrCreateSession(sessionId);
 
-      const [messageId] = await db('chat_messages').insert({
-        session_id: session.id,
-        role: role,
-        content: content,
-        intent: metadata.intent || null,
-        confidence: metadata.confidence || null,
-        metadata: JSON.stringify(metadata),
-        tokens_used: metadata.tokensUsed || null,
-        model: metadata.model || null,
-        response_time_ms: metadata.responseTime || null,
-        created_at: new Date(),
-      });
+      const result = db.prepare(`
+        INSERT INTO chat_messages (
+          session_id, role, content, intent, confidence, metadata,
+          tokens_used, model, response_time_ms, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        session.id,
+        role,
+        content,
+        metadata.intent || null,
+        metadata.confidence || null,
+        JSON.stringify(metadata),
+        metadata.tokensUsed || null,
+        metadata.model || null,
+        metadata.responseTime || null,
+        new Date().toISOString()
+      );
 
-      return messageId;
+      return result.lastInsertRowid;
     } catch (error) {
       console.error('Error saving message:', error);
       throw error;
@@ -76,96 +89,101 @@ class ChatPersistenceService {
   /**
    * Get conversation history for a session
    */
-  async getHistory(sessionId, limit = 20) {
+  getHistory(sessionId, limit = 20) {
     try {
-      const session = await db('chat_sessions')
-        .where({ session_id: sessionId })
-        .first();
+      const session = db.prepare(
+        'SELECT * FROM chat_sessions WHERE session_id = ?'
+      ).get(sessionId);
 
       if (!session) {
         return [];
       }
 
-      const messages = await db('chat_messages')
-        .where({ session_id: session.id })
-        .orderBy('created_at', 'desc')
-        .limit(limit)
-        .select('role', 'content', 'created_at', 'intent', 'confidence');
+      const messages = db.prepare(`
+        SELECT * FROM chat_messages
+        WHERE session_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `).all(session.id, limit);
 
-      // Return in chronological order
       return messages.reverse();
     } catch (error) {
       console.error('Error getting history:', error);
-      return [];
+      throw error;
     }
   }
 
   /**
    * Get session statistics
    */
-  async getSessionStats(sessionId) {
+  getSessionStats(sessionId) {
     try {
-      const session = await db('chat_sessions')
-        .where({ session_id: sessionId })
-        .first();
+      const session = db.prepare(
+        'SELECT * FROM chat_sessions WHERE session_id = ?'
+      ).get(sessionId);
 
       if (!session) {
         return null;
       }
 
-      const stats = await db('chat_messages')
-        .where({ session_id: session.id })
-        .select(
-          db.raw('COUNT(*) as message_count'),
-          db.raw('SUM(tokens_used) as total_tokens'),
-          db.raw('AVG(response_time_ms) as avg_response_time')
-        )
-        .first();
+      const stats = db.prepare(`
+        SELECT 
+          COUNT(*) as message_count,
+          SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) as user_messages,
+          SUM(CASE WHEN role = 'assistant' THEN 1 ELSE 0 END) as assistant_messages,
+          SUM(tokens_used) as total_tokens,
+          AVG(response_time_ms) as avg_response_time
+        FROM chat_messages
+        WHERE session_id = ?
+      `).get(session.id);
 
       return {
         session_id: sessionId,
+        platform: session.platform,
         created_at: session.created_at,
-        last_activity: session.last_activity_at,
-        message_count: stats.message_count || 0,
-        total_tokens: stats.total_tokens || 0,
-        avg_response_time: stats.avg_response_time || 0,
+        last_activity_at: session.last_activity_at,
+        is_active: session.is_active,
+        ...stats
       };
     } catch (error) {
       console.error('Error getting session stats:', error);
-      return null;
+      throw error;
     }
   }
 
   /**
-   * Close/deactivate a session
+   * Close a session
    */
-  async closeSession(sessionId) {
+  closeSession(sessionId) {
     try {
-      await db('chat_sessions')
-        .where({ session_id: sessionId })
-        .update({ is_active: false });
+      db.prepare(
+        'UPDATE chat_sessions SET is_active = 0 WHERE session_id = ?'
+      ).run(sessionId);
+      return true;
     } catch (error) {
       console.error('Error closing session:', error);
+      throw error;
     }
   }
 
   /**
-   * Clean up old inactive sessions (data retention)
+   * Delete old sessions (cleanup)
    */
-  async cleanupOldSessions(daysOld = 30) {
+  cleanupOldSessions(daysOld = 30) {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
-      const deletedCount = await db('chat_sessions')
-        .where('is_active', false)
-        .where('last_activity_at', '<', cutoffDate)
-        .delete();
+      const result = db.prepare(`
+        DELETE FROM chat_sessions
+        WHERE is_active = 0
+        AND last_activity_at < ?
+      `).run(cutoffDate.toISOString());
 
-      return deletedCount;
+      return result.changes;
     } catch (error) {
-      console.error('Error cleaning up old sessions:', error);
-      return 0;
+      console.error('Error cleaning up sessions:', error);
+      throw error;
     }
   }
 }

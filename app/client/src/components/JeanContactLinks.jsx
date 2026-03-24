@@ -7,7 +7,7 @@ const JeanContactLinks = () => {
   };
 
   const handleWhatsAppClick = () => {
-    const phoneNumber = '6756949494';
+    const phoneNumber = '67583460582';
     const message = encodeURIComponent('Hi Jean! I need help with job searching.');
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(whatsappUrl, '_blank');

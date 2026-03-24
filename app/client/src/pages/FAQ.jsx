@@ -85,7 +85,7 @@ const faqData = [
       },
       {
         q: 'How do I contact WantokJobs?',
-        a: 'You can reach us via email at info@wantokjobs.com, call +675 7583 0582, message us on WhatsApp, or visit our Contact page.',
+        a: 'You can reach us via email at info@wantokjobs.com, call +675 8346 0582, message us on WhatsApp, or visit our Contact page.',
       },
     ],
   },
