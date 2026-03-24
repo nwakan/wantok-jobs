@@ -26,3 +26,11 @@ server/public/index.html
 # Log files
 logs/
 *.log
+
+# Backup files (added 2026-03-24)
+*.backup
+*.backup_*
+*.backup-*
+*_backup
+*_backup_*
+*.corrupted.backup
