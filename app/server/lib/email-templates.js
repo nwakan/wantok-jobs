@@ -47,16 +47,29 @@ function emailLayout({ preheader, body, footerText, showUnsubscribe = false, uns
       <!-- Main Container -->
       <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:${COLORS.white};border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
         
-        <!-- Header with PNG Cultural Touch -->
-        <tr><td style="background:linear-gradient(135deg,${COLORS.green} 0%,${COLORS.greenDark} 100%);padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
-          <!-- Logo placeholder -->
-          <div style="background:${COLORS.white};width:64px;height:64px;margin:0 auto 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-            <span style="font-size:32px;font-weight:800;color:${COLORS.green};">W</span>
-          </div>
-          <h1 style="color:${COLORS.white};margin:0;font-size:28px;font-weight:700;letter-spacing:-0.5px;">WantokJobs</h1>
-          <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;font-weight:500;">Your Wantok in the Job Market</p>
-          <!-- PNG Flag Colors Accent -->
-          <div style="margin-top:16px;height:4px;background:linear-gradient(90deg,#CE1126 0%,#CE1126 33%,${COLORS.gold} 33%,${COLORS.gold} 66%,#000000 66%,#000000 100%);border-radius:2px;"></div>
+        <!-- Header with PNG Cultural Touch (Side-by-Side Layout) -->
+        <tr><td style="background:linear-gradient(135deg,${COLORS.green} 0%,${COLORS.greenDark} 100%);padding:32px 24px;border-radius:12px 12px 0 0;">
+          <!-- Two-column layout: Logo on left, Text on right -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <!-- Logo Column (80px width) -->
+              <td width="80" valign="middle" style="padding-right:16px;">
+                <div style="background:${COLORS.white};width:64px;height:64px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                  <!-- Logo 'W' using table for email client compatibility -->
+                  <table role="presentation" width="64" height="64" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td align="center" valign="middle" style="font-size:32px;font-weight:800;color:${COLORS.green};">W</td></tr>
+                  </table>
+                </div>
+              </td>
+              <!-- Text + PNG Flag Column -->
+              <td valign="middle">
+                <h1 style="color:${COLORS.white};margin:0 0 4px;font-size:28px;font-weight:700;letter-spacing:-0.5px;">WantokJobs</h1>
+                <p style="color:rgba(255,255,255,0.9);margin:0 0 8px;font-size:14px;font-weight:500;">Your Wantok in the Job Market</p>
+                <!-- PNG Flag Colors Accent -->
+                <div style="height:4px;background:linear-gradient(90deg,#CE1126 0%,#CE1126 33%,${COLORS.gold} 33%,${COLORS.gold} 66%,#000000 66%,#000000 100%);border-radius:2px;max-width:300px;"></div>
+              </td>
+            </tr>
+          </table>
         </td></tr>
         
         <!-- Body Content -->
