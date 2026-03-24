@@ -153,6 +153,17 @@ export default function ChatWidget() {
     }
   }, []);
 
+  // Listen for custom event from JeanContactLinks to open chat
+  useEffect(() => {
+    const handleOpenChat = () => {
+      setIsOpen(true);
+      setShowHint(false);
+    };
+
+    window.addEventListener('open-jean-chat', handleOpenChat);
+    return () => window.removeEventListener('open-jean-chat', handleOpenChat);
+  }, []);
+
   const loadHistory = async () => {
     try {
       const params = sessionToken ? `?sessionToken=${sessionToken}` : '';

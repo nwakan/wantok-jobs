@@ -315,4 +315,79 @@ router.post("/transcribe", authenticateToken, upload.single("audio"), async (req
   }
 });
 
+
+/**
+ * Get Jean AI settings
+ * GET /api/chat/settings
+ * 
+ * Returns configuration for the Jean AI chat widget
+ * No authentication required - public endpoint
+ */
+router.get('/settings', (req, res) => {
+  try {
+    // Return Jean AI configuration
+    // These settings control the chat widget behavior
+    res.json({
+      enabled: true,           // Jean AI chat is enabled
+      proactive: true,         // Show proactive hints to new users
+      voiceEnabled: true,      // Voice input/output enabled
+      name: 'Jean Kila',       // AI assistant name
+      role: 'WantokJobs Customer Success',
+      features: {
+        fileUpload: true,      // Allow file uploads
+        voiceInput: true,      // Allow voice input
+        voiceOutput: true,     // Allow voice output
+        quickReplies: true,    // Show quick reply suggestions
+        contextHints: true,    // Show contextual page hints
+      },
+    });
+  } catch (error) {
+    console.error('[Chat] Settings error:', error);
+    res.status(500).json({ error: 'Failed to load settings' });
+  }
+});
+
+/**
+ * Get conversation history (without sessionId in URL)
+ * GET /api/chat/history?sessionToken=xxx
+ * 
+ * Frontend calls this without sessionId in the URL path
+ * Session token is passed as query parameter
+ */
+router.get('/history', optionalAuth, async (req, res) => {
+  try {
+    const { sessionToken, limit: limitParam } = req.query;
+    const limit = parseInt(limitParam) || 20;
+
+    // If no session token, create a new session
+    if (!sessionToken) {
+      const newSessionToken = require('uuid').v4();
+      return res.json({
+        sessionToken: newSessionToken,
+        messages: [],
+      });
+    }
+
+    // Load history for the session
+    const history = await chatPersistence.getHistory(sessionToken, limit);
+
+    res.json({
+      sessionToken,
+      messages: history.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        created_at: msg.created_at,
+        metadata: msg.metadata,
+      })),
+    });
+  } catch (error) {
+    console.error('[Chat] History error:', error);
+    res.status(500).json({ 
+      error: 'Failed to load history',
+      sessionToken: req.query.sessionToken || require('uuid').v4(),
+      messages: [],
+    });
+  }
+});
+
 module.exports = router;

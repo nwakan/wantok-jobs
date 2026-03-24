@@ -13,6 +13,7 @@ import { CompareFloatingBar } from './JobCard';
 import ChatWidget from './ChatWidget';
 import CookieConsent from './CookieConsent';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import JeanContactLinks from './JeanContactLinks';
 
 function getDashboardLink(user) {
   if (!user) return '/';
@@ -176,6 +177,7 @@ export default function Layout() {
       <CompareFloatingBar />
       <BackToTop />
       <ChatWidget />
+      <JeanContactLinks />
       <CookieConsent />
     </>
   );
