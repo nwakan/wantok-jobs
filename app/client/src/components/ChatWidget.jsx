@@ -365,36 +365,7 @@ export default function ChatWidget() {
   if (settings && !settings.enabled) return null;
 
   return (
-    <>      {/* COMMENTED OUT - Using JeanContactLinks instead
-      
-      // {/* Chat bubble */}
-      // {!isOpen && (
-      // <div className="fixed bottom-6 right-4 z-50 flex items-end gap-3 sm:bottom-4">
-      // {/* Proactive hint (contextual page triggers or generic for new visitors) */}
-      // {showHint && (contextHint || (!hasGreeted && settings?.proactive)) && (
-      // <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm px-4 py-2.5 rounded-2xl rounded-br-md shadow-lg max-w-[220px] animate-fade-in cursor-pointer border dark:border-gray-700"
-      // onClick={() => { setShowHint(false); setContextHint(''); setIsOpen(true); }}>
-      // {contextHint || 'Hi! 👋 I\'m Jean. Need help finding a job or posting one?'}
-      // </div>
-      // )}
-      // <button
-      // onClick={() => { setShowHint(false); setIsOpen(true); }}
-      // className="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-4 shadow-xl transition-all hover:scale-110 active:scale-95 relative"
-      // aria-label="Chat with Jean"
-      // >
-      // <MessageCircle size={24} />
-      // {unreadCount > 0 && (
-      // <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-      // {unreadCount}
-      // </span>
-      // )}
-      // <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white"></span>
-      // </button>
-      // </div>
-      // )}
-      
-           
-      */}
+    <>
  {/* Chat window */}
       {isOpen && (
         <div
