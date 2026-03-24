@@ -457,7 +457,9 @@ app.use('/api/references', require('./routes/references'));
 // Feature routes
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/plans', require('./routes/plans'));
+app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/orders', require('./routes/orders'));
+ app.use('/api/admin', require('./routes/admin-pricing'));
 app.use('/api/credits', require('./routes/credits'));
 app.use('/api/screening', require('./routes/screening'));
 app.use('/api/job-alerts', require('./routes/job-alerts'));
