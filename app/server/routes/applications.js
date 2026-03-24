@@ -1334,6 +1334,28 @@ router.post('/jobs/:id/quick-apply', authenticateToken, requireRole('jobseeker')
     } catch (e) {}
 
     res.status(201).json({
+
+    // Task 18: Smart Matching System (Quick-Apply)
+    (async () => {
+      try {
+        const MatchmakerAgent = require('../../system/agents/matchmaker-agent');
+        const RankerAgent = require('../../system/agents/ranker-agent');
+
+        // 1. Calculate and save match score
+        const matchScore = await MatchmakerAgent.calculateMatchScore(applicationId);
+        if (matchScore) await MatchmakerAgent.saveMatch(applicationId, matchScore);
+
+        // 2. Quick-apply doesn't use screening questions (skip)
+
+        // 3. Rank applicants if >= 10 applications
+        const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(jobId)?.n;
+        if (appCount >= 10) {
+          await RankerAgent.rankApplicants(jobId);
+        }
+      } catch (err) {
+        logger.error('Smart Matching failed', { applicationId, error: err.message });
+      }
+    })();
       success: true,
       application_id: applicationId,
       message: 'Applied! The employer will review your application.',
