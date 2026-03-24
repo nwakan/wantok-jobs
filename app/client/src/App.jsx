@@ -110,6 +110,7 @@ const ManageUsers = lazy(() => import('./pages/dashboard/admin/ManageUsers'));
 const ManageJobs = lazy(() => import('./pages/dashboard/admin/ManageJobs'));
 const AdminSettings = lazy(() => import('./pages/dashboard/admin/Settings'));
 const AdminOrders = lazy(() => import('./pages/dashboard/admin/Orders'));
+const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
 const AdminPlans = lazy(() => import('./pages/dashboard/admin/Plans'));
 const AdminCategories = lazy(() => import('./pages/dashboard/admin/Categories'));
 const AdminReports = lazy(() => import('./pages/dashboard/admin/Reports'));
@@ -236,6 +237,7 @@ function App() {
                 <Route path="users" element={<Lazy component={ManageUsers} />} />
                 <Route path="jobs" element={<Lazy component={ManageJobs} />} />
                 <Route path="orders" element={<Lazy component={AdminOrders} />} />
+                <Route path="pricing" element={<Lazy component={AdminPricing} />} />
                 <Route path="plans" element={<Lazy component={AdminPlans} />} />
                 <Route path="categories" element={<Lazy component={AdminCategories} />} />
                 <Route path="reports" element={<Lazy component={AdminReports} />} />
