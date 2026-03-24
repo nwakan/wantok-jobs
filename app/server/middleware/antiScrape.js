@@ -85,7 +85,7 @@ function botBlocker(req, res, next) {
   // Exempt monitoring endpoints from bot blocking
   if (req.path === '/health' || req.path === '/api/health') return next();  
   // Exempt OAuth endpoints (LinkedIn/Google/Facebook redirects don't have User-Agent)
-  if (req.path.startsWith('/api/auth/oauth/')) return next();
+  if (req.originalUrl.startsWith('/api/auth/oauth')) return next();
   
   // Allow known good bots
   if (ALLOWED_BOTS.some(p => p.test(ua))) return next();
