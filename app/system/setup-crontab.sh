@@ -20,6 +20,7 @@ echo "0 3 * * * cd /opt/wantokjobs/app && node scripts/expire-jobs.js >> /var/lo
 echo "0 8 * * * cd /opt/wantokjobs/app && node scripts/send-job-alerts.js >> /var/log/wantokjobs-cron.log 2>&1"
 echo "0 1 * * * cd /opt/wantokjobs/app && node system/agents/job-indexer.js >> /var/log/wantokjobs-cron.log 2>&1"
 echo "0 4 * * 0 cd /opt/wantokjobs/app && node system/data-cleanup.js >> /var/log/wantokjobs-cron.log 2>&1"
+echo "0 2 * * * cd /opt/wantokjobs/app && node server/lib/subscription-cron.js >> /var/log/wantokjobs-subscriptions.log 2>&1"
 echo "0 5 * * * cd /opt/wantokjobs/app && node system/agents/daily-verification-sweep.js >> /var/log/wantokjobs-verification.log 2>&1"
 ) | crontab -
 
