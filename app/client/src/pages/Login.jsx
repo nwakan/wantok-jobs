@@ -89,6 +89,66 @@ export default function Login() {
       script.async = true;
       script.defer = true;
       document.body.appendChild(script);
+
+  // Auto-initialize Google One Tap on page load
+  useEffect(() => {
+    const initGoogleOneTap = () => {
+      const googleProvider = oauthProviders.find(p => p.name === 'google');
+      if (!googleProvider) return;
+      
+      if (!window.google?.accounts?.id) {
+        // SDK not loaded yet, retry in 500ms
+        setTimeout(initGoogleOneTap, 500);
+        return;
+      }
+      
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleProvider.clientId,
+          callback: async (response) => {
+            setGoogleLoading(true);
+            try {
+              const res = await fetch('/api/auth/oauth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential }),
+              });
+              const data = await res.json();
+              if (res.ok) {
+                login(data.token, data.user);
+                navigate(searchParams.get('redirect') || `/dashboard/${data.user.role}`, { replace: true });
+              } else {
+                setError(data.message || 'Google sign-in failed');
+                setGoogleLoading(false);
+              }
+            } catch (err) {
+              setError('Network error during Google sign-in');
+              setGoogleLoading(false);
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false,
+        });
+        
+        // Show One Tap prompt automatically
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed()) {
+            console.log('One Tap not displayed:', notification.getNotDisplayedReason());
+          }
+          if (notification.isSkippedMoment()) {
+            console.log('One Tap skipped:', notification.getSkippedReason());
+          }
+        });
+      } catch (err) {
+        console.error('Google One Tap initialization error:', err);
+      }
+    };
+    
+    // Only initialize if user is not already logged in
+    if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
+      initGoogleOneTap();
+    }
+  }, [oauthProviders, login, navigate, searchParams]);
     }
   }, [oauthProviders]);
 
