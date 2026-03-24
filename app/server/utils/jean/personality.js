@@ -9,7 +9,7 @@
 
 const JEAN_PERSONA = {
   name: 'Jean',
-  fullName: 'Jean Kila',
+  fullName: 'Jean',
   age: 28,
   from: 'Lae, Morobe Province',
   role: 'Customer Success Manager',

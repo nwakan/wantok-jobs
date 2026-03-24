@@ -49,7 +49,7 @@ router.post(
     const startTime = Date.now();
 
     try {
-      const { message, conversationHistory = [], sessionId, userContext, pageContext } = req.body;
+      const { message, conversationHistory = [], sessionId } = req.body;
       const userId = req.user?.id || null;
 
       // Link session to user if authenticated
@@ -74,24 +74,10 @@ router.post(
       );
 
       // Process with Jean AI
-      // Build enhanced context for Jean AI personalization
-      let enhancedContext = '';
-
-      if (userContext?.isAuthenticated) {
-        enhancedContext += `\nCurrent user: ${userContext.userName} (${userContext.userRole})`;
-      }
-
-      if (pageContext?.path) {
-        enhancedContext += `\nCurrent page: ${pageContext.path}`;
-        if (pageContext.jobId) enhancedContext += ` - Viewing job ID ${pageContext.jobId}`;
-        if (pageContext.employerId) enhancedContext += ` - Viewing employer ID ${pageContext.employerId}`;
-      }
-
       const response = await jean.processMessage(message, {
         conversationHistory,
         userId,
         sessionId: actualSessionId,
-        context: enhancedContext,
       });
 
       const responseTime = Date.now() - startTime;
@@ -148,7 +134,7 @@ router.post(
     const startTime = Date.now();
 
     try {
-      const { message, conversationHistory = [], sessionId, userContext, pageContext } = req.body;
+      const { message, conversationHistory = [], sessionId } = req.body;
       const userId = req.user?.id || null;
 
       // Link session to user if authenticated
@@ -176,24 +162,10 @@ router.post(
       let confidence = null;
 
       // Process with Jean AI (streaming)
-      // Build enhanced context for Jean AI personalization
-      let enhancedContext = '';
-
-      if (userContext?.isAuthenticated) {
-        enhancedContext += `\nCurrent user: ${userContext.userName} (${userContext.userRole})`;
-      }
-
-      if (pageContext?.path) {
-        enhancedContext += `\nCurrent page: ${pageContext.path}`;
-        if (pageContext.jobId) enhancedContext += ` - Viewing job ID ${pageContext.jobId}`;
-        if (pageContext.employerId) enhancedContext += ` - Viewing employer ID ${pageContext.employerId}`;
-      }
-
       const stream = await jean.processMessageStream(message, {
         conversationHistory,
         userId,
         sessionId: actualSessionId,
-        context: enhancedContext,
       });
 
       // Stream tokens to client

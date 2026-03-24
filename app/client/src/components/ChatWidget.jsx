@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
+import { useAuth } from '../context/AuthContext';
   MessageCircle, X, Send, Mic, MicOff, Paperclip, Volume2, VolumeX,
   ChevronDown, Bot, User, Loader2, Minimize2
 } from 'lucide-react';
@@ -61,6 +62,7 @@ export default function ChatWidget() {
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
 
   // Proactive page-context triggers
   const PAGE_TRIGGERS = [
@@ -243,15 +245,25 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
+      // Build user context
+      const userContext = {
+        userId: user?.id || null,
+        userName: user?.name || null,
+        userRole: user?.role || null,
+        isAuthenticated: isAuthenticated || false,
+      };
+
+      // Build page context
       const pageContext = {
         path: location.pathname,
         jobId: location.pathname.match(/\/jobs\/(\d+)/)?.[1] || null,
+        employerId: location.pathname.match(/\/employers\/(\d+)/)?.[1] || null,
       };
 
       const res = await chatFetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ message: text, sessionToken, pageContext }),
+        body: JSON.stringify({ message: text, sessionToken, userContext, pageContext }),
       });
 
       const data = await res.json();
@@ -384,7 +396,7 @@ export default function ChatWidget() {
                 J
               </div>
               <div>
-                <div className="font-semibold text-sm">Jean Kila</div>
+                <div className="font-semibold text-sm">Jean</div>
                 <div className="text-xs text-blue-100 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
                   Online · WantokJobs
