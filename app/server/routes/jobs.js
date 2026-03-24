@@ -100,6 +100,22 @@ async function processNewJob(job, employer) {
     }
   } catch(e) { /* FTS might not exist */ }
 
+
+  // Step 4: Generate screening questions (async, non-blocking)
+  try {
+    const screenerAgent = require('../../system/agents/screener-agent');
+    const jobData = {
+      title: job.title,
+      description: job.description,
+      required_skills: job.skills,
+      experience_level: job.experience_level,
+      location: job.location
+    };
+    const questions = await screenerAgent.generateScreeningQuestions(job.id, jobData);
+    if (questions.length > 0) steps.push(`screening:${questions.length}`);
+  } catch (e) {
+    logger.error('Screening questions generation failed', { jobId: job.id, error: e.message });
+  }
   logger.info('AI pipeline complete', { jobId: job.id, steps, totalMs: Date.now() - startMs });
 }
 
