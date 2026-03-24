@@ -15,6 +15,8 @@ const { validateJobData } = require('../middleware/jobValidator');
 
 const cache = require('../lib/cache');
 
+const VerifierAgent = require('../../system/agents/verifier-agent');
+const FraudDetectorAgent = require('../../system/agents/fraud-detector-agent');
 // Real-time AI pipeline — processes new jobs asynchronously
 let vectorStore, embeddingReady = false;
 try {
@@ -825,6 +827,31 @@ router.post('/', authenticateToken, requireRole('employer'), validateJobData, va
       processNewJob(job, employer).catch(e => 
         logger.error('AI pipeline error', { jobId: job.id, error: e.message })
       );
+    }
+
+
+    // Task 17 Phase 5: Verification System Integration
+    if (status === 'active') {
+      Promise.all([
+        (async () => {
+          try {
+            const verifier = new VerifierAgent();
+            await verifier.verifyJob(job.id);
+            verifier.close();
+          } catch (err) {
+            logger.error('Job verification failed', { jobId: job.id, error: err.message });
+          }
+        })(),
+        (async () => {
+          try {
+            const fraudDetector = new FraudDetectorAgent();
+            await fraudDetector.detectFraud('job', job.id);
+            fraudDetector.close();
+          } catch (err) {
+            logger.error('Fraud detection failed', { jobId: job.id, error: err.message });
+          }
+        })()
+      ]).catch(err => logger.error('Verification system error', { error: err.message }));
     }
 
     res.status(201).json({ data: job, id: job.id });

@@ -17,6 +17,8 @@ const {
 } = require('./account-security');
 
 const router = express.Router();
+const VerifierAgent = require('../../system/agents/verifier-agent');
+const FraudDetectorAgent = require('../../system/agents/fraud-detector-agent');
 
 // Security: Weak password blocklist
 const WEAK_PASSWORDS = [
@@ -223,6 +225,28 @@ router.post('/register', validate(schemas.register), async (req, res) => {
       db.prepare('INSERT INTO profiles_jobseeker (user_id) VALUES (?)').run(userId);
     } else if (role === 'employer') {
       db.prepare('INSERT INTO profiles_employer (user_id) VALUES (?)').run(userId);
+
+      // Task 17 Phase 5: Employer Verification System Integration
+      Promise.all([
+        (async () => {
+          try {
+            const verifier = new VerifierAgent();
+            await verifier.verifyEmployer(userId);
+            verifier.close();
+          } catch (err) {
+            logger.error('Employer verification failed', { userId, error: err.message });
+          }
+        })(),
+        (async () => {
+          try {
+            const fraudDetector = new FraudDetectorAgent();
+            await fraudDetector.detectFraud('employer', userId);
+            fraudDetector.close();
+          } catch (err) {
+            logger.error('Fraud detection failed', { userId, error: err.message });
+          }
+        })()
+      ]).catch(err => logger.error('Verification system error', { error: err.message }));
     }
 
     // Auto-detect location from IP and prefill profile

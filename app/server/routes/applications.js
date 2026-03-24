@@ -13,6 +13,7 @@ const { stripHtml, isValidLength } = require('../utils/sanitizeHtml');
 
 const router = express.Router();
 
+const FraudDetectorAgent = require('../../system/agents/fraud-detector-agent');
 // ─── Quick Apply: Resume upload config ──────────────────────────────
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const RESUME_DIR = path.join(dataDir, 'uploads', 'resumes');
@@ -304,6 +305,17 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
 
     // Check badges after application submit
     try { require('./badges').checkAndAwardBadges(req.user.id); } catch {}
+
+    // Task 17 Phase 5: Mass-Apply Bot Detection
+    (async () => {
+      try {
+        const fraudDetector = new FraudDetectorAgent();
+        await fraudDetector.detectFraud('jobseeker', req.user.id);
+        fraudDetector.close();
+      } catch (err) {
+        logger.error('Bot detection failed', { userId: req.user.id, error: err.message });
+      }
+    })();
 
     res.status(201).json(application);
   } catch (error) {
