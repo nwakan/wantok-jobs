@@ -851,3 +851,292 @@ router.patch('/reviews/:id', (req, res) => {
 });
 
 module.exports = router;
+
+// ============================================================================
+// TASK 17: VERIFICATION SYSTEM ADMIN ENDPOINTS
+// ============================================================================
+
+// GET /api/admin/verification/checks — List all verification checks
+router.get('/verification/checks', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { status, entity_type, limit = 50, offset = 0 } = req.query;
+    
+    let query = `
+      SELECT 
+        vc.*,
+        CASE 
+          WHEN vc.entity_type = 'employer' THEN c.name
+          WHEN vc.entity_type = 'job' THEN j.title
+          ELSE NULL
+        END as entity_name
+      FROM verification_checks vc
+      LEFT JOIN companies c ON vc.entity_type = 'employer' AND vc.entity_id = c.id
+      LEFT JOIN jobs j ON vc.entity_type = 'job' AND vc.entity_id = j.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (status) {
+      query += ' AND vc.status = ?';
+      params.push(status);
+    }
+    if (entity_type) {
+      query += ' AND vc.entity_type = ?';
+      params.push(entity_type);
+    }
+    
+    query += ' ORDER BY vc.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const checks = db.prepare(query).all(...params);
+    
+    const counts = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN status = 'flagged' THEN 1 ELSE 0 END) as flagged
+      FROM verification_checks
+    `).get();
+    
+    res.json({ checks, counts });
+  } catch (error) {
+    logger.error('Admin get verification checks error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch verification checks' });
+  }
+});
+
+// POST /api/admin/verification/:id/action — Approve, reject, or flag a verification
+router.post('/verification/:id/action', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, note } = req.body;
+    
+    if (!['approve', 'reject', 'flag'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+    
+    const check = db.prepare('SELECT * FROM verification_checks WHERE id = ?').get(id);
+    if (!check) {
+      return res.status(404).json({ error: 'Verification check not found' });
+    }
+    
+    const statusMap = { approve: 'approved', reject: 'rejected', flag: 'flagged' };
+    const newStatus = statusMap[action];
+    
+    db.prepare(`
+      UPDATE verification_checks 
+      SET status = ?, admin_note = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(newStatus, note || null, id);
+    
+    if (action === 'approve' && check.entity_type === 'employer') {
+      db.prepare('UPDATE companies SET verified = 1 WHERE id = ?').run(check.entity_id);
+    }
+    
+    res.json({ success: true, message: `Verification ${action}d successfully` });
+  } catch (error) {
+    logger.error('Admin verification action error', { error: error.message });
+    res.status(500).json({ error: 'Failed to process verification action' });
+  }
+});
+
+// GET /api/admin/fraud/flags — List all fraud flags
+router.get('/fraud/flags', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { status, category, severity, limit = 50, offset = 0 } = req.query;
+    
+    let query = `
+      SELECT 
+        ff.*,
+        CASE 
+          WHEN ff.entity_type = 'employer' THEN c.name
+          WHEN ff.entity_type = 'jobseeker' THEN u.name
+          WHEN ff.entity_type = 'job' THEN j.title
+          ELSE NULL
+        END as entity_name
+      FROM fraud_flags ff
+      LEFT JOIN companies c ON ff.entity_type = 'employer' AND ff.entity_id = c.id
+      LEFT JOIN users u ON ff.entity_type = 'jobseeker' AND ff.entity_id = u.id
+      LEFT JOIN jobs j ON ff.entity_type = 'job' AND ff.entity_id = j.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (status) {
+      query += ' AND ff.status = ?';
+      params.push(status);
+    }
+    if (category) {
+      query += ' AND ff.category = ?';
+      params.push(category);
+    }
+    if (severity) {
+      query += ' AND ff.severity = ?';
+      params.push(severity);
+    }
+    
+    query += ' ORDER BY ff.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const flags = db.prepare(query).all(...params);
+    
+    const counts = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved,
+        SUM(CASE WHEN status = 'escalated' THEN 1 ELSE 0 END) as escalated,
+        SUM(CASE WHEN severity = 'high' THEN 1 ELSE 0 END) as high_severity
+      FROM fraud_flags
+    `).get();
+    
+    res.json({ flags, counts });
+  } catch (error) {
+    logger.error('Admin get fraud flags error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch fraud flags' });
+  }
+});
+
+// POST /api/admin/fraud/:id/action — Resolve, escalate, or block fraud flag
+router.post('/fraud/:id/action', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, note, block_ip } = req.body;
+    
+    if (!['resolve', 'escalate', 'block'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+    
+    const flag = db.prepare('SELECT * FROM fraud_flags WHERE id = ?').get(id);
+    if (!flag) {
+      return res.status(404).json({ error: 'Fraud flag not found' });
+    }
+    
+    const statusMap = { resolve: 'resolved', escalate: 'escalated', block: 'blocked' };
+    const newStatus = statusMap[action];
+    
+    db.prepare(`
+      UPDATE fraud_flags 
+      SET status = ?, admin_note = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(newStatus, note || null, id);
+    
+    if (action === 'block' && block_ip && flag.details) {
+      try {
+        const details = JSON.parse(flag.details);
+        if (details.ip_address) {
+          db.prepare(`
+            INSERT INTO ip_blocks (ip_address, reason, confidence, blocked_at, expires_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, datetime('now', '+30 days'))
+          `).run(details.ip_address, `Fraud flag ${id}: ${flag.category}`, flag.confidence);
+        }
+      } catch (e) {
+        logger.warn('Failed to block IP', { flagId: id, error: e.message });
+      }
+    }
+    
+    res.json({ success: true, message: `Fraud flag ${action}d successfully` });
+  } catch (error) {
+    logger.error('Admin fraud action error', { error: error.message });
+    res.status(500).json({ error: 'Failed to process fraud action' });
+  }
+});
+
+// GET /api/admin/blocked-ips — List all blocked IPs
+router.get('/blocked-ips', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { active_only, limit = 100, offset = 0 } = req.query;
+    
+    let query = 'SELECT * FROM ip_blocks WHERE 1=1';
+    const params = [];
+    
+    if (active_only === 'true') {
+      query += ' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)';
+    }
+    
+    query += ' ORDER BY blocked_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const blockedIps = db.prepare(query).all(...params);
+    
+    const counts = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP THEN 1 ELSE 0 END) as expired
+      FROM ip_blocks
+    `).get();
+    
+    res.json({ blockedIps, counts });
+  } catch (error) {
+    logger.error('Admin get blocked IPs error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch blocked IPs' });
+  }
+});
+
+// DELETE /api/admin/blocked-ips/:ip — Unblock an IP address
+router.delete('/blocked-ips/:ip', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { ip } = req.params;
+    
+    const block = db.prepare('SELECT * FROM ip_blocks WHERE ip_address = ?').get(ip);
+    if (!block) {
+      return res.status(404).json({ error: 'IP block not found' });
+    }
+    
+    db.prepare('DELETE FROM ip_blocks WHERE ip_address = ?').run(ip);
+    
+    logger.info('Admin unblocked IP', { ip, adminId: req.user.id });
+    
+    res.json({ success: true, message: `IP ${ip} unblocked successfully` });
+  } catch (error) {
+    logger.error('Admin unblock IP error', { error: error.message });
+    res.status(500).json({ error: 'Failed to unblock IP' });
+  }
+});
+
+// POST /api/admin/blocked-ips — Manually block an IP address
+router.post('/blocked-ips', requireAuth, requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { ip_address, reason, duration_days } = req.body;
+    
+    if (!ip_address || !reason) {
+      return res.status(400).json({ error: 'IP address and reason are required' });
+    }
+    
+    // Validate IP format
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (!ipRegex.test(ip_address)) {
+      return res.status(400).json({ error: 'Invalid IP address format' });
+    }
+    
+    // Check if already blocked
+    const existing = db.prepare('SELECT * FROM ip_blocks WHERE ip_address = ?').get(ip_address);
+    if (existing) {
+      return res.status(409).json({ error: 'IP is already blocked' });
+    }
+    
+    const expiresAt = duration_days 
+      ? `datetime('now', '+${parseInt(duration_days)} days')`
+      : 'NULL';
+    
+    db.prepare(`
+      INSERT INTO ip_blocks (ip_address, reason, confidence, blocked_at, expires_at)
+      VALUES (?, ?, 1.0, CURRENT_TIMESTAMP, ${expiresAt})
+    `).run(ip_address, reason);
+    
+    logger.info('Admin blocked IP', { ip: ip_address, reason, durationDays: duration_days, adminId: req.user.id });
+    
+    res.json({ 
+      success: true, 
+      message: `IP ${ip_address} blocked successfully`,
+      block: db.prepare('SELECT * FROM ip_blocks WHERE ip_address = ?').get(ip_address)
+    });
+  } catch (error) {
+    logger.error('Admin block IP error', { error: error.message });
+    res.status(500).json({ error: 'Failed to block IP' });
+  }
+});
+
+module.exports = router;

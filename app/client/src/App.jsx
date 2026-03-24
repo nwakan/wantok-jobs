@@ -115,6 +115,9 @@ const ManageJobs = lazy(() => import('./pages/dashboard/admin/ManageJobs'));
 const AdminSettings = lazy(() => import('./pages/dashboard/admin/Settings'));
 const AdminOrders = lazy(() => import('./pages/dashboard/admin/Orders'));
 const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
+const AdminVerificationQueue = lazy(() => import("./pages/admin/AdminVerificationQueue"));
+const AdminFraudFlags = lazy(() => import("./pages/admin/AdminFraudFlags"));
+const AdminBlockedIPs = lazy(() => import("./pages/admin/AdminBlockedIPs"));
 const AdminPlans = lazy(() => import('./pages/dashboard/admin/Plans'));
 const AdminCategories = lazy(() => import('./pages/dashboard/admin/Categories'));
 const AdminReports = lazy(() => import('./pages/dashboard/admin/Reports'));
@@ -245,6 +248,9 @@ function App() {
                 <Route path="jobs" element={<Lazy component={ManageJobs} />} />
                 <Route path="orders" element={<Lazy component={AdminOrders} />} />
                 <Route path="pricing" element={<Lazy component={AdminPricing} />} />
+                <Route path="verification" element={<Lazy component={AdminVerificationQueue} />} />
+                <Route path="fraud-flags" element={<Lazy component={AdminFraudFlags} />} />
+                <Route path="blocked-ips" element={<Lazy component={AdminBlockedIPs} />} />
                 <Route path="plans" element={<Lazy component={AdminPlans} />} />
                 <Route path="categories" element={<Lazy component={AdminCategories} />} />
                 <Route path="reports" element={<Lazy component={AdminReports} />} />
