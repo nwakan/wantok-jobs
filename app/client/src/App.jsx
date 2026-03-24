@@ -57,6 +57,10 @@ const ReferenceResponse = lazy(() => import('./pages/ReferenceResponse'));
 const SalaryCalculator = lazy(() => import('./pages/SalaryCalculator'));
 const CompareJobs = lazy(() => import('./pages/CompareJobs'));
 const SuccessStories = lazy(() => import('./pages/SuccessStories'));
+// === Subscription pages (lazy) ===
+const SubscriptionPlans = lazy(() => import("./pages/subscriptions/SubscriptionPlans"));
+const SubscriptionManagement = lazy(() => import("./pages/subscriptions/SubscriptionManagement"));
+const SubscriptionUpgrade = lazy(() => import("./pages/subscriptions/SubscriptionUpgrade"));
 const IndustryLanding = lazy(() => import('./pages/IndustryLanding'));
 const Transparency = lazy(() => import('./pages/Transparency'));
 const TransparencyLeaderboard = lazy(() => import('./pages/TransparencyLeaderboard'));
@@ -156,6 +160,9 @@ function App() {
               <Route path="privacy" element={<Lazy component={Privacy} />} />
               <Route path="terms" element={<Lazy component={Terms} />} />
               <Route path="pricing" element={<Lazy component={Pricing} />} />
+              <Route path="subscriptions" element={<Lazy component={SubscriptionPlans} />} />
+              <Route path="subscriptions/manage" element={<Lazy component={SubscriptionManagement} />} />
+              <Route path="subscriptions/upgrade" element={<Lazy component={SubscriptionUpgrade} />} />
               <Route path="faq" element={<Lazy component={FAQ} />} />
               <Route path="help" element={<Lazy component={HelpCenter} />} />
               <Route path="categories" element={<Lazy component={CategoriesPage} />} />
