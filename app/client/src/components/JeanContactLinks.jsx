@@ -7,14 +7,14 @@ const JeanContactLinks = () => {
   };
 
   const handleWhatsAppClick = () => {
-    const phoneNumber = '6756949494';
+    const phoneNumber = '67583460582';
     const message = encodeURIComponent('Hi Jean! I need help with job searching.');
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(whatsappUrl, '_blank');
   };
 
   return (
-    <div className="fixed bottom-24 right-4 z-40 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
       {/* Desktop: Horizontal Split Rectangle */}
       <div className="hidden sm:flex rounded-lg shadow-xl overflow-hidden border border-gray-200">
         {/* Chat Button */}

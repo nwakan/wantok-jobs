@@ -95,7 +95,7 @@ export default function Contact() {
                   <div className="p-3 bg-primary-100 rounded-lg"><Phone className="w-6 h-6 text-primary-600" /></div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Call Us</h3>
-                    <a href="tel:+67575830582" className="text-primary-600 hover:text-primary-700 text-sm block">+675 7583 0582</a>
+                    <a href="tel:+67583460582" className="text-primary-600 hover:text-primary-700 text-sm block">+675 8346 0582</a>
                   </div>
                 </div>
               </div>
