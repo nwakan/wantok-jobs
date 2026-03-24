@@ -155,9 +155,23 @@ export default function Login() {
   const handleGoogleLogin = () => {
     setError('');
     setGoogleLoading(true);
+
     const googleProvider = oauthProviders.find(p => p.name === 'google');
-    if (!googleProvider) { setError('Google login not configured'); setGoogleLoading(false); return; }
-    window.google.accounts.id.initialize({
+    if (!googleProvider) { 
+      setError('Google login not configured'); 
+      setGoogleLoading(false); 
+      return; 
+    }
+
+    // Check if Google SDK is loaded
+    if (!window.google?.accounts?.id) {
+      setError('Google login is still loading. Please wait a moment and try again.');
+      setGoogleLoading(false);
+      return;
+    }
+
+    try {
+      window.google.accounts.id.initialize({
       client_id: googleProvider.clientId,
       callback: async (response) => {
         try {
@@ -179,9 +193,17 @@ export default function Login() {
         }
       },
     });
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) setGoogleLoading(false);
-    });
+
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          setGoogleLoading(false);
+        }
+      });
+    } catch (err) {
+      console.error('Google OAuth initialization error:', err);
+      setError('Google login temporarily unavailable. Please try again or use email login.');
+      setGoogleLoading(false);
+    }
   };
 
   const handleLinkedinLogin = () => {

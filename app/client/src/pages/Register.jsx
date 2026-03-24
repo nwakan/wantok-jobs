@@ -191,6 +191,14 @@ export default function Register() {
       return;
     }
     
+    
+    // Check if Google SDK is loaded
+    if (!window.google?.accounts?.id) {
+      setError('Google registration is still loading. Please wait a moment and try again.');
+      setGoogleLoading(false);
+      return;
+    }
+    try {
     window.google.accounts.id.initialize({
       client_id: googleProvider.clientId,
       callback: async (response) => {
@@ -205,6 +213,11 @@ export default function Register() {
         setOauthLoading(false);
       }
     });
+    } catch (err) {
+      console.error('Google OAuth initialization error:', err);
+      setError('Google registration temporarily unavailable. Please try again or use email registration.');
+      setGoogleLoading(false);
+    }
   };  const handleLinkedinRegister = () => {
     setError('');
     setLinkedinLoading(true);
