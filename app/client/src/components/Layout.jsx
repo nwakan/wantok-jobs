@@ -14,7 +14,6 @@ import ChatWidget from './ChatWidget';
 import CookieConsent from './CookieConsent';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import JeanContactLinks from './JeanContactLinks';
-import WhatsAppFloatingButton from './WhatsAppFloatingButton';
 
 function getDashboardLink(user) {
   if (!user) return '/';
@@ -219,7 +218,6 @@ export default function Layout() {
           </div>
         </div>
       </footer>
-      <WhatsAppFloatingButton />
 
       <MobileBottomNav />
       <CompareFloatingBar />
