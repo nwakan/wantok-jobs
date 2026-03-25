@@ -184,7 +184,7 @@ router.post('/facebook', async (req, res) => {
 const LINKEDIN_AUTH_URL  = 'https://www.linkedin.com/oauth/v2/authorization';
 const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
 const LINKEDIN_USER_URL  = 'https://api.linkedin.com/v2/userinfo';
-const LINKEDIN_SCOPES    = 'openid profile email';
+const LINKEDIN_SCOPES    = 'r_liteprofile r_emailaddress';
 
 // Generate the public-facing base URL (production vs dev)
 function getBaseUrl(req) {
