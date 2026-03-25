@@ -15,13 +15,20 @@ router.get('/tiers', (req, res) => {
   const db = getDb();
   try {
     const { tier_type } = req.query;
-    let query = 'SELECT * FROM subscription_tiers WHERE is_active = 1';
+    let query = `
+      SELECT st.*, 
+             COALESCE(pc.price_pgk, st.price_pgk) as price_pgk,
+             COALESCE(pc.price_usd, st.price_usd) as price_usd
+      FROM subscription_tiers st
+      LEFT JOIN pricing_config pc ON st.pricing_config_id = pc.id AND pc.is_active = 1
+      WHERE st.is_active = 1
+    `;
     const params = [];
     if (tier_type) {
-      query += ' AND tier_type = ?';
+      query += ' AND st.tier_type = ?';
       params.push(tier_type);
     }
-    query += ' ORDER BY display_order ASC';
+    query += ' ORDER BY st.display_order ASC';
     const stmt = db.prepare(query);
     const tiers = stmt.all(...params);
     const tiersWithFeatures = tiers.map(tier => ({
@@ -43,11 +50,14 @@ router.get('/current', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     const stmt = db.prepare(`
-      SELECT us.*, st.name as tier_name, st.tier_type, st.price_pgk, st.price_usd,
+      SELECT us.*, st.name as tier_name, st.tier_type, 
+             COALESCE(pc.price_pgk, st.price_pgk) as price_pgk,
+             COALESCE(pc.price_usd, st.price_usd) as price_usd,
              st.billing_period, st.features, st.credits_per_period, st.max_active_jobs,
              st.priority_support
       FROM user_subscriptions us
       JOIN subscription_tiers st ON us.tier_id = st.tier_id
+      LEFT JOIN pricing_config pc ON st.pricing_config_id = pc.id AND pc.is_active = 1
       WHERE us.user_id = ? AND us.status = 'active'
       ORDER BY us.created_at DESC LIMIT 1
     `);
@@ -80,7 +90,14 @@ router.post('/subscribe', authenticateToken, (req, res) => {
     if (!tier_id) {
       return res.status(400).json({ success: false, error: 'tier_id is required' });
     }
-    const tierStmt = db.prepare('SELECT * FROM subscription_tiers WHERE tier_id = ? AND is_active = 1');
+    const tierStmt = db.prepare(`
+      SELECT st.*,
+             COALESCE(pc.price_pgk, st.price_pgk) as price_pgk,
+             COALESCE(pc.price_usd, st.price_usd) as price_usd
+      FROM subscription_tiers st
+      LEFT JOIN pricing_config pc ON st.pricing_config_id = pc.id AND pc.is_active = 1
+      WHERE st.tier_id = ? AND st.is_active = 1
+    `);
     const tier = tierStmt.get(tier_id);
     if (!tier) {
       return res.status(404).json({ success: false, error: 'Subscription tier not found or inactive' });
@@ -140,8 +157,6 @@ router.post('/subscribe', authenticateToken, (req, res) => {
     db.close();
   }
 });
-
-module.exports = router;
 
 // PUT /api/subscriptions/manage - Update or cancel subscription
 router.put('/manage', authenticateToken, (req, res) => {
@@ -229,3 +244,5 @@ router.post('/validate-feature', authenticateToken, (req, res) => {
     db.close();
   }
 });
+
+module.exports = router;
