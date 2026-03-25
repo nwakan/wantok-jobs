@@ -89,6 +89,8 @@ export default function Login() {
       script.async = true;
       script.defer = true;
       document.body.appendChild(script);
+    }
+  }, [oauthProviders]);
 
   // Auto-initialize Google One Tap on page load
   useEffect(() => {
@@ -149,8 +151,6 @@ export default function Login() {
       initGoogleOneTap();
     }
   }, [oauthProviders, login, navigate, searchParams]);
-    }
-  }, [oauthProviders]);
 
   // Load Facebook SDK
   useEffect(() => {
@@ -231,30 +231,9 @@ export default function Login() {
     }
 
     try {
-      window.google.accounts.id.initialize({
-      client_id: googleProvider.clientId,
-      callback: async (response) => {
-        try {
-          const res = await fetch('/api/auth/oauth/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: response.credential }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Google login failed');
-          login(data.token, data.user);
-          if (data.user.role === 'admin') navigate('/dashboard/admin');
-          else if (data.user.role === 'employer') navigate('/dashboard/employer');
-          else navigate('/dashboard/jobseeker');
-        } catch (err) {
-          setError(err.message || 'Google login failed');
-        } finally {
-          setGoogleLoading(false);
-        }
-      },
-    });
-      window.google.accounts.id.prompt();
 
+      // ✅ SDK already initialized by auto-init useEffect
+      // Just trigger prompt() to show One Tap dialog
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setGoogleLoading(false);
