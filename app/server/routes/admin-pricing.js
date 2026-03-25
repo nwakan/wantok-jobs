@@ -12,14 +12,14 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
 /**
  * GET /api/admin/pricing
  * List all pricing configurations (active and inactive)
  * Admin only
  */
-router.get('/pricing', requireAuth, requireAdmin, (req, res) => {
+router.get('/pricing', authenticateToken, requireRole, (req, res) => {
   try {
     const { feature_type, is_active } = req.query;
     
@@ -70,7 +70,7 @@ router.get('/pricing', requireAuth, requireAdmin, (req, res) => {
  * Get single pricing configuration by ID
  * Admin only
  */
-router.get('/pricing/:id', requireAuth, requireAdmin, (req, res) => {
+router.get('/pricing/:id', authenticateToken, requireRole, (req, res) => {
   try {
     const config = db.prepare('SELECT * FROM pricing_config WHERE id = ?').get(req.params.id);
     
@@ -108,7 +108,7 @@ router.get('/pricing/:id', requireAuth, requireAdmin, (req, res) => {
  * Create new pricing configuration
  * Admin only
  */
-router.post('/pricing', requireAuth, requireAdmin, (req, res) => {
+router.post('/pricing', authenticateToken, requireRole, (req, res) => {
   try {
     const {
       feature_type,
@@ -184,7 +184,7 @@ router.post('/pricing', requireAuth, requireAdmin, (req, res) => {
  * Update existing pricing configuration
  * Admin only
  */
-router.put('/pricing/:id', requireAuth, requireAdmin, (req, res) => {
+router.put('/pricing/:id', authenticateToken, requireRole, (req, res) => {
   try {
     const {
       price_pgk,
@@ -274,7 +274,7 @@ router.put('/pricing/:id', requireAuth, requireAdmin, (req, res) => {
  * Deactivate pricing configuration (soft delete)
  * Admin only
  */
-router.delete('/pricing/:id', requireAuth, requireAdmin, (req, res) => {
+router.delete('/pricing/:id', authenticateToken, requireRole, (req, res) => {
   try {
     const existing = db.prepare('SELECT id FROM pricing_config WHERE id = ?').get(req.params.id);
     if (!existing) {

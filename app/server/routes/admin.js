@@ -857,7 +857,7 @@ module.exports = router;
 // ============================================================================
 
 // GET /api/admin/verification/checks — List all verification checks
-router.get('/verification/checks', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.get('/verification/checks', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { status, entity_type, limit = 50, offset = 0 } = req.query;
     
@@ -907,7 +907,7 @@ router.get('/verification/checks', requireAuth, requireRole(['superadmin']), asy
 });
 
 // POST /api/admin/verification/:id/action — Approve, reject, or flag a verification
-router.post('/verification/:id/action', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.post('/verification/:id/action', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { action, note } = req.body;
@@ -942,7 +942,7 @@ router.post('/verification/:id/action', requireAuth, requireRole(['superadmin'])
 });
 
 // GET /api/admin/fraud/flags — List all fraud flags
-router.get('/fraud/flags', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.get('/fraud/flags', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { status, category, severity, limit = 50, offset = 0 } = req.query;
     
@@ -999,7 +999,7 @@ router.get('/fraud/flags', requireAuth, requireRole(['superadmin']), async (req,
 });
 
 // POST /api/admin/fraud/:id/action — Resolve, escalate, or block fraud flag
-router.post('/fraud/:id/action', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.post('/fraud/:id/action', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { action, note, block_ip } = req.body;
@@ -1044,7 +1044,7 @@ router.post('/fraud/:id/action', requireAuth, requireRole(['superadmin']), async
 });
 
 // GET /api/admin/blocked-ips — List all blocked IPs
-router.get('/blocked-ips', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.get('/blocked-ips', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { active_only, limit = 100, offset = 0 } = req.query;
     
@@ -1076,7 +1076,7 @@ router.get('/blocked-ips', requireAuth, requireRole(['superadmin']), async (req,
 });
 
 // DELETE /api/admin/blocked-ips/:ip — Unblock an IP address
-router.delete('/blocked-ips/:ip', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.delete('/blocked-ips/:ip', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { ip } = req.params;
     
@@ -1097,7 +1097,7 @@ router.delete('/blocked-ips/:ip', requireAuth, requireRole(['superadmin']), asyn
 });
 
 // POST /api/admin/blocked-ips — Manually block an IP address
-router.post('/blocked-ips', requireAuth, requireRole(['superadmin']), async (req, res) => {
+router.post('/blocked-ips', authenticateToken, requireRole(['superadmin']), async (req, res) => {
   try {
     const { ip_address, reason, duration_days } = req.body;
     

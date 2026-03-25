@@ -1333,94 +1333,26 @@ router.post('/jobs/:id/quick-apply', authenticateToken, requireRole('jobseeker')
       }));
     } catch (e) {}
 
-    res.status(201).json({
+    res.status(201).json({ success: true, application_id: applicationId });
 
     // Task 18: Smart Matching System (Quick-Apply)
     (async () => {
       try {
         const MatchmakerAgent = require('../../system/agents/matchmaker-agent');
         const RankerAgent = require('../../system/agents/ranker-agent');
-
-        // 1. Calculate and save match score
         const matchScore = await MatchmakerAgent.calculateMatchScore(applicationId);
         if (matchScore) await MatchmakerAgent.saveMatch(applicationId, matchScore);
-
-        // 2. Quick-apply doesn't use screening questions (skip)
-
-        // 3. Rank applicants if >= 10 applications
         const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(jobId)?.n;
-        if (appCount >= 10) {
-          await RankerAgent.rankApplicants(jobId);
-        }
+        if (appCount >= 10) { await RankerAgent.rankApplicants(jobId); }
       } catch (err) {
         logger.error('Smart Matching failed', { applicationId, error: err.message });
       }
     })();
-      success: true,
-      application_id: applicationId,
-      message: 'Applied! The employer will review your application.',
-      match_score: compatibility.score
-    });
   } catch (error) {
-    logger.error('Quick apply error', { error: error.message, userId: req.user?.id });
+    logger.error('Quick apply error', { error: error.message });
     res.status(500).json({ error: 'Failed to submit application' });
   }
 });
-
-function generateCoverLetter(profile, job, userName) {
-  const firstName = userName.split(' ')[0];
-  const companyName = job.company_display_name || 'your company';
   
-  let letter = `Dear Hiring Manager,\n\n`;
-  letter += `I am writing to express my strong interest in the ${job.title} position at ${companyName}.\n\n`;
-  
-  // Mention skills
-  let skills = [];
-  try {
-    if (profile.skills) {
-      const parsed = JSON.parse(profile.skills);
-      skills = Array.isArray(parsed) ? parsed : [];
-    }
-  } catch {}
-  
-  if (skills.length > 0) {
-    letter += `With my background in ${skills.slice(0, 3).join(', ')}, I believe I would be a strong fit for this role. `;
-  }
-  
-  // Mention experience
-  let workHistory = [];
-  try {
-    if (profile.work_history) {
-      const parsed = JSON.parse(profile.work_history);
-      workHistory = Array.isArray(parsed) ? parsed : [];
-    }
-  } catch {}
-  
-  if (workHistory.length > 0) {
-    const latestJob = workHistory[0];
-    if (latestJob.title) {
-      letter += `My experience as a ${latestJob.title}`;
-      if (latestJob.company) {
-        letter += ` at ${latestJob.company}`;
-      }
-      letter += ` has equipped me with the skills and knowledge needed to excel in this position.\n\n`;
-    }
-  } else {
-    letter += `\n\n`;
-  }
-  
-  // Location match
-  if (profile.location && job.location && profile.location.toLowerCase() === job.location.toLowerCase()) {
-    letter += `Being based in ${profile.location}, I am readily available to work at your ${job.location} location.\n\n`;
-  }
-  
-  letter += `I am particularly excited about this opportunity because it aligns well with my career goals and expertise. `;
-  letter += `I would welcome the chance to discuss how my skills and experience can contribute to ${companyName}'s continued success.\n\n`;
-  
-  letter += `Thank you for considering my application. I look forward to hearing from you.\n\n`;
-  letter += `Best regards,\n${firstName}`;
-  
-  return letter;
-}
 
 module.exports = router;
