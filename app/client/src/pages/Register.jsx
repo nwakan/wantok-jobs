@@ -145,7 +145,7 @@ export default function Register() {
     if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
       initGoogleOneTap();
     }
-  }, [oauthProviders, login, navigate, searchParams]);
+  }, []);
   // Load Facebook SDK
   useEffect(() => {
     const hasFacebook = oauthProviders.some(p => p.name === 'facebook');
