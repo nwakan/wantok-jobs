@@ -21,7 +21,7 @@ export default function Register() {
   const [captcha, setCaptcha] = useState(null);
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [linkedinLoading, setLinkedinLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
   const [error, setError] = useState('');
@@ -103,7 +103,7 @@ export default function Register() {
         window.google.accounts.id.initialize({
           client_id: googleProvider.clientId,
           callback: async (response) => {
-            setGoogleLoading(true);
+            setOauthLoading(true);
             try {
               const res = await fetch('/api/auth/oauth/google', {
                 method: 'POST',
@@ -116,11 +116,11 @@ export default function Register() {
                 navigate(searchParams.get('redirect') || `/dashboard/${data.user.role}`, { replace: true });
               } else {
                 setError(data.message || 'Google sign-in failed');
-                setGoogleLoading(false);
+                setOauthLoading(false);
               }
             } catch (err) {
               setError('Network error during Google sign-in');
-              setGoogleLoading(false);
+              setOauthLoading(false);
             }
           },
           auto_select: false,
@@ -242,34 +242,38 @@ export default function Register() {
   
   const handleGoogleRegister = () => {
     setError('');
-    setGoogleLoading(true);
+    setOauthLoading(true);
     
     const googleProvider = oauthProviders.find(p => p.name === 'google');
     if (!googleProvider) {
       setError('Google registration not configured');
-      setGoogleLoading(false);
+      setOauthLoading(false);
       return;
     }
-    
     
     // Check if Google SDK is loaded
     if (!window.google?.accounts?.id) {
       setError('Google registration is still loading. Please wait a moment and try again.');
-      setGoogleLoading(false);
+      setOauthLoading(false);
       return;
     }
+
     try {
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        setOauthLoading(false);
-      }
-    });
+      // ✅ SDK already initialized by auto-init useEffect
+      // Just trigger prompt() to show One Tap dialog
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          setOauthLoading(false);
+        }
+      });
     } catch (err) {
       console.error('Google OAuth initialization error:', err);
       setError('Google registration temporarily unavailable. Please try again or use email registration.');
-      setGoogleLoading(false);
+      setOauthLoading(false);
     }
-  };  const handleLinkedinRegister = () => {
+  };
+
+  const handleLinkedinRegister = () => {
     setError('');
     setLinkedinLoading(true);
     window.location.href = `/api/auth/oauth/linkedin?role=${formData.role}`;
@@ -301,7 +305,7 @@ export default function Register() {
   const completeOAuthRegistration = async (selectedRole) => {
     if (!pendingOauthData) return;
     if (pendingOauthData.provider === 'linkedin') setLinkedinLoading(true);
-    else if (pendingOauthData.provider === 'google') setGoogleLoading(true);
+    else if (pendingOauthData.provider === 'google') setOauthLoading(true);
     else setFacebookLoading(true);
     try {
       let res;
@@ -333,7 +337,7 @@ export default function Register() {
       console.error('OAuth registration error:', err);
       setError(err.message || 'Registration failed');
     } finally {
-      setGoogleLoading(false);
+      setOauthLoading(false);
       setLinkedinLoading(false);
       setFacebookLoading(false);
       setShowRoleDialog(false);
@@ -345,7 +349,7 @@ export default function Register() {
   const hasLinkedinAuth = oauthProviders.some(p => p.name === 'linkedin');
   const hasFacebookAuth = oauthProviders.some(p => p.name === 'facebook');
   const hasOAuth        = hasGoogleAuth || hasLinkedinAuth || hasFacebookAuth;
-  const anyOauthLoading = googleLoading || linkedinLoading || facebookLoading;
+  const anyOauthLoading = oauthLoading || linkedinLoading || facebookLoading;
 
   return (
     <>
