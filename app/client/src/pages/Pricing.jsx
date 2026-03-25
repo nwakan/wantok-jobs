@@ -1,4 +1,4 @@
-import { Check, CheckCircle, X, HelpCircle, Zap, TrendingUp, Building2, Crown, Bell, Sparkles, Shield, Smartphone, FileText, Users, Calculator } from 'lucide-react';
+import { Check, CheckCircle, X, HelpCircle, Zap, TrendingUp, Building2, Crown, Bell, Sparkles, Shield, Smartphone, FileText, Users, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHead from '../components/PageHead';
 import { useState, useEffect, useMemo } from 'react';
@@ -377,6 +377,8 @@ function PriceCalculator() {
     candidateSearch: false,
     socialBoost: false,
   });
+  const [expandedAddons, setExpandedAddons] = useState({});
+  const toggleAddonExpand = (key) => setExpandedAddons(e => ({ ...e, [key]: !e[key] }));
 
   const handleJobCountInput = (val) => {
     setJobCountInput(val);
@@ -444,6 +446,73 @@ function PriceCalculator() {
   }, [addons]);
 
   const toggleAddon = (key) => setAddons(a => ({ ...a, [key]: !a[key] }));
+
+  const addonDetails = {
+    aiMatching: {
+      overview: 'Our AI-powered matching system analyzes candidate profiles and job requirements to identify the best fits automatically.',
+      features: [
+        '✓ Intelligent skill matching with semantic analysis',
+        '✓ Experience level compatibility scoring',
+        '✓ Location and salary range matching',
+        '✓ Automated candidate ranking',
+        '✓ Real-time match notifications'
+      ],
+      benefits: [
+        '⚡ Save 80% of time spent screening candidates',
+        '🎯 Identify qualified candidates you might have missed',
+        '⏱️ Reduce time-to-hire by up to 50%',
+        '🔝 Focus on top matches first'
+      ]
+    },
+    featured: {
+      overview: 'Get premium visibility with featured placement at the top of search results and job listings.',
+      features: [
+        '✓ Highlighted border and badge on listings',
+        '✓ Top 3 placement in search results',
+        '✓ Priority display on homepage',
+        '✓ Social media boost on our channels',
+        '✓ 7-day featured duration'
+      ],
+      benefits: [
+        '👀 Get 3x more views than standard listings',
+        '📈 Attract more qualified applicants',
+        '⚡ Fill positions faster',
+        '🏆 Stand out from competitors'
+      ]
+    },
+    candidateSearch: {
+      overview: 'Proactively search our database of job seekers to find passive candidates and build your talent pipeline.',
+      features: [
+        '✓ Access to 33,000+ candidate profiles',
+        '✓ Advanced filters (skills, experience, location)',
+        '✓ Direct messaging capability',
+        '✓ Save candidate lists',
+        '✓ Export candidate data'
+      ],
+      benefits: [
+        '🎯 Find passive candidates not actively applying',
+        '📊 Build talent pipeline for future roles',
+        '🚀 Reduce dependency on job postings',
+        '💼 Headhunt top talent directly'
+      ]
+    },
+    socialBoost: {
+      overview: 'Amplify your job posting reach with automated promotion across major social media platforms.',
+      features: [
+        '✓ Facebook page and groups posting',
+        '✓ Instagram story and feed posts',
+        '✓ LinkedIn company page sharing',
+        '✓ Custom graphics and captions',
+        '✓ 3x promotional posts over 7 days'
+      ],
+      benefits: [
+        '📱 Reach 50,000+ additional candidates',
+        '🎨 Target younger demographic on Instagram',
+        '💼 Professional audience on LinkedIn',
+        '🌟 Increase brand awareness'
+      ]
+    }
+  };
 
   const grandTotal = useMemo(() => {
     if (userType === 'employer') return employerTotal + addonTotal;
@@ -542,26 +611,70 @@ function PriceCalculator() {
               {/* Add-ons */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-3">Add-ons</label>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {[
                     ['aiMatching', 'AI Matching', 200, 'Smart candidate-job matching'],
                     ['featured', 'Featured Listings', 500, 'Top placement in search results'],
                     ['candidateSearch', 'Candidate Search', 300, 'Browse candidate database'],
                     ['socialBoost', 'Social Boost', 400, 'Promote on social media'],
                   ].map(([key, label, price, desc]) => (
-                    <label key={key} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition ${addons[key] ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <div className="flex items-center gap-3">
-                        <input type="checkbox" checked={addons[key]} onChange={() => toggleAddon(key)} className="w-4 h-4 text-primary-600 rounded" />
-                        <div>
-                          <span className="font-medium text-gray-900">{label}</span>
-                          <p className="text-xs text-gray-500">{desc}</p>
+                    <div key={key} className="border rounded-lg overflow-hidden">
+                      <div className={`flex items-center justify-between p-3 cursor-pointer transition ${addons[key] ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                          <input 
+                            type="checkbox" 
+                            checked={addons[key]} 
+                            onChange={() => toggleAddon(key)} 
+                            className="w-4 h-4 text-primary-600 rounded" 
+                          />
+                          <div>
+                            <span className="font-medium text-gray-900">{label}</span>
+                            <p className="text-xs text-gray-500">{desc}</p>
+                          </div>
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-gray-700">+K{price.toLocaleString()}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); toggleAddonExpand(key); }}
+                            className="p-1 text-gray-500 hover:text-gray-700 transition"
+                            aria-label={expandedAddons[key] ? 'Collapse details' : 'Expand details'}
+                          >
+                            {expandedAddons[key] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          </button>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-gray-700">+K{price.toLocaleString()}</span>
-                    </label>
+                      {expandedAddons[key] && addonDetails[key] && (
+                        <div className="p-4 border-t bg-gray-50 animate-fadeIn">
+                          <p className="text-sm text-gray-700 mb-4 leading-relaxed">{addonDetails[key].overview}</p>
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="font-semibold text-sm text-gray-900 mb-2 flex items-center gap-2">
+                                <span className="text-primary-600">✓</span> Features
+                              </h5>
+                              <ul className="space-y-1.5">
+                                {addonDetails[key].features.map((feature, i) => (
+                                  <li key={i} className="text-xs text-gray-600 leading-relaxed">{feature}</li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-sm text-gray-900 mb-2 flex items-center gap-2">
+                                <span className="text-primary-600">★</span> Benefits
+                              </h5>
+                              <ul className="space-y-1.5">
+                                {addonDetails[key].benefits.map((benefit, i) => (
+                                  <li key={i} className="text-xs text-gray-600 leading-relaxed">{benefit}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
-              </div>
+                </div>
             </>
           )}
 
@@ -705,24 +818,69 @@ function PriceCalculator() {
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Number of Jobs: <span className="text-primary-600">{smeJobCount}</span>
                 </label>
-                <input
-                  type="range" min={1} max={20} value={smeJobCount}
-                  onChange={e => setSmeJobCount(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>1</span><span>5</span><span>10</span><span>15</span><span>20</span>
+                <div className="space-y-3">
+                  {[
+                    ['aiMatching', 'AI Matching', 200, 'Smart candidate-job matching'],
+                    ['featured', 'Featured Listings', 500, 'Top placement in search results'],
+                    ['candidateSearch', 'Candidate Search', 300, 'Browse candidate database'],
+                    ['socialBoost', 'Social Boost', 400, 'Promote on social media'],
+                  ].map(([key, label, price, desc]) => (
+                    <div key={key} className="border rounded-lg overflow-hidden">
+                      <div className={`flex items-center justify-between p-3 cursor-pointer transition ${addons[key] ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                          <input 
+                            type="checkbox" 
+                            checked={addons[key]} 
+                            onChange={() => toggleAddon(key)} 
+                            className="w-4 h-4 text-primary-600 rounded" 
+                          />
+                          <div>
+                            <span className="font-medium text-gray-900">{label}</span>
+                            <p className="text-xs text-gray-500">{desc}</p>
+                          </div>
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-gray-700">+K{price.toLocaleString()}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); toggleAddonExpand(key); }}
+                            className="p-1 text-gray-500 hover:text-gray-700 transition"
+                            aria-label={expandedAddons[key] ? 'Collapse details' : 'Expand details'}
+                          >
+                            {expandedAddons[key] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                      {expandedAddons[key] && addonDetails[key] && (
+                        <div className="p-4 border-t bg-gray-50 animate-fadeIn">
+                          <p className="text-sm text-gray-700 mb-4 leading-relaxed">{addonDetails[key].overview}</p>
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="font-semibold text-sm text-gray-900 mb-2 flex items-center gap-2">
+                                <span className="text-primary-600">✓</span> Features
+                              </h5>
+                              <ul className="space-y-1.5">
+                                {addonDetails[key].features.map((feature, i) => (
+                                  <li key={i} className="text-xs text-gray-600 leading-relaxed">{feature}</li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-sm text-gray-900 mb-2 flex items-center gap-2">
+                                <span className="text-primary-600">★</span> Benefits
+                              </h5>
+                              <ul className="space-y-1.5">
+                                {addonDetails[key].benefits.map((benefit, i) => (
+                                  <li key={i} className="text-xs text-gray-600 leading-relaxed">{benefit}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* Recommendation */}
-              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-5 h-5 text-green-600" />
-                  <h4 className="font-semibold text-gray-900">Recommended Package</h4>
-                </div>
-                <p className="text-lg font-bold text-gray-900">{smeRecommendation.name}</p>
-                <p className="text-sm text-gray-600">{smeRecommendation.description}</p>
                 <p className="text-2xl font-bold text-primary-600 mt-2">K{smeRecommendation.price}</p>
                 {smeRecommendation.perJob && (
                   <p className="text-xs text-gray-500">K{smeRecommendation.perJob} per job</p>
