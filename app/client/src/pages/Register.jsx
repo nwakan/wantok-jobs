@@ -242,32 +242,27 @@ export default function Register() {
   
   const handleGoogleRegister = () => {
     setError('');
-  const handleGoogleRegister = () => {
-    setError('');
-    setOauthLoading(true);
-
+    setGoogleLoading(true);
+    
     const googleProvider = oauthProviders.find(p => p.name === 'google');
     if (!googleProvider) {
       setError('Google registration not configured');
-      setOauthLoading(false);
+      setGoogleLoading(false);
       return;
     }
-
+    
+    
     // Check if Google SDK is loaded
     if (!window.google?.accounts?.id) {
       setError('Google registration is still loading. Please wait a moment and try again.');
-      setOauthLoading(false);
+      setGoogleLoading(false);
       return;
     }
-
     try {
-      // ✅ SDK already initialized by auto-init useEffect
-      // Just trigger prompt() to show One Tap dialog
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setOauthLoading(false);
-        }
-      });
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        setOauthLoading(false);
+      }
     });
     } catch (err) {
       console.error('Google OAuth initialization error:', err);
