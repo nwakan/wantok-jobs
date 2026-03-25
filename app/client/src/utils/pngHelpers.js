@@ -243,7 +243,7 @@ export function getDisplayCompanyName(job) {
   const name = job.company_name || job.employer_name || '';
   if (name === 'Various Employers' || name === 'WantokJobs Imports') {
     const src = formatJobSource(job.source);
-    return src ? src.short : 'Various Employers';
+    return src ? src.short : '';
   }
   return name;
 }
