@@ -70,8 +70,9 @@ export default function Layout() {
       
       <header className={`sticky top-0 z-50 bg-white dark:bg-gray-900 transition-shadow duration-300 ${scrolled ? 'shadow-lg' : 'border-b border-gray-200 dark:border-gray-700'}`}>
         <nav className="flex items-center justify-between p-4 max-w-7xl mx-auto">
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center gap-3">
             <img src="/assets/logo.png" alt="WantokJobs Logo" className="h-12 w-auto opacity-90 hover:opacity-100 transition-opacity" />
+            <span className="hidden md:block text-xl font-bold text-gray-900 dark:text-white">WantokJobs</span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-1">
