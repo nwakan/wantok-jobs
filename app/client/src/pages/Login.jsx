@@ -150,7 +150,7 @@ export default function Login() {
     if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
       initGoogleOneTap();
     }
-  }, []);
+  }, [oauthProviders]);
 
   // Load Facebook SDK
   useEffect(() => {
