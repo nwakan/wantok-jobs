@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auth, referrals } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +30,11 @@ export default function Register() {
   const [oauthProviders, setOauthProviders] = useState([]);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [pendingOauthData, setPendingOauthData] = useState(null);
+  // Google One Tap refs
+  const googleInitialized = useRef(false);
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef(null);
+
   
   // Track referral code from URL
   const refCode = searchParams.get('ref');
@@ -90,20 +95,30 @@ export default function Register() {
   // Auto-initialize Google One Tap on page load
   useEffect(() => {
     const initGoogleOneTap = () => {
+      // Guard 1: Already initialized
+      if (googleInitialized.current) return;
+
+      // Guard 2: No Google provider config
       const googleProvider = oauthProviders.find(p => p.name === 'google');
       if (!googleProvider) return;
-      
+
+      // Guard 3: SDK not loaded yet (with retry limit)
       if (!window.google?.accounts?.id) {
-        // SDK not loaded yet, retry in 500ms
-        setTimeout(initGoogleOneTap, 500);
+        retryCountRef.current++;
+        if (retryCountRef.current <= 10) {  // Max 10 retries = 5 seconds
+          retryTimeoutRef.current = setTimeout(initGoogleOneTap, 500);
+        } else {
+          console.error('Google SDK failed to load after 10 retries (5 seconds)');
+        }
         return;
       }
-      
+
+      // Initialize Google One Tap (only once)
       try {
         window.google.accounts.id.initialize({
           client_id: googleProvider.clientId,
           callback: async (response) => {
-            setOauthLoading(true);
+            setGoogleLoading(true);
             try {
               const res = await fetch('/api/auth/oauth/google', {
                 method: 'POST',
@@ -112,21 +127,22 @@ export default function Register() {
               });
               const data = await res.json();
               if (res.ok) {
-                login(data.token, data.user);
-                navigate(searchParams.get('redirect') || `/dashboard/${data.user.role}`, { replace: true });
+                // Store user info and redirect to role selection
+                localStorage.setItem('tempUser', JSON.stringify(data));
+                setShowRoleSelection(true);
               } else {
-                setError(data.message || 'Google sign-in failed');
-                setOauthLoading(false);
+                setError(data.message || 'Google sign-up failed');
+                setGoogleLoading(false);
               }
             } catch (err) {
-              setError('Network error during Google sign-in');
-              setOauthLoading(false);
+              setError('Network error during Google sign-up');
+              setGoogleLoading(false);
             }
           },
           auto_select: false,
           cancel_on_tap_outside: false,
         });
-        
+
         // Show One Tap prompt automatically
         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
@@ -136,16 +152,28 @@ export default function Register() {
             console.log('One Tap skipped:', notification.getSkippedReason());
           }
         });
+
+        // Mark as successfully initialized
+        googleInitialized.current = true;
       } catch (err) {
         console.error('Google One Tap initialization error:', err);
+        googleInitialized.current = false;  // Allow retry on error
       }
     };
-    
+
     // Only initialize if user is not already logged in
     if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
       initGoogleOneTap();
     }
-  }, [oauthProviders]);
+
+    // Cleanup function
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);  // Empty dependency array - initialize ONCE
+
   // Load Facebook SDK
   useEffect(() => {
     const hasFacebook = oauthProviders.some(p => p.name === 'facebook');

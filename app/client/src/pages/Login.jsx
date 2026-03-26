@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auth } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,11 @@ export default function Login() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [forceReset, setForceReset]     = useState(false);
   const [oauthProviders, setOauthProviders] = useState([]);
+  // Google One Tap refs
+  const googleInitialized = useRef(false);
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef(null);
+
 
   // Handle OAuth redirect-back params
   useEffect(() => {
@@ -95,15 +100,25 @@ export default function Login() {
   // Auto-initialize Google One Tap on page load
   useEffect(() => {
     const initGoogleOneTap = () => {
+      // Guard 1: Already initialized
+      if (googleInitialized.current) return;
+
+      // Guard 2: No Google provider config
       const googleProvider = oauthProviders.find(p => p.name === 'google');
       if (!googleProvider) return;
-      
+
+      // Guard 3: SDK not loaded yet (with retry limit)
       if (!window.google?.accounts?.id) {
-        // SDK not loaded yet, retry in 500ms
-        setTimeout(initGoogleOneTap, 500);
+        retryCountRef.current++;
+        if (retryCountRef.current <= 10) {  // Max 10 retries = 5 seconds
+          retryTimeoutRef.current = setTimeout(initGoogleOneTap, 500);
+        } else {
+          console.error('Google SDK failed to load after 10 retries (5 seconds)');
+        }
         return;
       }
-      
+
+      // Initialize Google One Tap (only once)
       try {
         window.google.accounts.id.initialize({
           client_id: googleProvider.clientId,
@@ -131,7 +146,7 @@ export default function Login() {
           auto_select: false,
           cancel_on_tap_outside: false,
         });
-        
+
         // Show One Tap prompt automatically
         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
@@ -141,16 +156,28 @@ export default function Login() {
             console.log('One Tap skipped:', notification.getSkippedReason());
           }
         });
+
+        // Mark as successfully initialized
+        googleInitialized.current = true;
       } catch (err) {
         console.error('Google One Tap initialization error:', err);
+        googleInitialized.current = false;  // Allow retry on error
       }
     };
-    
+
     // Only initialize if user is not already logged in
     if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
       initGoogleOneTap();
     }
-  }, [oauthProviders]);
+
+    // Cleanup function
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);  // Empty dependency array - initialize ONCE
+
 
   // Load Facebook SDK
   useEffect(() => {
