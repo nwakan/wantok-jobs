@@ -94,7 +94,7 @@ test('Bug 1: Application event logged on apply', () => {
   const appId = result.lastInsertRowid;
   
   // Log event like the route does
-  db.prepare(`INSERT INTO application_events (application_id, to_status, changed_by, notes) VALUES (?, 'applied', ?, 'Initial application')`).run(appId, 2);
+  db.prepare(`INSERT INTO application_events (application_id, event_type, to_status, changed_by, notes) VALUES (?, 'applied', 'applied', ?, 'Initial application')`).run(appId, 2);
   
   const event = db.prepare('SELECT * FROM application_events WHERE application_id = ?').get(appId);
   assert(event !== undefined, 'Event exists');
@@ -108,7 +108,7 @@ test('Bug 1: Status change event has from_status and to_status', () => {
   const oldStatus = app.status;
   
   db.prepare(`UPDATE applications SET status = 'screening', updated_at = datetime('now') WHERE id = ?`).run(app.id);
-  db.prepare(`INSERT INTO application_events (application_id, from_status, to_status, changed_by, notes) VALUES (?, ?, 'screening', ?, 'Status changed by employer')`).run(app.id, oldStatus, 1);
+  db.prepare(`INSERT INTO application_events (application_id, event_type, from_status, to_status, changed_by, notes) VALUES (?, 'status_change', ?, 'screening', ?, 'Status changed by employer')`).run(app.id, oldStatus, 1);
   
   const events = db.prepare('SELECT * FROM application_events WHERE application_id = ? ORDER BY id').all(app.id);
   assert(events.length === 2, 'Two events logged');
@@ -195,7 +195,7 @@ test('Bug 4: Jobseeker can withdraw application', () => {
   assert(!['hired', 'rejected', 'withdrawn'].includes(app.status), 'Application is in withdrawable state');
   
   db.prepare(`UPDATE applications SET status = 'withdrawn', updated_at = datetime('now') WHERE id = ?`).run(app.id);
-  db.prepare(`INSERT INTO application_events (application_id, from_status, to_status, changed_by, notes) VALUES (?, ?, 'withdrawn', ?, 'Withdrawn by jobseeker')`).run(app.id, oldStatus, 2);
+  db.prepare(`INSERT INTO application_events (application_id, event_type, from_status, to_status, changed_by, notes) VALUES (?, 'withdrawn', ?, 'withdrawn', ?, 'Withdrawn by jobseeker')`).run(app.id, oldStatus, 2);
   
   const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(app.id);
   assert(updated.status === 'withdrawn', 'Status is withdrawn');
