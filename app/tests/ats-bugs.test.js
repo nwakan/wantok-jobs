@@ -108,7 +108,7 @@ test('Bug 1: Status change event has from_status and to_status', () => {
   const oldStatus = app.status;
   
   db.prepare(`UPDATE applications SET status = 'screening', updated_at = datetime('now') WHERE id = ?`).run(app.id);
-  db.prepare(`INSERT INTO application_events (application_id, event_type, from_status, to_status, changed_by, notes) VALUES (?, 'status_change', ?, 'screening', ?, 'Status changed by employer')`).run(app.id, oldStatus, 1);
+  db.prepare(`INSERT INTO application_events (application_id, event_type, from_status, to_status, changed_by, notes) VALUES (?, 'screening_completed', ?, 'screening', ?, 'Status changed by employer')`).run(app.id, oldStatus, 1);
   
   const events = db.prepare('SELECT * FROM application_events WHERE application_id = ? ORDER BY id').all(app.id);
   assert(events.length === 2, 'Two events logged');
