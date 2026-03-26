@@ -544,7 +544,7 @@ app.use('/', require('./routes/sitemap'));
 
 // Serve uploaded files statically
 const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
-app.use('/uploads', express.static(path.join(dataDir, 'uploads'), {
+app.use('/uploads', express.static(path.join(__dirname, '../public'), {
   maxAge: '1y',
   immutable: true,
 }));
