@@ -493,28 +493,27 @@ router.get('/compare', (req, res) => {
     
     const placeholders = idList.map(() => '?').join(',');
     const jobs = db.prepare(`
-      SELECT j.*, 
+      SELECT j.*,
              u.name as employer_name,
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              pe.industry as company_industry,
              pe.website,
              COALESCE(j.logo_url, pe.logo_url) as logo_url,
-             pe.location as company_location
+             pe.location as company_location,
+             GROUP_CONCAT(c.name) as categories
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
+      LEFT JOIN job_categories jc ON j.id = jc.job_id
+      LEFT JOIN categories c ON jc.category_id = c.id
       WHERE j.id IN (${placeholders}) AND j.status = 'active'
+      GROUP BY j.id
     `).all(...idList);
 
-    // Get categories for each job
+    // Parse categories from comma-separated string
     for (const job of jobs) {
-      job.categories = db.prepare(`
-        SELECT c.name FROM categories c
-        INNER JOIN job_categories jc ON c.id = jc.category_id
-        WHERE jc.job_id = ?
-      `).all(job.id);
+      job.categories = job.categories ? job.categories.split(',').map(name => ({ name })) : [];
     }
-
     res.json(jobs);
   } catch (err) {
     logger.error('Compare jobs error:', err);

@@ -73,22 +73,35 @@ router.get('/cache-stats', (req, res) => {
 router.get("/dashboard-stats", (req, res) => {
   try {
     // --- Quick stats (this week) ---
-    const weeklyJobs = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE created_at > datetime('now', '-7 days')").get().c;
-    const weeklyApplications = db.prepare("SELECT COUNT(*) as c FROM applications WHERE applied_at > datetime('now', '-7 days')").get().c;
-    const weeklyUsers = db.prepare("SELECT COUNT(*) as c FROM users WHERE created_at > datetime('now', '-7 days')").get().c;
-    const weeklyRevenue = db.prepare("SELECT COALESCE(SUM(amount), 0) as c FROM orders WHERE status = 'completed' AND completed_at > datetime('now', '-7 days')").get().c;
+    // Optimized: Single UNION ALL query (replaces 11 separate COUNT queries)
+    const stats = db.prepare(`
+      SELECT 'weeklyJobs' as metric, COUNT(*) as value FROM jobs WHERE created_at > datetime('now', '-7 days')
+      UNION ALL SELECT 'weeklyApplications', COUNT(*) FROM applications WHERE applied_at > datetime('now', '-7 days')
+      UNION ALL SELECT 'weeklyUsers', COUNT(*) FROM users WHERE created_at > datetime('now', '-7 days')
+      UNION ALL SELECT 'weeklyRevenue', COALESCE(SUM(amount), 0) FROM orders WHERE status = 'completed' AND completed_at > datetime('now', '-7 days')
+      UNION ALL SELECT 'activeJobs', COUNT(*) FROM jobs WHERE status = 'active'
+      UNION ALL SELECT 'expiredJobs', COUNT(*) FROM jobs WHERE status = 'closed'
+      UNION ALL SELECT 'totalUsers', COUNT(*) FROM users
+      UNION ALL SELECT 'totalJobs', COUNT(*) FROM jobs
+      UNION ALL SELECT 'pendingReports', COUNT(*) FROM reports WHERE status = 'pending'
+      UNION ALL SELECT 'pendingOrders', COUNT(*) FROM orders WHERE status = 'pending'
+    `).all();
 
-    // --- System health ---
-    const activeJobs = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE status = 'active'").get().c;
-    const expiredJobs = db.prepare("SELECT COUNT(*) as c FROM jobs WHERE status = 'closed'").get().c;
-    const totalUsers = db.prepare("SELECT COUNT(*) as c FROM users").get().c;
-    const totalJobs = db.prepare("SELECT COUNT(*) as c FROM jobs").get().c;
+    // Convert array to object for compatibility
+    const weeklyJobs = stats.find(s => s.metric === 'weeklyJobs')?.value || 0;
+    const weeklyApplications = stats.find(s => s.metric === 'weeklyApplications')?.value || 0;
+    const weeklyUsers = stats.find(s => s.metric === 'weeklyUsers')?.value || 0;
+    const weeklyRevenue = stats.find(s => s.metric === 'weeklyRevenue')?.value || 0;
+    const activeJobs = stats.find(s => s.metric === 'activeJobs')?.value || 0;
+    const expiredJobs = stats.find(s => s.metric === 'expiredJobs')?.value || 0;
+    const totalUsers = stats.find(s => s.metric === 'totalUsers')?.value || 0;
+    const totalJobs = stats.find(s => s.metric === 'totalJobs')?.value || 0;
+    const pendingReports = stats.find(s => s.metric === 'pendingReports')?.value || 0;
+    const pendingOrders = stats.find(s => s.metric === 'pendingOrders')?.value || 0;
 
-    // --- Pending items ---
-    const pendingReports = db.prepare("SELECT COUNT(*) as c FROM reports WHERE status = 'pending'").get().c;
+    // Handle claims separately (backwards compatibility)
     let pendingClaims = 0;
     try { pendingClaims = db.prepare("SELECT COUNT(*) as c FROM claims WHERE status = 'pending'").get().c; } catch(e) {}
-    const pendingOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get().c;
 
     // --- Recent activity (last 10) ---
     // Union registrations, job posts, and applications

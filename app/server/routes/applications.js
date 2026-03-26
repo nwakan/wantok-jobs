@@ -286,18 +286,45 @@ router.post('/', authenticateToken, requireRole('jobseeker'), (req, res) => {
       }
     }
 
-    const applicant = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+    // Optimized: Single query with JOINs (replaces 4 separate queries)
+    const applicationData = db.prepare(`
+      SELECT 
+        u_applicant.name as applicant_name,
+        u_applicant.email as applicant_email,
+        u_employer.email as employer_email,
+        u_employer.name as employer_name,
+        pe.company_name,
+        (SELECT COUNT(*) FROM applications WHERE job_id = ?) as app_count
+      FROM users u_applicant
+      CROSS JOIN users u_employer
+      LEFT JOIN profiles_employer pe ON pe.user_id = u_employer.id
+      WHERE u_applicant.id = ? AND u_employer.id = ?
+    `).get(job.id, req.user.id, job.employer_id);
+
+    // Create compatible objects
+    const applicant = applicationData ? {
+      name: applicationData.applicant_name,
+      email: applicationData.applicant_email
+    } : null;
+
+    const employer = applicationData ? {
+      email: applicationData.employer_email,
+      name: applicationData.employer_name
+    } : null;
+
+    const appCount = applicationData?.app_count || 0;
+
+    const companyProfile = applicationData?.company_name ? {
+      company_name: applicationData.company_name
+    } : null;
 
     // Smart notification with match score
     notifEvents.onNewApplication(application, job, applicant || { name: 'A jobseeker' });
 
     // Email employer about new application
-    const employer = db.prepare('SELECT email, name FROM users WHERE id = ?').get(job.employer_id);
-    const appCount = db.prepare('SELECT COUNT(*) as n FROM applications WHERE job_id = ?').get(job.id)?.n;
     if (employer) sendNewApplicationEmail(employer, job.title, applicant?.name || 'A jobseeker', appCount).catch(() => {});
 
     // Email jobseeker confirmation
-    const companyProfile = db.prepare('SELECT company_name FROM profiles_employer WHERE user_id = ?').get(job.employer_id);
     sendApplicationConfirmationEmail({ email: req.user.email, name: applicant?.name }, job, companyProfile?.company_name || employer?.name || 'the employer').catch(() => {});
 
     // Log application event
