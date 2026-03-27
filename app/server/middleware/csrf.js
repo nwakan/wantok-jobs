@@ -89,10 +89,13 @@ function csrfProtection(req, res, next) {
   // Only validate state-changing methods
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     return next();
-  }
-  
-  // Exempt webhook and API-only endpoints
-  if (req.path.startsWith('/api/whatsapp') || req.path.startsWith('/api/webhook') || req.path === '/api/cv/parse') {
+  }  // Exempt webhook, OAuth, and API-only endpoints
+  if (
+    req.path.startsWith('/api/whatsapp') || 
+    req.path.startsWith('/api/webhook') || 
+    req.path.startsWith('/api/auth/oauth') ||  // OAuth routes (Google, LinkedIn, Facebook)
+    req.path === '/api/cv/parse'
+  ) {
     return next();
   }
   
