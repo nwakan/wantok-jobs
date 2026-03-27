@@ -77,22 +77,23 @@ function dashboardUrl(role) {
 // ─── Providers list ─────────────────────────────────────────────────────────
 
 router.get('/providers', (req, res) => {
-  const providers = [];
+  const providers = {};
 
   if (process.env.GOOGLE_CLIENT_ID) {
-    providers.push({ name: 'google', clientId: process.env.GOOGLE_CLIENT_ID, enabled: true });
+    providers.google = { clientId: process.env.GOOGLE_CLIENT_ID, enabled: true };
   }
 
   if (process.env.FACEBOOK_APP_ID) {
-    providers.push({ name: 'facebook', appId: process.env.FACEBOOK_APP_ID, enabled: true });
+    providers.facebook = { appId: process.env.FACEBOOK_APP_ID, enabled: true };
   }
 
   if (process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) {
-    providers.push({ name: 'linkedin', enabled: true });
+    providers.linkedin = { enabled: true };
   }
 
   res.json({ providers });
 });
+
 
 // ─── Google ──────────────────────────────────────────────────────────────────
 
