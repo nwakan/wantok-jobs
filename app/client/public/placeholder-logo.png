@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#f3f4f6" stroke="#d1d5db" stroke-width="2"/>
+  
+  <!-- Building icon (represents company) -->
+  <g fill="#9ca3af">
+    <!-- Main building -->
+    <rect x="70" y="60" width="60" height="80" rx="2"/>
+    
+    <!-- Windows -->
+    <rect x="80" y="70" width="12" height="12" fill="#fff"/>
+    <rect x="108" y="70" width="12" height="12" fill="#fff"/>
+    <rect x="80" y="90" width="12" height="12" fill="#fff"/>
+    <rect x="108" y="90" width="12" height="12" fill="#fff"/>
+    <rect x="80" y="110" width="12" height="12" fill="#fff"/>
+    <rect x="108" y="110" width="12" height="12" fill="#fff"/>
+    
+    <!-- Door -->
+    <rect x="90" y="120" width="20" height="20" fill="#6b7280"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="100" y="165" font-family="Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">Employer</text>
+</svg>
