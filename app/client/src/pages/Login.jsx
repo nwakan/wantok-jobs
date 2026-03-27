@@ -87,7 +87,7 @@ export default function Login() {
 
   // Load Google Sign-In SDK
   useEffect(() => {
-    const hasGoogle = oauthProviders.some(p => p.name === 'google');
+    const hasGoogle = oauthProviders?.google?.enabled === true;
     if (hasGoogle && !window.google) {
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
@@ -104,7 +104,7 @@ export default function Login() {
       if (googleInitialized.current) return;
 
       // Guard 2: No Google provider config
-      const googleProvider = oauthProviders.find(p => p.name === 'google');
+      const googleProvider = oauthProviders?.google;
       if (!googleProvider) return;
 
       // Guard 3: SDK not loaded yet (with retry limit)
@@ -181,10 +181,10 @@ export default function Login() {
 
   // Load Facebook SDK
   useEffect(() => {
-    const hasFacebook = oauthProviders.some(p => p.name === 'facebook');
+    const hasFacebook = oauthProviders?.facebook?.enabled === true;
     if (hasFacebook && !window.FB) {
       window.fbAsyncInit = function () {
-        const fbProvider = oauthProviders.find(p => p.name === 'facebook');
+        const fbProvider = oauthProviders?.facebook;
         window.FB.init({ appId: fbProvider?.appId, cookie: true, xfbml: true, version: 'v18.0' });
       };
       const script = document.createElement('script');
@@ -243,7 +243,7 @@ export default function Login() {
     setError('');
     setGoogleLoading(true);
 
-    const googleProvider = oauthProviders.find(p => p.name === 'google');
+    const googleProvider = oauthProviders?.google;
     if (!googleProvider) { 
       setError('Google login not configured'); 
       setGoogleLoading(false); 
@@ -308,9 +308,9 @@ export default function Login() {
     }, { scope: 'public_profile,email' });
   };
 
-  const hasGoogleAuth   = oauthProviders.some(p => p.name === 'google');
-  const hasLinkedinAuth = oauthProviders.some(p => p.name === 'linkedin');
-  const hasFacebookAuth = oauthProviders.some(p => p.name === 'facebook');
+  const hasGoogleAuth   = oauthProviders?.google?.enabled === true;
+  const hasLinkedinAuth = oauthProviders?.linkedin?.enabled === true;
+  const hasFacebookAuth = oauthProviders?.facebook?.enabled === true;
   const hasOAuth        = hasGoogleAuth || hasLinkedinAuth || hasFacebookAuth;
   const anyOauthLoading = googleLoading || linkedinLoading || facebookLoading;
 
