@@ -118,7 +118,7 @@ export default function Register() {
         window.google.accounts.id.initialize({
           client_id: googleProvider.clientId,
           callback: async (response) => {
-            setGoogleLoading(true);
+            setOauthLoading(true);
             try {
               const res = await fetch('/api/auth/oauth/google', {
                 method: 'POST',
@@ -132,11 +132,11 @@ export default function Register() {
                 setShowRoleSelection(true);
               } else {
                 setError(data.message || 'Google sign-up failed');
-                setGoogleLoading(false);
+                setOauthLoading(false);
               }
             } catch (err) {
               setError('Network error during Google sign-up');
-              setGoogleLoading(false);
+              setOauthLoading(false);
             }
           },
           auto_select: false,
