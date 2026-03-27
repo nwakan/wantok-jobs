@@ -269,7 +269,7 @@ export default function IndustryLanding() {
                     <li key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
                         {emp.logo_url ? (
-                          <img src={emp.logo_url} alt="" className="w-8 h-8 rounded object-contain bg-gray-50" />
+                          <img src={emp.logo_url} onError={(e) => { e.target.onerror = null; e.target.src = '/placeholder-logo.png'; }} alt="" className="w-8 h-8 rounded object-contain bg-gray-50" />
                         ) : (
                           <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500">
                             {emp.name?.charAt(0)}

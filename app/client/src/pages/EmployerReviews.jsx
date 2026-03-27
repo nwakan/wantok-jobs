@@ -132,7 +132,7 @@ export default function CompanyReviews() {
           <div className="flex items-start gap-4 mb-4">
             {company.logo_url ? (
               <img
-                src={company.logo_url}
+                src={company.logo_url} onError={(e) => { e.target.onerror = null; e.target.src = '/placeholder-logo.png'; }}
                 alt={company.name}
                 className="w-20 h-20 object-contain rounded border border-gray-200"
               />

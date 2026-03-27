@@ -158,7 +158,7 @@ export default function CareerInsights() {
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
                     {company.logo ? (
-                      <img src={company.logo} alt={company.name} className="w-12 h-12 rounded object-cover" />
+                      <img src={company.logo} onError={(e) => { e.target.onerror = null; e.target.src = '/placeholder-logo.png'; }} alt={company.name} className="w-12 h-12 rounded object-cover" />
                     ) : (
                       <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 font-bold">
                         {company.name.charAt(0)}

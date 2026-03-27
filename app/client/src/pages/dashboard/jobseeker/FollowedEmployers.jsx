@@ -70,7 +70,7 @@ export default function FollowedCompanies() {
               <div className="flex items-start gap-4 mb-4">
                 {company.logo_url ? (
                   <img
-                    src={company.logo_url}
+                    src={company.logo_url} onError={(e) => { e.target.onerror = null; e.target.src = '/placeholder-logo.png'; }}
                     alt={company.company_name}
                     className="w-14 h-14 rounded-lg object-cover border border-gray-200"
                   />

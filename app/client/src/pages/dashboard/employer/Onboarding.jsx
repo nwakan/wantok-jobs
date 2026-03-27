@@ -393,7 +393,7 @@ export default function EmployerOnboarding() {
               {logoPreview ? (
                 <div className="relative">
                   <img
-                    src={logoPreview}
+                    src={logoPreview} onError={(e) => { e.target.onerror = null; e.target.src = '/placeholder-logo.png'; }}
                     alt="Company logo"
                     className="w-32 h-32 rounded-xl object-contain border-2 border-gray-200 bg-white p-2"
                   />

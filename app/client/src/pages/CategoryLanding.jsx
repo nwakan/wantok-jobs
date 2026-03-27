@@ -248,7 +248,7 @@ export default function CategoryLanding() {
                       >
                         {employer.company_logo ? (
                           <img
-                            src={employer.company_logo}
+                            src={employer.company_logo} onError={(e) => { e.target.onerror = null; e.target.src = '/placeholder-logo.png'; }}
                             alt={employer.company_display_name}
                             className="w-10 h-10 object-contain"
                           />
