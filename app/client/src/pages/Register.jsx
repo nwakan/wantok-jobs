@@ -162,7 +162,7 @@ export default function Register() {
     };
 
     // Only initialize if user is not already logged in
-    if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
+    if (oauthProviders?.google && !localStorage.getItem('token')) {
       initGoogleOneTap();
     }
 
@@ -172,7 +172,7 @@ export default function Register() {
         clearTimeout(retryTimeoutRef.current);
       }
     };
-  }, []);  // Empty dependency array - initialize ONCE
+  }, [oauthProviders]);  // Re-run when OAuth providers load
 
   // Load Facebook SDK
   useEffect(() => {

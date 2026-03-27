@@ -166,7 +166,7 @@ export default function Login() {
     };
 
     // Only initialize if user is not already logged in
-    if (oauthProviders.length > 0 && !localStorage.getItem('token')) {
+    if (oauthProviders?.google && !localStorage.getItem('token')) {
       initGoogleOneTap();
     }
 
@@ -176,7 +176,7 @@ export default function Login() {
         clearTimeout(retryTimeoutRef.current);
       }
     };
-  }, []);  // Empty dependency array - initialize ONCE
+  }, [oauthProviders]); // Re-run when OAuth providers load - initialize ONCE
 
 
   // Load Facebook SDK
