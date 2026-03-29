@@ -95,8 +95,8 @@ export default function Register() {
   // Auto-initialize Google One Tap on page load
   useEffect(() => {
     const initGoogleOneTap = () => {
-      // Guard 1: Already initialized
-      if (googleInitialized.current) return;
+      // Guard 1: Already initialized (global check)
+      if (window._googleOneTapInitialized || googleInitialized.current) return;
 
       // Guard 2: No Google provider config
       const googleProvider = oauthProviders?.google;
@@ -153,8 +153,9 @@ export default function Register() {
           }
         });
 
-        // Mark as successfully initialized
+        // Mark as successfully initialized (both local and global)
         googleInitialized.current = true;
+        window._googleOneTapInitialized = true;
       } catch (err) {
         console.error('Google One Tap initialization error:', err);
         googleInitialized.current = false;  // Allow retry on error
