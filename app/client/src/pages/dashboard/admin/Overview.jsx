@@ -74,9 +74,9 @@ export default function AdminOverview() {
       <div>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">This Week</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Jobs Posted" value={w.jobs ?? 0} icon="💼" color="green" />
-          <StatCard title="Applications" value={w.applications ?? 0} icon="📝" color="purple" />
-          <StatCard title="New Users" value={w.users ?? 0} icon="👥" color="blue" />
+          <StatCard title="Jobs Posted" value={(w.jobs ?? 0).toLocaleString()} icon="💼" color="green" />
+          <StatCard title="Applications" value={(w.applications ?? 0).toLocaleString()} icon="📝" color="purple" />
+          <StatCard title="New Users" value={(w.users ?? 0).toLocaleString()} icon="👥" color="blue" />
           <StatCard title="Revenue" value={`K${(w.revenue ?? 0).toLocaleString()}`} icon="💰" color="orange" />
         </div>
       </div>
@@ -85,10 +85,10 @@ export default function AdminOverview() {
       <div>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Platform Totals</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Users" value={stats?.totalUsers ?? h.totalUsers ?? 0} icon="👥" color="blue" />
-          <StatCard title="Active Jobs" value={h.activeJobs ?? 0} icon="✅" color="green" />
-          <StatCard title="Closed/Expired" value={h.expiredJobs ?? 0} icon="📦" color="orange" />
-          <StatCard title="Total Jobs" value={h.totalJobs ?? 0} icon="💼" color="purple" />
+          <StatCard title="Total Users" value={(stats?.totalUsers ?? h.totalUsers ?? 0).toLocaleString()} icon="👥" color="blue" />
+          <StatCard title="Active Jobs" value={(h.activeJobs ?? 0).toLocaleString()} icon="✅" color="green" />
+          <StatCard title="Closed/Expired" value={(h.expiredJobs ?? 0).toLocaleString()} icon="📦" color="orange" />
+          <StatCard title="Total Jobs" value={(h.totalJobs ?? 0).toLocaleString()} icon="💼" color="purple" />
         </div>
       </div>
 
