@@ -99,10 +99,10 @@ router.get('/providers', (req, res) => {
 
 router.post('/google', async (req, res) => {
   try {
-    const { idToken, role } = req.body;
-    if (!idToken) return res.status(400).json({ error: 'ID token required' });
+    const { credential, role } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Credential required' });
 
-    const googleResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+    const googleResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
     if (!googleResponse.ok) {
       logger.error('Google token verification failed:', { detail: googleResponse.status });
       return res.status(401).json({ error: 'Invalid Google token' });
