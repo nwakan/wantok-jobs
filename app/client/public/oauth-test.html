@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google One Tap Diagnostic Test - WantokJobs</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        #logs {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: "Courier New", monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .log-success { color: #4ec9b0; }
+        .log-error { color: #f48771; }
+        .log-info { color: #569cd6; }
+        .log-warning { color: #dcdcaa; }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover { background: #0052a3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Google One Tap Diagnostic Test</h1>
+        
+        <div id="status-container">
+            <div class="status info">⏳ Running diagnostics...</div>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button onclick="testOneTap()">🔄 Re-test One Tap</button>
+            <button onclick="clearLogs()">🗑️ Clear Logs</button>
+            <button onclick="location.reload()">🔁 Reload Page</button>
+        </div>
+
+        <h3>Console Logs:</h3>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        const statusContainer = document.getElementById('status-container');
+        const logsContainer = document.getElementById('logs');
+        let testResults = {
+            oauthApi: false,
+            googleSdk: false,
+            oneTapInitialized: false,
+            oneTapDisplayed: false,
+            errors: []
+        };
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logsContainer.appendChild(entry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function updateStatus() {
+            const html = `
+                <div class="status ${testResults.oauthApi ? 'success' : 'error'}">
+                    ${testResults.oauthApi ? '✅' : '❌'} OAuth Providers API: ${testResults.oauthApi ? 'Working' : 'Failed'}
+                </div>
+                <div class="status ${testResults.googleSdk ? 'success' : 'error'}">
+                    ${testResults.googleSdk ? '✅' : '❌'} Google SDK: ${testResults.googleSdk ? 'Loaded' : 'Not Loaded'}
+                </div>
+                <div class="status ${testResults.oneTapInitialized ? 'success' : 'warning'}">
+                    ${testResults.oneTapInitialized ? '✅' : '⚠️'} One Tap Initialized: ${testResults.oneTapInitialized ? 'Yes' : 'No'}
+                </div>
+                <div class="status ${testResults.oneTapDisplayed ? 'success' : 'warning'}">
+                    ${testResults.oneTapDisplayed ? '✅' : '⚠️'} One Tap Displayed: ${testResults.oneTapDisplayed ? 'Yes' : 'No (see logs for reason)'}
+                </div>
+                ${testResults.errors.length > 0 ? `
+                    <div class="status error">
+                        ❌ Errors Found:<br>
+                        ${testResults.errors.map(e => `• ${e}`).join('<br>')}
+                    </div>
+                ` : ''}
+            `;
+            statusContainer.innerHTML = html;
+        }
+
+        async function testOAuthApi() {
+            addLog('Testing OAuth Providers API...', 'info');
+            try {
+                const response = await fetch('/api/auth/oauth/providers');
+                const data = await response.json();
+                
+                if (response.ok && data.providers && data.providers.google) {
+                    testResults.oauthApi = true;
+                    addLog(`✅ OAuth API working - Client ID: ${data.providers.google.clientId}`, 'success');
+                    return data.providers.google.clientId;
+                } else {
+                    testResults.errors.push('OAuth API returned invalid data');
+                    addLog('❌ OAuth API failed - Invalid response', 'error');
+                    return null;
+                }
+            } catch (error) {
+                testResults.errors.push(`OAuth API error: ${error.message}`);
+                addLog(`❌ OAuth API error: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        function testGoogleSdk() {
+            addLog('Testing Google SDK availability...', 'info');
+            
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const maxAttempts = 20;
+                
+                const checkSdk = setInterval(() => {
+                    attempts++;
+                    
+                    if (window.google?.accounts?.id) {
+                        clearInterval(checkSdk);
+                        testResults.googleSdk = true;
+                        addLog('✅ Google SDK loaded successfully', 'success');
+                        resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkSdk);
+                        testResults.errors.push('Google SDK failed to load after 10 seconds');
+                        addLog('❌ Google SDK not available after 10 seconds', 'error');
+                        resolve(false);
+                    } else {
+                        addLog(`⏳ Waiting for Google SDK... (attempt ${attempts}/${maxAttempts})`, 'info');
+                    }
+                }, 500);
+            });
+        }
+
+        async function testOneTap() {
+            addLog('=== Starting Google One Tap Test ===', 'info');
+            testResults = { oauthApi: false, googleSdk: false, oneTapInitialized: false, oneTapDisplayed: false, errors: [] };
+            updateStatus();
+
+            // Test 1: OAuth API
+            const clientId = await testOAuthApi();
+            updateStatus();
+            
+            if (!clientId) {
+                addLog('⚠️ Cannot proceed without client ID', 'warning');
+                return;
+            }
+
+            // Test 2: Google SDK
+            const sdkLoaded = await testGoogleSdk();
+            updateStatus();
+            
+            if (!sdkLoaded) {
+                addLog('⚠️ Cannot initialize One Tap without SDK', 'warning');
+                return;
+            }
+
+            // Test 3: Initialize One Tap
+            addLog('Initializing Google One Tap...', 'info');
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: (response) => {
+                        addLog('🎉 Google One Tap callback triggered!', 'success');
+                        addLog(`Credential received: ${response.credential.substring(0, 50)}...`, 'success');
+                    },
+                    auto_select: false,
+                    cancel_on_tap_outside: false
+                });
+                testResults.oneTapInitialized = true;
+                addLog('✅ One Tap initialized successfully', 'success');
+                updateStatus();
+            } catch (error) {
+                testResults.errors.push(`One Tap initialization error: ${error.message}`);
+                addLog(`❌ One Tap initialization failed: ${error.message}`, 'error');
+                updateStatus();
+                return;
+            }
+
+            // Test 4: Prompt One Tap
+            addLog('Calling google.accounts.id.prompt()...', 'info');
+            try {
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed()) {
+                        const reason = notification.getNotDisplayedReason();
+                        addLog(`⚠️ One Tap NOT displayed. Reason: ${reason}`, 'warning');
+                        addLog(`Common reasons:`, 'info');
+                        addLog(`• opt_out_or_no_session: User dismissed One Tap before OR not signed into Google`, 'info');
+                        addLog(`• user_cancel: User clicked X on One Tap (24-48hr cooldown)`, 'info');
+                        addLog(`• tap_outside: User clicked outside One Tap dialog`, 'info');
+                        addLog(`• issuing_failed: FedCM disabled in browser settings`, 'info');
+                        addLog(`• browser_not_supported: Browser doesn't support One Tap`, 'info');
+                        testResults.oneTapDisplayed = false;
+                    } else if (notification.isSkippedMoment()) {
+                        const reason = notification.getSkippedReason();
+                        addLog(`⚠️ One Tap skipped. Reason: ${reason}`, 'warning');
+                        testResults.oneTapDisplayed = false;
+                    } else {
+                        addLog('✅ One Tap dialog displayed successfully!', 'success');
+                        testResults.oneTapDisplayed = true;
+                    }
+                    updateStatus();
+                });
+            } catch (error) {
+                testResults.errors.push(`One Tap prompt error: ${error.message}`);
+                addLog(`❌ One Tap prompt failed: ${error.message}`, 'error');
+                updateStatus();
+            }
+        }
+
+        function clearLogs() {
+            logsContainer.innerHTML = '';
+            addLog('Logs cleared', 'info');
+        }
+
+        // Auto-run test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testOneTap, 1000);
+        });
+    </script>
+</body>
+</html>

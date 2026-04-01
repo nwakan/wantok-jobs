@@ -15,6 +15,7 @@ import ReferralSection from '../../../components/ReferralSection';
 import BadgeGrid from '../../../components/BadgeGrid';
 import { useBadgeCheck } from '../../../hooks/useBadgeCheck';
 import { getFlag } from '../../../utils/countryFlags';
+import { formatNumber, formatCurrency, formatPercent } from '../../../utils/formatters';
 
 export default function JobseekerOverview() {
   const { user } = useAuth();
@@ -461,28 +462,28 @@ export default function JobseekerOverview() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <StatsCard 
           title="Total Applications" 
-          value={applicationStats.total} 
+          value={formatNumber(applicationStats.total)} 
           icon={<Briefcase className="w-6 h-6" />}
           subtitle={`${applicationStats.thisWeek} this week`}
           color="blue" 
         />
         <StatsCard 
           title="Pending Review" 
-          value={applicationStats.pending} 
+          value={formatNumber(applicationStats.pending)} 
           icon={<Clock className="w-6 h-6" />}
           subtitle={applicationStats.avgResponseTime > 0 ? `~${applicationStats.avgResponseTime}d avg. response` : 'No responses yet'}
           color="orange" 
         />
         <StatsCard 
           title="Interviews" 
-          value={applicationStats.interview} 
+          value={formatNumber(applicationStats.interview)} 
           icon={<Target className="w-6 h-6" />}
           subtitle={`${applicationStats.successRate}% success rate`}
           color="purple" 
         />
         <StatsCard 
           title="Saved Jobs" 
-          value={savedJobsCount} 
+          value={formatNumber(savedJobsCount)} 
           icon={<BookmarkCheck className="w-6 h-6" />}
           subtitle="Ready to apply"
           color="green" 

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import OptimizedImage from '../../../components/OptimizedImage';
 import ReferralSection from '../../../components/ReferralSection';
+import { formatNumber, formatCurrency } from '../../../utils/formatters';
 
 export default function EmployerOverview() {
   const { user } = useAuth();
@@ -120,7 +121,7 @@ export default function EmployerOverview() {
               </h1>
               <p className="text-primary-100">
                 {stats.pendingReviews > 0
-                  ? `You have ${stats.pendingReviews} application${stats.pendingReviews !== 1 ? 's' : ''} to review`
+                  ? `You have ${formatNumber(stats.pendingReviews)} application${stats.pendingReviews !== 1 ? 's' : ''} to review`
                   : stats.activeJobs > 0
                     ? `${stats.activeJobs} active job${stats.activeJobs !== 1 ? 's' : ''} running`
                     : 'Post a job to start receiving applications'
@@ -132,7 +133,7 @@ export default function EmployerOverview() {
             <div className="text-sm opacity-75">Total Views</div>
             <div className="flex items-center gap-2 justify-end">
               <Eye className="w-5 h-5" />
-              <span className="text-3xl font-bold">{stats.totalViews}</span>
+              <span className="text-3xl font-bold">{formatNumber(stats.totalViews)}</span>
             </div>
             <div className="text-xs opacity-75">across all jobs</div>
           </div>
@@ -188,10 +189,10 @@ export default function EmployerOverview() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatsCard title="Active Jobs" value={stats.activeJobs} icon={<Briefcase className="w-6 h-6" />} color="blue" subtitle={`${stats.totalJobs} total`} />
-        <StatsCard title="Total Views" value={stats.totalViews} icon={<Eye className="w-6 h-6" />} color="purple" />
-        <StatsCard title="Applications" value={stats.totalApplications} icon={<Users className="w-6 h-6" />} color="green" subtitle={`${stats.pendingReviews} pending`} />
-        <StatsCard title="Interviews" value={stats.interviewScheduled} icon={<Target className="w-6 h-6" />} color="orange" subtitle={`${stats.offered} offered`} />
+        <StatsCard title="Active Jobs" value={formatNumber(stats.activeJobs)} icon={<Briefcase className="w-6 h-6" />} color="blue" subtitle={`${formatNumber(stats.totalJobs)} total`} />
+        <StatsCard title="Total Views" value={formatNumber(stats.totalViews)} icon={<Eye className="w-6 h-6" />} color="purple" />
+        <StatsCard title="Applications" value={formatNumber(stats.totalApplications)} icon={<Users className="w-6 h-6" />} color="green" subtitle={`${formatNumber(stats.pendingReviews)} pending`} />
+        <StatsCard title="Interviews" value={formatNumber(stats.interviewScheduled)} icon={<Target className="w-6 h-6" />} color="orange" subtitle={`${formatNumber(stats.offered)} offered`} />
       </div>
 
       {/* Quick Actions */}
