@@ -256,13 +256,13 @@ export default function CompanyProfile() {
                       <span className="text-sm truncate">{company.location}{company.country && `, ${company.country}`}</span>
                     </div>
                   )}
-                  {company.company_size && (
+                  {company.company_size && company.company_size !== "0" && company.company_size !== 0 && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Users className="w-4 h-4 flex-shrink-0 text-gray-400" />
                       <span className="text-sm">{company.company_size} employees</span>
                     </div>
                   )}
-                  {company.founded_year && (
+                  {company.founded_year && company.founded_year !== "0" && company.founded_year !== 0 && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Calendar className="w-4 h-4 flex-shrink-0 text-gray-400" />
                       <span className="text-sm">Founded {company.founded_year}</span>
