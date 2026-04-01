@@ -139,6 +139,13 @@ router.post(
  * 
  * Same as above but returns Server-Sent Events stream
  */
+/**
+ * STREAMING ENDPOINT TEMPORARILY DISABLED
+ * Reason: jean.processMessageStream() method not implemented
+ * TODO: Either implement streaming or remove this endpoint completely
+ * Date: 2026-04-01
+ */
+/*
 router.post(
   '/stream',
   jeanAILimiter,
@@ -233,6 +240,7 @@ router.post(
     }
   }
 );
+*/
 
 /**
  * Get conversation history

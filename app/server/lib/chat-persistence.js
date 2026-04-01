@@ -1,10 +1,10 @@
 /**
  * Jean AI Chat Persistence Service
  * Handles storing and retrieving chat sessions and messages
- * 
- * FIXED: Converted from Knex to better-sqlite3 syntax
- * Author: Agent Zero (Top-notch Developer Mode)
- * Date: 2026-03-24
+ *
+ * UPDATED: Now uses jean_sessions and jean_messages tables (Migration 048)
+ * Author: Agent Zero
+ * Date: 2026-04-01
  */
 
 const db = require('../database');
@@ -13,37 +13,39 @@ const { v4: uuidv4 } = require('uuid');
 class ChatPersistenceService {
   /**
    * Create or get a chat session
+   * @param {string} sessionId - Session token (UUID)
+   * @param {string} platform - Platform: 'web', 'whatsapp', 'mobile'
+   * @param {object} metadata - Additional session metadata (userId, etc.)
    */
   getOrCreateSession(sessionId, platform = 'web', metadata = {}) {
     try {
       // Check if session exists
       let session = db.prepare(
-        'SELECT * FROM chat_sessions WHERE session_id = ?'
+        'SELECT * FROM jean_sessions WHERE session_token = ?'
       ).get(sessionId);
 
       if (!session) {
         // Create new session
         const now = new Date().toISOString();
         const result = db.prepare(`
-          INSERT INTO chat_sessions (
-            session_id, platform, metadata, created_at, last_activity_at, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO jean_sessions (
+            user_id, session_token, platform, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?)
         `).run(
+          metadata.userId || null,
           sessionId,
           platform,
-          JSON.stringify(metadata),
           now,
-          now,
-          1
+          now
         );
 
         session = db.prepare(
-          'SELECT * FROM chat_sessions WHERE id = ?'
+          'SELECT * FROM jean_sessions WHERE id = ?'
         ).get(result.lastInsertRowid);
       } else {
-        // Update last activity
+        // Update last activity (updated_at)
         db.prepare(
-          'UPDATE chat_sessions SET last_activity_at = ? WHERE id = ?'
+          'UPDATE jean_sessions SET updated_at = ? WHERE id = ?'
         ).run(new Date().toISOString(), session.id);
       }
 
@@ -56,26 +58,34 @@ class ChatPersistenceService {
 
   /**
    * Save a chat message
+   * @param {string} sessionId - Session token (UUID)
+   * @param {string} role - 'user' or 'assistant'
+   * @param {string} content - Message content
+   * @param {object} metadata - Additional metadata (intent, confidence, tokens, etc.)
    */
   saveMessage(sessionId, role, content, metadata = {}) {
     try {
-      const session = this.getOrCreateSession(sessionId);
+      const session = this.getOrCreateSession(sessionId, metadata.platform || 'web', metadata);
+
+      // Build metadata JSON including tokens, model, response time
+      const fullMetadata = {
+        ...metadata,
+        tokensUsed: metadata.tokensUsed || metadata.tokens_used || null,
+        model: metadata.model || null,
+        responseTime: metadata.responseTime || metadata.response_time_ms || null,
+      };
 
       const result = db.prepare(`
-        INSERT INTO chat_messages (
-          session_id, role, content, intent, confidence, metadata,
-          tokens_used, model, response_time_ms, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO jean_messages (
+          session_id, role, content, intent, confidence, metadata, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
         session.id,
         role,
         content,
         metadata.intent || null,
         metadata.confidence || null,
-        JSON.stringify(metadata),
-        metadata.tokensUsed || null,
-        metadata.model || null,
-        metadata.responseTime || null,
+        JSON.stringify(fullMetadata),
         new Date().toISOString()
       );
 
@@ -88,11 +98,13 @@ class ChatPersistenceService {
 
   /**
    * Get conversation history for a session
+   * @param {string} sessionId - Session token (UUID)
+   * @param {number} limit - Maximum number of messages to return
    */
   getHistory(sessionId, limit = 20) {
     try {
       const session = db.prepare(
-        'SELECT * FROM chat_sessions WHERE session_id = ?'
+        'SELECT * FROM jean_sessions WHERE session_token = ?'
       ).get(sessionId);
 
       if (!session) {
@@ -100,7 +112,7 @@ class ChatPersistenceService {
       }
 
       const messages = db.prepare(`
-        SELECT * FROM chat_messages
+        SELECT * FROM jean_messages
         WHERE session_id = ?
         ORDER BY created_at DESC
         LIMIT ?
@@ -115,35 +127,57 @@ class ChatPersistenceService {
 
   /**
    * Get session statistics
+   * @param {string} sessionId - Session token (UUID)
    */
   getSessionStats(sessionId) {
     try {
       const session = db.prepare(
-        'SELECT * FROM chat_sessions WHERE session_id = ?'
+        'SELECT * FROM jean_sessions WHERE session_token = ?'
       ).get(sessionId);
 
       if (!session) {
         return null;
       }
 
+      // Parse metadata to extract tokens and response times
       const stats = db.prepare(`
-        SELECT 
+        SELECT
           COUNT(*) as message_count,
           SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) as user_messages,
-          SUM(CASE WHEN role = 'assistant' THEN 1 ELSE 0 END) as assistant_messages,
-          SUM(tokens_used) as total_tokens,
-          AVG(response_time_ms) as avg_response_time
-        FROM chat_messages
+          SUM(CASE WHEN role = 'assistant' THEN 1 ELSE 0 END) as assistant_messages
+        FROM jean_messages
         WHERE session_id = ?
       `).get(session.id);
+
+      // Calculate total tokens and avg response time from metadata JSON
+      const messages = db.prepare(
+        'SELECT metadata FROM jean_messages WHERE session_id = ? AND metadata IS NOT NULL'
+      ).all(session.id);
+
+      let totalTokens = 0;
+      let totalResponseTime = 0;
+      let responseCount = 0;
+
+      messages.forEach(msg => {
+        try {
+          const meta = JSON.parse(msg.metadata);
+          if (meta.tokensUsed) totalTokens += meta.tokensUsed;
+          if (meta.responseTime) {
+            totalResponseTime += meta.responseTime;
+            responseCount++;
+          }
+        } catch (e) {}
+      });
 
       return {
         session_id: sessionId,
         platform: session.platform,
         created_at: session.created_at,
-        last_activity_at: session.last_activity_at,
-        is_active: session.is_active,
-        ...stats
+        last_activity_at: session.updated_at,
+        is_active: 1, // All sessions are active in new schema
+        ...stats,
+        total_tokens: totalTokens,
+        avg_response_time: responseCount > 0 ? totalResponseTime / responseCount : null,
       };
     } catch (error) {
       console.error('Error getting session stats:', error);
@@ -152,13 +186,14 @@ class ChatPersistenceService {
   }
 
   /**
-   * Close a session
+   * Close a session (mark as inactive)
+   * Note: jean_sessions doesn't have is_active field, so this is a no-op
+   * Sessions are considered inactive after 2 hours (handled in jean/index.js)
    */
   closeSession(sessionId) {
     try {
-      db.prepare(
-        'UPDATE chat_sessions SET is_active = 0 WHERE session_id = ?'
-      ).run(sessionId);
+      // No-op: jean_sessions doesn't have is_active field
+      // Sessions expire based on updated_at timestamp (2 hour timeout in jean/index.js)
       return true;
     } catch (error) {
       console.error('Error closing session:', error);
@@ -168,6 +203,7 @@ class ChatPersistenceService {
 
   /**
    * Delete old sessions (cleanup)
+   * @param {number} daysOld - Delete sessions older than this many days
    */
   cleanupOldSessions(daysOld = 30) {
     try {
@@ -175,9 +211,8 @@ class ChatPersistenceService {
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
       const result = db.prepare(`
-        DELETE FROM chat_sessions
-        WHERE is_active = 0
-        AND last_activity_at < ?
+        DELETE FROM jean_sessions
+        WHERE updated_at < ?
       `).run(cutoffDate.toISOString());
 
       return result.changes;
