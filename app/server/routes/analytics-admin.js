@@ -74,17 +74,17 @@ router.get('/overview', (req, res) => {
     const applicationsMonth = db.prepare('SELECT COUNT(*) as count FROM applications WHERE created_at >= ?').get(oneMonthAgo).count;
 
     // Profile completion rates
-    const completedProfiles = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM users 
-      WHERE role = 'jobseeker' 
-      AND profile_completed = 1
-      AND COALESCE(account_status, 'active') != 'spam'
-    `).get().count;
-
-    const profileCompletionRate = totalJobseekers > 0 
-      ? Math.round((completedProfiles / totalJobseekers) * 100) 
-      : 0;
+    //     const completedProfiles = db.prepare(`
+    //       SELECT COUNT(*) as count 
+    //       FROM users 
+    //       WHERE role = 'jobseeker' 
+    //       AND profile_completed = 1
+    //       AND COALESCE(account_status, 'active') != 'spam'
+    //     `).get().count;
+    // 
+    //     const profileCompletionRate = totalJobseekers > 0 
+    //       ? Math.round((completedProfiles / totalJobseekers) * 100) 
+    //       : 0;
 
     // Most viewed jobs (using view_count if available, otherwise application count as proxy)
     const mostViewedJobs = db.prepare(`
@@ -142,11 +142,11 @@ router.get('/overview', (req, res) => {
         applicationsWeek,
         applicationsMonth,
       },
-      profiles: {
-        completedProfiles,
-        totalJobseekers,
-        profileCompletionRate,
-      },
+      //       profiles: {
+      //         completedProfiles,
+      //         totalJobseekers,
+      //         profileCompletionRate,
+      //       },
       mostViewedJobs,
       topKeywords,
     };
