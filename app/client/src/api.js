@@ -314,26 +314,26 @@ export const categories = {
 // Plans
 export const plans = {
   getAll: () =>
-    fetch(`${API_URL}/plans`, {
+    fetch(`${API_URL}/admin/pricing`, {
       headers: getAuthHeader(),
     }).then(handleResponse),
 
   create: (planData) =>
-    fetch(`${API_URL}/plans`, {
+    fetch(`${API_URL}/admin/pricing`, {
       method: 'POST',
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify(planData),
     }).then(handleResponse),
 
   update: (id, planData) =>
-    fetch(`${API_URL}/plans/${id}`, {
+    fetch(`${API_URL}/admin/pricing/${id}`, {
       method: 'PUT',
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify(planData),
     }).then(handleResponse),
 
   delete: (id) =>
-    fetch(`${API_URL}/plans/${id}`, {
+    fetch(`${API_URL}/admin/pricing/${id}`, {
       method: 'DELETE',
       headers: getAuthHeader(),
     }).then(handleResponse),
