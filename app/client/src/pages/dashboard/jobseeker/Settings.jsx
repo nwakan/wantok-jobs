@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import WhatsAppConnect from '../../../components/WhatsAppConnect.jsx';
 import { profile, notificationPreferences } from '../../../api';
 import { useToast } from '../../../components/Toast';
 import { useAuth } from '../../../context/AuthContext';
@@ -170,7 +171,14 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
+        
+        {/* WhatsApp Notifications */}
+        <div className="mt-4 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">WhatsApp Notifications</h3>
+          <p className="text-xs text-gray-500 mb-3">Connect your WhatsApp to receive job notifications instantly</p>
+          <WhatsAppConnect />
+        </div>
+<div className="flex justify-end mt-6">
           <button
             onClick={handleSaveNotifications}
             disabled={saving}

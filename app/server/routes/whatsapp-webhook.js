@@ -645,6 +645,66 @@ router.post('/webhook', async (req, res) => {
 });
 
 /**
+ * Handle WhatsApp activation code
+ * @param {string} phone - User's phone number
+ * @param {string} code - Activation code from message
+ * @param {object} session - WhatsApp session object
+ */
+async function handleActivationCode(phone, code, session) {
+  try {
+    // Validate activation code
+    const activationRecord = db.prepare(
+      `SELECT * FROM whatsapp_activation_codes 
+       WHERE activation_code = ? 
+       AND status = 'pending' 
+       AND datetime(expires_at) > datetime('now')`
+    ).get(code);
+
+    if (!activationRecord) {
+      await sendWhatsAppMessage(phone, 
+        `❌ Invalid or expired activation code.\n\nPlease generate a new code from your WantokJobs dashboard at https://wantokjobs.com/settings`
+      );
+      return;
+    }
+
+    // Update activation record
+    db.prepare(
+      `UPDATE whatsapp_activation_codes 
+       SET phone_number = ?, 
+           status = 'activated', 
+           activated_at = datetime('now') 
+       WHERE id = ?`
+    ).run(phone, activationRecord.id);
+
+    // Link session to user
+    db.prepare(
+      'UPDATE whatsapp_sessions SET user_id = ? WHERE id = ?'
+    ).run(activationRecord.user_id, session.id);
+
+    // Get user details
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(activationRecord.user_id);
+
+    // Send confirmation message
+    await sendWhatsAppMessage(phone, 
+      `✅ Success! Your WhatsApp is now connected to your WantokJobs account.\n\nWelcome ${user.name || 'aboard'}! 🎉\n\nYou'll now receive job notifications and can search for jobs right here in WhatsApp.\n\nTry:\n• "search jobs" - Find opportunities\n• "my applications" - Check application status\n• "help" - See all commands`
+    );
+
+    logger.info('WhatsApp activation successful', { 
+      userId: activationRecord.user_id, 
+      phone, 
+      code 
+    });
+
+  } catch (error) {
+    logger.error('WhatsApp activation error', { error: error.message, phone, code });
+    await sendWhatsAppMessage(phone, 
+      `Sorry, something went wrong activating your account. Please try again or contact support at support@wantokjobs.com 🙏`
+    );
+  }
+}
+
+
+/**
  * Extract messages from various provider formats
  */
 function extractMessages(body) {
@@ -758,6 +818,15 @@ async function handleIncomingMessage(msg) {
 
   if (!messageText && msg.type === 'text') {
     return; // Empty message
+  }
+
+
+  // ─── Activation Code Flow ──────────────────────────
+  const activationCodeMatch = messageText.match(/Activation code:\s*([A-Z0-9-]+)/i);
+  if (activationCodeMatch) {
+    const code = activationCodeMatch[1].toUpperCase();
+    await handleActivationCode(phone, code, session);
+    return;
   }
 
   // ─── Account Linking Flow ──────────────────────────────

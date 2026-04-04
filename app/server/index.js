@@ -512,6 +512,7 @@ app.use('/api/chat', chatLimiter, require('./routes/chat'));
 
 // WhatsApp webhook for Jean AI
 app.use('/api/whatsapp', require('./routes/whatsapp-webhook'));
+app.use('/api/whatsapp', require('./routes/whatsapp-activation')); // WhatsApp activation codes
 
 // Admin routes (protected by auth middleware)
 const { authenticateToken } = require('./middleware/auth');
