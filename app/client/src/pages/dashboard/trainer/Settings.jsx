@@ -115,11 +115,11 @@ export default function Settings() {
   }
 
   const emailNotifications = [
-    { key: 'email_new_application', label: 'New Applications', desc: 'Get notified when candidates apply to your jobs' },
-    { key: 'email_status_change', label: 'Status Updates', desc: 'Updates when application statuses change' },
-    { key: 'email_new_message', label: 'New Messages', desc: 'Get notified when you receive new messages from candidates' },
-    { key: 'email_job_alert', label: 'Job Insights', desc: 'Market insights and recommendations for your job listings' },
-    { key: 'email_newsletter', label: 'Newsletter', desc: 'Hiring tips, platform updates, and industry news' },
+    { key: 'email_new_application', label: 'New Enrollments', desc: 'Get notified when students enroll in your courses' },
+    { key: 'email_status_change', label: 'Course Completions', desc: 'Updates when students complete course milestones' },
+    { key: 'email_new_message', label: 'Student Messages', desc: 'Get notified when you receive messages from students' },
+    { key: 'email_job_alert', label: 'Course Insights', desc: 'Analytics and recommendations for your training programs' },
+    { key: 'email_newsletter', label: 'Newsletter', desc: 'Training tips, platform updates, and education industry news' },
   ];
 
   return (
@@ -244,10 +244,10 @@ export default function Settings() {
             <h3 className="text-xl font-bold text-gray-900 mb-4">Delete Account?</h3>
             <p className="text-gray-700 mb-6">Are you absolutely sure? This will:</p>
             <ul className="list-disc list-inside text-sm text-gray-700 mb-6 space-y-1">
-              <li>Delete your company profile and all information</li>
-              <li>Remove all your job postings permanently</li>
-              <li>Delete all candidate applications and messages</li>
-              <li>Cancel your subscription and billing history</li>
+              <li>Delete your training provider profile and all information</li>
+              <li>Remove all your training courses permanently</li>
+              <li>Delete all student enrollment data and progress</li>
+              <li>Cancel all course schedules and bookings</li>
               <li>This action <strong>cannot be undone</strong></li>
             </ul>
             <p className="text-sm text-gray-600 mb-6">This is a permanent action that cannot be reversed.</p>
