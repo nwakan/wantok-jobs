@@ -1,0 +1,81 @@
+{
+  "config": {
+    "configFile": "/a0/usr/projects/project_1_-_wantokjobs/app/app/playwright.config.js",
+    "rootDir": "/a0/usr/projects/project_1_-_wantokjobs/app/app/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/a0/usr/projects/project_1_-_wantokjobs/app/app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "",
+        "name": "",
+        "testDir": "/a0/usr/projects/project_1_-_wantokjobs/app/app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.test.js"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Could not locate the bindings file. Tried:\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/Debug/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/Release/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/out/Debug/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/Debug/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/out/Release/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/Release/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/default/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/compiled/22.22.0/linux/x64/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/binding/node-v127-linux-x64/better_sqlite3.node",
+      "stack": "Error: Could not locate the bindings file. Tried:\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/Debug/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/Release/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/out/Debug/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/Debug/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/out/Release/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/Release/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/build/default/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/compiled/22.22.0/linux/x64/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node\n → /a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/binding/node-v127-linux-x64/better_sqlite3.node\n    at bindings (/a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/bindings/bindings.js:126:9)\n    at Database (/a0/usr/projects/project_1_-_wantokjobs/app/app/node_modules/better-sqlite3/lib/database.js:48:64)\n    at setup (/a0/usr/projects/project_1_-_wantokjobs/app/app/tests/ats-bugs.test.js:24:8)\n    at Object.<anonymous> (/a0/usr/projects/project_1_-_wantokjobs/app/app/tests/ats-bugs.test.js:88:1)",
+      "location": {
+        "file": "/a0/usr/projects/project_1_-_wantokjobs/app/app/tests/ats-bugs.test.js",
+        "column": 8,
+        "line": 24
+      },
+      "snippet": "   at ats-bugs.test.js:24\n\n  22 |   if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB);\n  23 |   \n> 24 |   db = new Database(TEST_DB);\n     |        ^\n  25 |   \n  26 |   // Get schema from prod\n  27 |   const prodDb = new Database(PROD_DB, { readonly: true });"
+    },
+    {
+      "message": "Error: No tests found",
+      "stack": "Error: No tests found"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-04-04T08:17:15.569Z",
+    "duration": 532.796,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

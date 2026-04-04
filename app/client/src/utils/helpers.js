@@ -1,4 +1,5 @@
 // Time ago helper
+import DOMPurify from 'dompurify';
 export function timeAgo(dateString) {
   const date = new Date(dateString);
   const now = new Date();
@@ -40,7 +41,37 @@ export function containsHTML(text) {
 // Sanitize HTML (basic - removes script tags)
 export function sanitizeHTML(html) {
   if (!html) return '';
-  return html.replace(/<script[^>]*>.*?<\/script>/gi, '');
+
+  // Use DOMPurify for comprehensive XSS protection
+  // DOMPurify imported at top of file
+
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      // Headings
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      // Text formatting
+      'p', 'br', 'strong', 'em', 'u', 's', 'strike', 'b', 'i',
+      // Lists
+      'ul', 'ol', 'li',
+      // Links and images
+      'a', 'img',
+      // Quotes and code
+      'blockquote', 'pre', 'code',
+      // Tables
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      // Containers
+      'div', 'span'
+    ],
+    ALLOWED_ATTR: [
+      'href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel'
+    ],
+    ALLOW_DATA_ATTR: false,
+    ALLOW_UNKNOWN_PROTOCOLS: false,
+    // Ensure links open in new tab safely
+    ADD_ATTR: ['target'],
+    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+  });
 }
 
 // Copy to clipboard
