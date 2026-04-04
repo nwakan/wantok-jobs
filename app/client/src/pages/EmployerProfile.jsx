@@ -17,7 +17,7 @@ const sanitizeText = (text) => {
   return text.replace(/\\r\\n/g, '').replace(/\\n/g, '').replace(/\r/g, '').replace(/\n/g, '').trim();
 };
 
-export default function CompanyProfile() {
+export default function EmployerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -25,32 +25,32 @@ export default function CompanyProfile() {
   const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
-    fetchCompanyData();
+    fetchEmployerData();
   }, [id]);
 
   // JSON-LD structured data for Google
   useEffect(() => {
-    if (!data?.company) return;
+    if (!data?.employer) return;
     
-    const company = data.company;
+    const employer = data.employer;
     const avgRating = data.average_rating || 0;
     const reviewCount = data.review_count || 0;
 
     const jsonLd = {
       "@context": "https://schema.org",
       "@type": ["Organization", "LocalBusiness"],
-      "name": company.company_name || company.name,
+      "name": employer.company_name || employer.name,
       "url": window.location.href,
-      ...(company.description && { "description": company.description }),
-      ...(company.logo_url && { "logo": company.logo_url, "image": company.logo_url }),
-      ...(company.website && { "sameAs": company.website }),
-      ...(company.phone && { "telephone": company.phone }),
-      ...(company.email && { "email": company.email }),
-      ...(company.founded_year && { "foundingDate": company.founded_year.toString() }),
+      ...(employer.description && { "description": employer.description }),
+      ...(employer.logo_url && { "logo": employer.logo_url, "image": employer.logo_url }),
+      ...(employer.website && { "sameAs": employer.website }),
+      ...(employer.phone && { "telephone": employer.phone }),
+      ...(employer.email && { "email": employer.email }),
+      ...(employer.founded_year && { "foundingDate": employer.founded_year.toString() }),
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": company.location || 'Pacific Islands',
-        "addressCountry": company.country || "PG"
+        "addressLocality": employer.location || 'Pacific Islands',
+        "addressCountry": employer.country || "PG"
       },
       ...(avgRating > 0 && {
         "aggregateRating": {
@@ -64,22 +64,22 @@ export default function CompanyProfile() {
     const script = document.createElement('script');
     script.type = 'application/ld+json';
     script.text = JSON.stringify(jsonLd);
-    script.id = 'company-structured-data';
+    script.id = 'employer-structured-data';
     document.head.appendChild(script);
 
     return () => {
-      const existing = document.getElementById('company-structured-data');
+      const existing = document.getElementById('employer-structured-data');
       if (existing) existing.remove();
     };
   }, [data]);
 
-  const fetchCompanyData = async () => {
+  const fetchEmployerData = async () => {
     setLoading(true);
     try {
       const response = await api.get(`/employers/${id}`);
       setData(response);
     } catch (error) {
-      console.error('Failed to fetch company data:', error);
+      console.error('Failed to fetch employer data:', error);
       setData(null);
     } finally {
       setLoading(false);
@@ -93,14 +93,14 @@ export default function CompanyProfile() {
   };
 
   const handleWhatsAppShare = () => {
-    const company = data.company;
-    const text = `Check out ${company.company_name || company.name} on WantokJobs: ${window.location.href}`;
+    const employer = data.employer;
+    const text = `Check out ${employer.company_name || employer.name} on WantokJobs: ${window.location.href}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const getGoogleMapsDirectionsUrl = () => {
-    const company = data.company;
-    const query = encodeURIComponent([company.location, company.country].filter(Boolean).join(', '));
+    const employer = data.employer;
+    const query = encodeURIComponent([employer.location, employer.country].filter(Boolean).join(', '));
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   };
 
@@ -118,29 +118,29 @@ export default function CompanyProfile() {
     );
   }
 
-  if (!data?.company) {
+  if (!data?.employer) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Building2 className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Company Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">The company you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Employer Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">The employer you're looking for doesn't exist or has been removed.</p>
           <Link to="/employers" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">
-            ← Back to Companies
+            ← Back to Employers
           </Link>
         </div>
       </div>
     );
   }
 
-  const { company, jobs = [], stats = {}, reviews = [], average_rating = 0, review_count = 0, related_companies = [] } = data;
-  const companyName = company.company_name || company.name;
+  const { employer, jobs = [], stats = {}, reviews = [], average_rating = 0, review_count = 0, related_companies = [] } = data;
+  const employerName = employer.company_name || employer.name;
 
   return (
     <>
       <PageHead
-        title={`${companyName} - Company Profile | WantokJobs`}
-        description={`${companyName} - ${company.industry || 'Employer'} in ${company.location || 'the Pacific Islands'}. ${stats.active_jobs || 0} active jobs. View company profile, jobs, and reviews.`}
+        title={`${employerName} - Employer Profile | WantokJobs`}
+        description={`${employerName} - ${employer.industry || 'Employer'} in ${employer.location || 'the Pacific Islands'}. ${stats.active_jobs || 0} active jobs. View company profile, jobs, and reviews.`}
       />
       
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6">
@@ -154,19 +154,19 @@ export default function CompanyProfile() {
             <ChevronRight className="w-4 h-4" />
             <Link to="/employers" className="hover:text-primary-600 dark:hover:text-primary-400">Companies</Link>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-gray-100 font-medium">{companyName}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">{employerName}</span>
           </nav>
 
           {/* Hero Section */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8 mb-6">
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Company Logo */}
+              {/* Employer Logo */}
               <div className="flex-shrink-0">
                 <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center">
-                  {company.logo_url ? (
+                  {employer.logo_url ? (
                     <OptimizedImage 
-                      src={company.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
-                      alt={companyName} 
+                      src={employer.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
+                      alt={employerName} 
                       width={128} 
                       height={128} 
                       className="w-full h-full object-contain rounded-xl" 
@@ -178,13 +178,13 @@ export default function CompanyProfile() {
                 </div>
               </div>
 
-              {/* Company Info */}
+              {/* Employer Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{companyName}</h1>
-                      {!!company.verified && (
+                      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{employerName}</h1>
+                      {!!employer.verified && (
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-full text-sm font-medium">
                           <CheckCircle2 className="w-4 h-4" />
                           Verified
@@ -192,8 +192,8 @@ export default function CompanyProfile() {
                       )}
                     </div>
                     
-                    {company.industry && (
-                      <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">{sanitizeText(company.industry)}</p>
+                    {employer.industry && (
+                      <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">{sanitizeText(employer.industry)}</p>
                     )}
 
                     {/* Rating */}
@@ -212,11 +212,11 @@ export default function CompanyProfile() {
                     )}
 
                     {/* Transparency Badge */}
-                    {company.transparency_required && company.transparency_score > 0 && (
+                    {employer.transparency_required && employer.transparency_score > 0 && (
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
                         <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
                         <span className="text-sm font-medium text-green-900 dark:text-green-100">
-                          Transparency Score: {company.transparency_score}/100
+                          Transparency Score: {employer.transparency_score}/100
                         </span>
                       </div>
                     )}
@@ -250,48 +250,48 @@ export default function CompanyProfile() {
 
                 {/* Quick Info Grid */}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                  {company.location && (
+                  {employer.location && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <span className="flex-shrink-0">{getFlag(company)}</span>
-                      <span className="text-sm truncate">{company.location}{company.country && `, ${company.country}`}</span>
+                      <span className="flex-shrink-0">{getFlag(employer)}</span>
+                      <span className="text-sm truncate">{employer.location}{employer.country && `, ${employer.country}`}</span>
                     </div>
                   )}
-                  {company.company_size && company.company_size !== "0" && company.company_size !== 0 && (
+                  {employer.company_size && employer.company_size !== "0" && employer.company_size !== 0 && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Users className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                      <span className="text-sm">{company.company_size} employees</span>
+                      <span className="text-sm">{employer.company_size} employees</span>
                     </div>
                   )}
-                  {company.founded_year && company.founded_year !== "0" && company.founded_year !== 0 && (
+                  {employer.founded_year && employer.founded_year !== "0" && employer.founded_year !== 0 && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Calendar className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                      <span className="text-sm">Founded {company.founded_year}</span>
+                      <span className="text-sm">Founded {employer.founded_year}</span>
                     </div>
                   )}
-                  {company.employer_type && (
+                  {employer.employer_type && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Award className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                      <span className="text-sm capitalize">{company.employer_type.replace(/_/g, ' ')}</span>
+                      <span className="text-sm capitalize">{employer.employer_type.replace(/_/g, ' ')}</span>
                     </div>
                   )}
-                  {company.website && (
+                  {employer.website && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Globe className="w-4 h-4 flex-shrink-0 text-gray-400" />
                       <a
-                        href={company.website}
+                        href={employer.website}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-primary-600 dark:text-primary-400 hover:underline truncate"
                       >
-                        {company.website.replace(/^https?:\/\//, '')}
+                        {employer.website.replace(/^https?:\/\//, '')}
                       </a>
                     </div>
                   )}
-                  {company.phone && (
+                  {employer.phone && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Phone className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                      <a href={`tel:${company.phone}`} className="text-sm hover:text-primary-600 dark:hover:text-primary-400">
-                        {company.phone}
+                      <a href={`tel:${employer.phone}`} className="text-sm hover:text-primary-600 dark:hover:text-primary-400">
+                        {employer.phone}
                       </a>
                     </div>
                   )}
@@ -306,13 +306,13 @@ export default function CompanyProfile() {
                 </div>
 
                 {/* Claim Profile Button */}
-                {!company.claimed && (
+                {!employer.claimed && (
                   <button
                     onClick={() => navigate(`/employers/${id}/claim`)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-900 dark:text-yellow-200 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition text-sm font-medium"
                   >
                     <Shield className="w-4 h-4" />
-                    Is this your company? Claim this profile
+                    Is this your employer account? Claim this profile
                   </button>
                 )}
               </div>
@@ -324,13 +324,13 @@ export default function CompanyProfile() {
             <div className="lg:col-span-2 space-y-6">
               {/* About Section */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">About {companyName}</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">About {employerName}</h2>
                 <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-400">
-                  {company.description || company.bio ? (
-                    <p>{sanitizeText(company.description || company.bio)}</p>
+                  {employer.description || employer.bio ? (
+                    <p>{sanitizeText(employer.description || employer.bio)}</p>
                   ) : (
                     <p>
-                      {companyName} is a {sanitizeText(company.industry)?.toLowerCase() || 'leading'} company based in {company.location || 'the Pacific Islands'}. 
+                      {employerName} is a {sanitizeText(employer.industry)?.toLowerCase() || 'leading'} company based in {employer.location || 'the Pacific Islands'}. 
                       We are committed to excellence and are always looking for talented individuals to join our team.
                     </p>
                   )}
@@ -338,7 +338,7 @@ export default function CompanyProfile() {
               </div>
 
               {/* Google Maps Section */}
-              {company.map_embed_url && (
+              {employer.map_embed_url && (
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Location</h2>
@@ -354,14 +354,14 @@ export default function CompanyProfile() {
                   </div>
                   <div className="w-full h-64 md:h-80 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                     <iframe
-                      src={company.map_embed_url}
+                      src={employer.map_embed_url}
                       width="100%"
                       height="100%"
                       style={{ border: 0 }}
                       allowFullScreen=""
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
-                      title={`Map showing ${companyName} location`}
+                      title={`Map showing ${employerName} location`}
                     ></iframe>
                   </div>
                 </div>
@@ -441,21 +441,21 @@ export default function CompanyProfile() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Similar Companies</h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Other companies in {sanitizeText(company.industry)}
+                    Other employers in {sanitizeText(employer.industry)}
                   </p>
                   <div className="grid sm:grid-cols-2 gap-4">
-                    {related_companies.map((relatedCompany) => (
+                    {related_companies.map((relatedEmployer) => (
                       <button
-                        key={relatedCompany.id}
-                        onClick={() => navigate(`/employers/${relatedCompany.id}`)}
+                        key={relatedEmployer.id}
+                        onClick={() => navigate(`/employers/${relatedEmployer.id}`)}
                         className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 transition text-left group"
                       >
                         <div className="flex items-start gap-3">
                           <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                            {relatedCompany.logo_url ? (
+                            {relatedEmployer.logo_url ? (
                               <OptimizedImage 
-                                src={relatedCompany.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
-                                alt={relatedCompany.company_name} 
+                                src={relatedEmployer.logo_url || '/assets/placeholder-logo.svg'} onError={(e) => { e.target.onerror = null; e.target.src = '/assets/placeholder-logo.svg'; }} 
+                                alt={relatedEmployer.company_name} 
                                 width={48} 
                                 height={48} 
                                 className="w-10 h-10 object-contain rounded" 
@@ -467,16 +467,16 @@ export default function CompanyProfile() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition truncate">
-                                {relatedCompany.company_name}
+                                {relatedEmployer.company_name}
                               </h3>
-                              {!!relatedCompany.verified && (
+                              {!!relatedEmployer.verified && (
                                 <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0" />
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{relatedCompany.location}</p>
-                            {relatedCompany.active_jobs_count > 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{relatedEmployer.location}</p>
+                            {relatedEmployer.active_jobs_count > 0 && (
                               <p className="text-xs font-medium text-primary-600 dark:text-primary-400">
-                                {relatedCompany.active_jobs_count} active {relatedCompany.active_jobs_count === 1 ? 'job' : 'jobs'}
+                                {relatedEmployer.active_jobs_count} active {relatedEmployer.active_jobs_count === 1 ? 'job' : 'jobs'}
                               </p>
                             )}
                           </div>
@@ -520,7 +520,7 @@ export default function CompanyProfile() {
               <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-xl p-6 text-white">
                 <h3 className="text-lg font-bold mb-2">Interested in Working Here?</h3>
                 <p className="text-primary-100 text-sm mb-4">
-                  Get notified when {companyName} posts new job openings.
+                  Get notified when {employerName} posts new job openings.
                 </p>
                 <button
                   onClick={() => navigate('/register')}
@@ -534,9 +534,9 @@ export default function CompanyProfile() {
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
                 <div className="space-y-2">
-                  {company.website && (
+                  {employer.website && (
                     <a
-                      href={company.website}
+                      href={employer.website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition"
@@ -546,7 +546,7 @@ export default function CompanyProfile() {
                       <ExternalLink className="w-3 h-3 ml-auto" />
                     </a>
                   )}
-                  {(company.location || company.country) && (
+                  {(employer.location || employer.country) && (
                     <a
                       href={getGoogleMapsDirectionsUrl()}
                       target="_blank"
