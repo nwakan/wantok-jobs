@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
-const { sendContactFormAdminEmail, sendContactFormAutoReply } = require('../lib/email');
+const { sendContactFormAdminEmail, sendContactFormAutoReply, sendEmail } = require('../lib/email');
 const { requireRole } = require('../middleware/role');
 const { stripHtml, sanitizeEmail, isValidLength } = require('../utils/sanitizeHtml');
 
@@ -109,6 +109,93 @@ router.put('/:id/reply', authenticateToken, requireRole('admin'), (req, res) => 
   } catch (error) {
     logger.error('Error replying to contact message', { error: error.message });
     res.status(500).json({ error: 'Failed to reply to contact message' });
+  }
+});
+
+// POST /employer/:employer_id - Job seeker contact employer
+router.post('/employer/:employer_id', authenticateToken, async (req, res) => {
+  try {
+    const { employer_id } = req.params;
+    const { name, email, message, jobTitle } = req.body;
+
+    // Sanitize inputs
+    const safeName = stripHtml(name);
+    const safeEmail = sanitizeEmail(email);
+    const safeMessage = stripHtml(message);
+    const safeJobTitle = jobTitle ? stripHtml(jobTitle) : null;
+
+    // Validate inputs
+    if (!safeName || !safeEmail || !safeMessage) {
+      return res.status(400).json({ error: 'Name, email, and message are required' });
+    }
+
+    // Validate lengths
+    if (!isValidLength(safeName, 100, 1)) {
+      return res.status(400).json({ error: 'Name must be between 1 and 100 characters' });
+    }
+    if (!isValidLength(safeMessage, 5000, 1)) {
+      return res.status(400).json({ error: 'Message must be between 1 and 5000 characters' });
+    }
+
+    // Load employer from database
+    const employer = db.prepare(`
+      SELECT u.id, u.name, u.email as user_email,
+             pe.email as profile_email, pe.phone, pe.contact_preference,
+             pe.company_name
+      FROM users u
+      LEFT JOIN profiles_employer pe ON pe.user_id = u.id
+      WHERE u.id = ? AND u.role = 'employer'
+    `).get(employer_id);
+
+    if (!employer) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+
+    // Get employer email (prefer profile email, fallback to user email)
+    const employerEmail = employer.profile_email || employer.user_email;
+
+    if (!employerEmail) {
+      return res.status(400).json({ error: 'Employer has no email address' });
+    }
+
+    // Build email HTML
+    const emailHtml = `
+      <h2>New Message from WantokJobs Job Seeker</h2>
+      <p>Hello ${employer.name || 'there'},</p>
+      <p>You have received a message from a job seeker on WantokJobs:</p>
+      <hr>
+      <p><strong>From:</strong> ${safeName} (${safeEmail})</p>
+      ${safeJobTitle ? `<p><strong>Regarding:</strong> ${safeJobTitle}</p>` : ''}
+      <p><strong>Message:</strong></p>
+      <p>${safeMessage.replace(/\n/g, '<br>')}</p>
+      <hr>
+      <p>To respond, simply reply to this email.</p>
+      <p>Best regards,<br>WantokJobs Team</p>
+    `;
+
+    // Send email
+    await sendEmail({
+      to: employerEmail,
+      toName: employer.name,
+      subject: `WantokJobs: Message from ${safeName}${safeJobTitle ? ` regarding ${safeJobTitle}` : ''}`,
+      html: emailHtml,
+      replyTo: safeEmail,
+      tags: ['contact-employer', 'job-seeker-inquiry']
+    });
+
+    logger.info('Employer contact message sent', { 
+      employerId: employer_id, 
+      jobSeekerId: req.user.id,
+      hasJobTitle: !!safeJobTitle
+    });
+
+    res.status(200).json({ 
+      message: 'Message sent successfully',
+      employerName: employer.name
+    });
+  } catch (error) {
+    logger.error('Error sending employer contact message', { error: error.message });
+    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 
