@@ -3,13 +3,13 @@
  * 
  * Priority 3 from Comprehensive Platform Audit (2026-04-05)
  * 
- * Issue: No email/phone columns in profiles_employer table
+ * Issue: No email/contact_preference columns in profiles_employer table
  * Impact: No employer contact functionality → job seekers can't reach employers
  * 
  * Changes:
- * - Add email column (TEXT, nullable, unique)
- * - Add phone column (TEXT, nullable)
+ * - Add email column (TEXT, nullable)
  * - Add contact_preference column (TEXT, default 'email')
+ * - Note: phone column already exists (column 11) - not added
  * - Add indexes for performance
  * 
  * Date: 2026-04-05
@@ -30,11 +30,6 @@ module.exports = {
         ADD COLUMN email TEXT;
       `);
 
-      // Add phone column (nullable)
-      database.exec(`
-        ALTER TABLE profiles_employer 
-        ADD COLUMN phone TEXT;
-      `);
 
       // Add contact_preference column (default 'email')
       database.exec(`
@@ -49,8 +44,8 @@ module.exports = {
       `);
 
       database.exec(`
-        CREATE INDEX IF NOT EXISTS idx_profiles_employer_phone 
-        ON profiles_employer(phone);
+        CREATE INDEX IF NOT EXISTS idx_profiles_employer_contact_preference 
+        ON profiles_employer(contact_preference);
       `);
 
       database.exec(`COMMIT;`);
@@ -70,7 +65,7 @@ module.exports = {
 
       // Drop indexes
       database.exec(`DROP INDEX IF EXISTS idx_profiles_employer_email;`);
-      database.exec(`DROP INDEX IF EXISTS idx_profiles_employer_phone;`);
+      database.exec(`DROP INDEX IF EXISTS idx_profiles_employer_contact_preference;`);
 
       // Note: SQLite doesn't support DROP COLUMN directly
       // In production, would need to recreate table without these columns
