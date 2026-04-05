@@ -66,7 +66,8 @@ export default function CompanyProfile() {
     description: '',
     culture: '',
     founded_year: '',
-    phone: '',
+    email: '',
+    contact_preference: 'email',
     benefits: [],
     photos: [],
     social_links: { facebook: '', linkedin: '', twitter: '' },
@@ -93,7 +94,8 @@ export default function CompanyProfile() {
           description: data.profile.description || '',
           culture: data.profile.culture || '',
           founded_year: data.profile.founded_year || '',
-          phone: data.profile.phone || '',
+          email: data.profile.email || '',
+          contact_preference: data.profile.contact_preference || 'email',
           benefits: data.profile.benefits ? JSON.parse(data.profile.benefits) : [],
           photos: data.profile.photos ? JSON.parse(data.profile.photos) : [],
           social_links: data.profile.social_links ? JSON.parse(data.profile.social_links) : { facebook: '', linkedin: '', twitter: '' },
@@ -117,7 +119,7 @@ export default function CompanyProfile() {
     if (formData.logo_url) score++;
     if (formData.description && formData.description.length > 50) score++;
     if (formData.website) score++;
-    if (formData.phone) score++;
+    if (formData.email) score++;
     if (formData.benefits.length >= 3) score++;
     if (formData.culture && formData.culture.length > 30) score++;
     if (formData.social_links.facebook || formData.social_links.linkedin) score++;
@@ -336,7 +338,7 @@ export default function CompanyProfile() {
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-3">Contact</h2>
               <div className="grid sm:grid-cols-2 gap-3 text-gray-700">
-                <p className="flex items-center gap-2"><Mail className="w-4 h-4" /> {user?.email}</p>
+                <p className="flex items-center gap-2"><Mail className="w-4 h-4" /> {formData.email || user?.email}</p>
                 {formData.phone && <p className="flex items-center gap-2"><Phone className="w-4 h-4" /> {formData.phone}</p>}
                 {formData.social_links?.facebook && (
                   <a href={formData.social_links.facebook} className="flex items-center gap-2 text-blue-600 hover:underline">
@@ -475,6 +477,28 @@ export default function CompanyProfile() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
                       placeholder="+675 XXX XXXX"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                      placeholder="contact@company.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact Preference</label>
+                    <select
+                      value={formData.contact_preference}
+                      onChange={(e) => setFormData({ ...formData, contact_preference: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="email">Email</option>
+                      <option value="phone">Phone</option>
+                      <option value="both">Both Email & Phone</option>
+                    </select>
                   </div>
                 </div>
 

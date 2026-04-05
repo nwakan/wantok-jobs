@@ -193,7 +193,8 @@ router.put('/', authenticateToken, (req, res) => {
         social_links,
         culture,
         founded_year,
-        phone: empPhone
+        email,
+        contact_preference,
       } = req.body;
 
       // Sanitize all text inputs
@@ -208,7 +209,8 @@ router.put('/', authenticateToken, (req, res) => {
       const safePhotos = photos ? stripHtml(photos) : null;
       const safeSocialLinks = social_links ? stripHtml(social_links) : null;
       const safeCulture = culture ? stripHtml(culture) : null;
-      const safePhone = empPhone ? stripHtml(empPhone) : null;
+      const safeEmail = email ? sanitizeEmail(email) : null;
+      const safeContactPreference = contact_preference ? stripHtml(contact_preference) : null;
 
       // Validate lengths
       if (safeCompanyName && !isValidLength(safeCompanyName, 200)) {
@@ -233,7 +235,8 @@ router.put('/', authenticateToken, (req, res) => {
           social_links = COALESCE(?, social_links),
           culture = COALESCE(?, culture),
           founded_year = COALESCE(?, founded_year),
-          phone = COALESCE(?, phone)
+          email = COALESCE(?, email),
+          contact_preference = COALESCE(?, contact_preference)
         WHERE user_id = ?
       `).run(
         safeCompanyName,
@@ -249,7 +252,8 @@ router.put('/', authenticateToken, (req, res) => {
         safeSocialLinks,
         safeCulture,
         founded_year || null,
-        safePhone,
+        safeEmail,
+        safeContactPreference,
         req.user.id
       );
 
