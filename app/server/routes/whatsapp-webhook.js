@@ -48,10 +48,42 @@ try {
   logger.error('WhatsApp sessions table setup error', { error: e.message });
 }
 
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'wantokjobs-verify';
-const API_TOKEN = process.env.WHATSAPP_API_TOKEN;
-const API_URL = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0';
-const PHONE_ID = process.env.WHATSAPP_PHONE_ID;
+// Read WhatsApp config from database first, fall back to environment variables
+const VERIFY_TOKEN = (() => {
+  try {
+    const row = db.prepare('SELECT value FROM whatsapp_config WHERE key=?').get('webhook_verify_token');
+    return row?.value || process.env.WHATSAPP_VERIFY_TOKEN || 'wantokjobs-verify';
+  } catch (e) {
+    return process.env.WHATSAPP_VERIFY_TOKEN || 'wantokjobs-verify';
+  }
+})();
+
+const API_TOKEN = (() => {
+  try {
+    const row = db.prepare('SELECT value FROM whatsapp_config WHERE key=?').get('api_token');
+    return row?.value || process.env.WHATSAPP_API_TOKEN;
+  } catch (e) {
+    return process.env.WHATSAPP_API_TOKEN;
+  }
+})();
+
+const API_URL = (() => {
+  try {
+    const row = db.prepare('SELECT value FROM whatsapp_config WHERE key=?').get('api_url');
+    return row?.value || process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0';
+  } catch (e) {
+    return process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0';
+  }
+})();
+
+const PHONE_ID = (() => {
+  try {
+    const row = db.prepare('SELECT value FROM whatsapp_config WHERE key=?').get('phone_number_id');
+    return row?.value || process.env.WHATSAPP_PHONE_ID;
+  } catch (e) {
+    return process.env.WHATSAPP_PHONE_ID;
+  }
+})();
 
 // Directory for uploaded resumes
 const RESUMES_DIR = process.env.RESUMES_DIR || path.join(__dirname, '../data/resumes');
