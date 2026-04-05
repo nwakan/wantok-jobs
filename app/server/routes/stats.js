@@ -5,6 +5,34 @@ const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
+// GET / - Public platform statistics (for homepage)
+router.get('/', (req, res) => {
+  try {
+    const totalUsers = db.prepare(`SELECT COUNT(*) as count FROM users`).get();
+    const totalJobseekers = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'jobseeker'`).get();
+    const totalEmployers = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'employer'`).get();
+    const totalJobs = db.prepare(`SELECT COUNT(*) as count FROM jobs`).get();
+    const activeJobs = db.prepare(`SELECT COUNT(*) as count FROM jobs WHERE status = 'active'`).get();
+    const totalApplications = db.prepare(`SELECT COUNT(*) as count FROM applications`).get();
+    const verifiedEmployers = db.prepare(`SELECT COUNT(*) as count FROM profiles_employer WHERE verified = 1`).get();
+    const transparentEmployers = db.prepare(`SELECT COUNT(*) as count FROM profiles_employer WHERE is_transparent = 1`).get();
+
+    res.json({
+      users: totalUsers?.count || 0,
+      jobseekers: totalJobseekers?.count || 0,
+      employers: totalEmployers?.count || 0,
+      jobs: totalJobs?.count || 0,
+      active_jobs: activeJobs?.count || 0,
+      applications: totalApplications?.count || 0,
+      verified_employers: verifiedEmployers?.count || 0,
+      transparent_employers: transparentEmployers?.count || 0
+    });
+  } catch (error) {
+    logger.error('Error fetching public stats', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch statistics' });
+  }
+});
+
 // GET /dashboard - Admin dashboard statistics
 router.get('/dashboard', authenticateToken, requireRole('admin'), (req, res) => {
   try {
