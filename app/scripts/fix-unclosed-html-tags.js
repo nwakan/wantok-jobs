@@ -95,7 +95,7 @@ function main() {
     console.log('='.repeat(70) + '\n');
     
     // Connect to database
-    const dbPath = path.join(__dirname, '../data/wantokjobs.db');
+    const dbPath = path.join(__dirname, '../server/data/wantokjobs.db');
     console.log(`Connecting to database: ${dbPath}\n`);
     
     const db = new Database(dbPath);
