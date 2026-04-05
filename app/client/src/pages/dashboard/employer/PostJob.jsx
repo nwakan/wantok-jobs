@@ -35,6 +35,7 @@ export default function PostJob() {
     title: '',
     description: '',
     requirements: [],
+    benefits: [],
     location: '',
     country: 'Papua New Guinea',
     job_type: 'full-time',
@@ -54,6 +55,7 @@ export default function PostJob() {
     status: 'active',
   });
   const [newRequirement, setNewRequirement] = useState('');
+  const [newBenefit, setNewBenefit] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [newQuestion, setNewQuestion] = useState('');
   
@@ -133,6 +135,7 @@ export default function PostJob() {
         title: job.title,
         description: job.description,
         requirements: job.requirements ? JSON.parse(job.requirements) : [],
+        benefits: job.benefits ? JSON.parse(job.benefits) : [],
         location: job.location || '',
         country: job.country || 'Papua New Guinea',
         job_type: job.job_type,
@@ -191,6 +194,7 @@ export default function PostJob() {
         ...formData,
         status: isDraft ? 'draft' : formData.status,
         requirements: JSON.stringify(formData.requirements),
+        benefits: JSON.stringify(formData.benefits),
         skills: JSON.stringify(formData.skills),
         screening_questions: JSON.stringify(formData.screening_questions),
         ...(isAgency && selectedClientId ? { client_id: selectedClientId } : {}),
@@ -226,6 +230,18 @@ export default function PostJob() {
   const removeRequirement = (index) => {
     setFormData({ ...formData, requirements: formData.requirements.filter((_, i) => i !== index) });
   };
+
+  const addBenefit = () => {
+    if (newBenefit.trim()) {
+      setFormData({ ...formData, benefits: [...formData.benefits, newBenefit.trim()] });
+      setNewBenefit('');
+    }
+  };
+
+  const removeBenefit = (index) => {
+    setFormData({ ...formData, benefits: formData.benefits.filter((_, i) => i !== index) });
+  };
+
 
   const addSkill = () => {
     if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
@@ -902,6 +918,54 @@ export default function PostJob() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
               <p className="text-xs text-gray-500 mt-1">Optional — job will auto-close after this date</p>
+              <p className="text-xs text-gray-500 mt-1">Optional — job will auto-close after this date</p>
+            </div>
+
+            {/* Benefits & Perks */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Benefits & Perks
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newBenefit}
+                  onChange={(e) => setNewBenefit(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="e.g. Health insurance, Remote work, Professional development"
+                />
+                <button
+                  type="button"
+                  onClick={addBenefit}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium inline-flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+              </div>
+              <ul className="space-y-2">
+                {formData.benefits.map((benefit, index) => (
+                  <li key={index} className="flex items-start gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
+                    <span className="text-primary-600 mt-0.5">✓</span>
+                    <span className="flex-1 text-gray-700 text-sm">{benefit}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeBenefit(index)}
+                      className="text-red-600 hover:text-red-700 text-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {formData.benefits.length === 0 && (
+                <p className="text-xs text-gray-500 italic">No benefits added yet</p>
+              )}
+              <p className="text-xs text-gray-500 mt-2 flex items-start gap-1">
+                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span>Benefits help attract top talent — jobs with benefits get 2x more applications</span>
+              </p>
             </div>
           </div>
         )}
