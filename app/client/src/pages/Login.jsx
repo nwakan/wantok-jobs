@@ -259,9 +259,36 @@ export default function Login() {
     }
 
     try {
+      // Re-initialize with fresh callback for manual button clicks
+      // This prevents "Only one navigator.credentials.get request may be outstanding" error
+      window.google.accounts.id.initialize({
+        client_id: googleProvider.clientId,
+        callback: async (response) => {
+          setGoogleLoading(true);
+          try {
+            const res = await fetch('/api/auth/oauth/google', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential: response.credential }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              login(data.token, data.user);
+              navigate(searchParams.get('redirect') || `/dashboard/${data.user.role}`, { replace: true });
+            } else {
+              setError(data.message || 'Google sign-in failed');
+              setGoogleLoading(false);
+            }
+          } catch (err) {
+            setError('Network error during Google sign-in');
+            setGoogleLoading(false);
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: false,
+      });
 
-      // ✅ SDK already initialized by auto-init useEffect
-      // Just trigger prompt() to show One Tap dialog
+      // Now show the prompt with the fresh callback
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setGoogleLoading(false);

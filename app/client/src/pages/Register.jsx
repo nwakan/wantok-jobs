@@ -288,8 +288,21 @@ export default function Register() {
     }
 
     try {
-      // ✅ SDK already initialized by auto-init useEffect
-      // Just trigger prompt() to show One Tap dialog
+      // Re-initialize with fresh callback for manual button clicks
+      // This prevents "Only one navigator.credentials.get request may be outstanding" error
+      window.google.accounts.id.initialize({
+        client_id: googleProvider.clientId,
+        callback: async (response) => {
+          setOauthLoading(true);
+          setPendingOauthData({ provider: 'google', credential: response.credential });
+          setShowRoleDialog(true);
+          setOauthLoading(false);
+        },
+        auto_select: false,
+        cancel_on_tap_outside: false,
+      });
+
+      // Now show the prompt with the fresh callback
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setOauthLoading(false);
