@@ -18,14 +18,14 @@ router.get('/', (req, res) => {
     const transparentEmployers = db.prepare(`SELECT COUNT(*) as count FROM profiles_employer WHERE is_transparent = 1`).get();
 
     res.json({
-      users: totalUsers?.count || 0,
-      jobseekers: totalJobseekers?.count || 0,
-      employers: totalEmployers?.count || 0,
-      jobs: totalJobs?.count || 0,
-      active_jobs: activeJobs?.count || 0,
+      totalJobs: totalJobs?.count || 0,
+      activeJobs: activeJobs?.count || 0,
+      totalEmployers: totalEmployers?.count || 0,
+      totalJobseekers: totalJobseekers?.count || 0,
+      transparentEmployers: transparentEmployers?.count || 0,
+      governmentBodies: 0, // TODO: Query government_bodies table when implemented
       applications: totalApplications?.count || 0,
-      verified_employers: verifiedEmployers?.count || 0,
-      transparent_employers: transparentEmployers?.count || 0
+      verifiedEmployers: verifiedEmployers?.count || 0
     });
   } catch (error) {
     logger.error('Error fetching public stats', { error: error.message });
