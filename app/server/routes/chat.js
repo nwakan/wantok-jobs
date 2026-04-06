@@ -99,7 +99,7 @@ router.post(
       // Save assistant response to database
       await chatPersistence.saveMessage(
         actualSessionId,
-        'assistant',
+        'jean',
         response.message || response.text || '',
         {
           intent: response.intent,
@@ -220,7 +220,7 @@ router.post(
       // Save complete response
       await chatPersistence.saveMessage(
         actualSessionId,
-        'assistant',
+        'jean',
         fullResponse,
         { intent, confidence, responseTime }
       );
