@@ -167,6 +167,12 @@ export const profile = {
       headers: getAuthHeader(),
       body: formData,
     }).then(handleResponse),
+  uploadCv: (formData) =>
+    fetch(`${API_URL}/uploads/cv`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: formData,
+    }).then(handleResponse),
 };
 
 // Saved Jobs

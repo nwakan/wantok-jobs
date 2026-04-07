@@ -15,7 +15,7 @@ export default function JobseekerProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingCv, setUploadingCv] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('basic'); // basic, experience, showcase, settings
@@ -170,6 +170,41 @@ export default function JobseekerProfile() {
       showToast('Upload failed: ' + error.message, 'error');
     } finally {
       setUploadingBanner(false);
+    }
+  };
+
+  const handleCvUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type (PDF, DOC, DOCX)
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    if (!validTypes.includes(file.type)) {
+      showToast('Please select a PDF or Word document', 'error');
+      return;
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('CV must be less than 10MB', 'error');
+      return;
+    }
+    
+    setUploadingCv(true);
+    try {
+      const formDataToUpload = new FormData();
+      formDataToUpload.append('cv', file);
+      
+      const response = await profileAPI.uploadCv(formDataToUpload);
+      setFormData({ ...formData, cv_url: response.url });
+      showToast('CV uploaded successfully!', 'success');
+    } catch (error) {
+      showToast('Upload failed: ' + error.message, 'error');
+    } finally {
+      setUploadingCv(false);
     }
   };
 
@@ -626,6 +661,45 @@ export default function JobseekerProfile() {
                     placeholder="e.g. Port Moresby"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Resume/CV Upload */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Resume/CV
+              </h2>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={(e) => handleCvUpload(e.target.files[0])}
+                    className="hidden"
+                    id="cv-upload-input"
+                    disabled={uploadingCv}
+                  />
+                  <label
+                    htmlFor="cv-upload-input"
+                    className="cursor-pointer inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 font-medium"
+                  >
+                    {uploadingCv ? 'Uploading...' : (formData.cv_url ? 'Update CV' : 'Upload CV')}
+                  </label>
+                  {formData.cv_url && (
+                    <a
+                      href={formData.cv_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Current CV
+                    </a>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">Accepted formats: PDF or Word document (max 10MB)</p>
+                <p className="text-xs text-gray-600">💡 Keep your CV updated to improve your profile strength and attract employers</p>
               </div>
             </div>
 
