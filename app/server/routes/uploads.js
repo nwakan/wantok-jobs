@@ -102,6 +102,19 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), uploadS
     // Update user record
     db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(url, req.user.id);
     
+    // Also update profile tables to keep avatar_url and profile_photo_url in sync
+    if (req.user.role === 'jobseeker') {
+      const profile = db.prepare('SELECT id FROM profiles_jobseeker WHERE user_id = ?').get(req.user.id);
+      if (profile) {
+        db.prepare('UPDATE profiles_jobseeker SET profile_photo_url = ? WHERE user_id = ?').run(url, req.user.id);
+      }
+    } else if (req.user.role === 'employer') {
+      const empProfile = db.prepare('SELECT id FROM profiles_employer WHERE user_id = ?').get(req.user.id);
+      if (empProfile) {
+        db.prepare('UPDATE profiles_employer SET profile_photo_url = ? WHERE user_id = ?').run(url, req.user.id);
+      }
+    }
+    
     res.json({ url, message: 'Avatar uploaded successfully' });
   } catch (error) {
     logger.error('Avatar upload error', { error: error.message });
