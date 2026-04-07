@@ -285,7 +285,7 @@ class Jean {
 
   /**
    * Handle a new message (no active flow)
-   * ENHANCED: Query knowledge base before responding
+   * ENHANCED: AI Router integration for natural, contextual responses
    */
   async handleNewMessage(session, message, user, pageContext) {
     const context = {
@@ -297,19 +297,20 @@ class Jean {
 
     const { intent, confidence, params } = classify(message, context);
 
-    // AUTONOMOUS LEARNING: Query knowledge base for platform-related questions
+    // STEP 1: Query Knowledge Base for platform-related questions
     let knowledgeContext = null;
     const platformQuestionIntents = [
       'help', 'how_to', 'what_is', 'platform_info', 'feature_info',
       'api_docs', 'whatsapp_help', 'payment_help', 'security_question'
     ];
     
-    // Query knowledge base if question seems platform-related
-    if (platformQuestionIntents.includes(intent) || message.toLowerCase().includes('how') || 
-        message.toLowerCase().includes('what') || message.toLowerCase().includes('wantokjobs')) {
+    if (platformQuestionIntents.includes(intent) || 
+        message.toLowerCase().includes('how') || 
+        message.toLowerCase().includes('what') || 
+        message.toLowerCase().includes('wantokjobs')) {
       try {
         const kb = getKnowledgeBase();
-        const results = await kb.query(message, 3, 0.4); // Top 3 results, 40% similarity threshold
+        const results = await kb.query(message, 3, 0.4);
         
         if (results.length > 0) {
           knowledgeContext = {
@@ -325,19 +326,82 @@ class Jean {
       }
     }
 
-    // If knowledge base has relevant results, use them in the response
-    if (knowledgeContext?.hasResults) {
-      // Build response from knowledge base
-      const kbResponse = this.buildKnowledgeResponse(message, knowledgeContext, user);
-      if (kbResponse) {
-        return { 
-          message: kbResponse, 
-          intent: 'knowledge_base_answer',
-          knowledgeUsed: true,
-          sources: knowledgeContext.results.map(r => r.metadata.file)
+    // STEP 2: Get real-time database data for context
+    const { getRealTimeData } = require('./real-time-data');
+    const databaseContext = getRealTimeData(intent, params, user, db);
+
+    // STEP 3: Try AI Router for natural response
+    try {
+      const { generateSystemPrompt } = require('./system-prompt');
+      const aiRouter = require('../../lib/ai-router');
+      
+      // Build enhanced system prompt with all context
+      const systemPrompt = generateSystemPrompt({
+        user,
+        intent,
+        context: { pageContext, knowledgeContext, databaseContext }
+      });
+      
+      // Add real-time data context to user message
+      let enhancedMessage = message;
+      
+      // Add job search context
+      if (databaseContext?.jobCount !== undefined) {
+        enhancedMessage += `\n\n[CONTEXT: Database shows ${databaseContext.jobCount} active jobs matching "${databaseContext.searchCategory}" in "${databaseContext.searchLocation}"]`;
+        
+        if (databaseContext.topJobs?.length > 0) {
+          enhancedMessage += `\n\nTop matches:\n${databaseContext.topJobs.map((j, i) => 
+            `${i+1}. ${j.title} at ${j.company} (${j.location}) - ${j.salary}`
+          ).join('\n')}`;
+        }
+      }
+      
+      // Add application context
+      if (databaseContext?.applicationCount !== undefined) {
+        enhancedMessage += `\n\n[CONTEXT: User has ${databaseContext.applicationCount} total applications]`;
+        
+        if (databaseContext.recentApplications?.length > 0) {
+          enhancedMessage += `\n\nRecent applications:\n${databaseContext.recentApplications.map((a, i) => 
+            `${i+1}. ${a.title} at ${a.company} - Status: ${a.status}`
+          ).join('\n')}`;
+        }
+      }
+      
+      // Add Knowledge Base context
+      if (knowledgeContext?.hasResults) {
+        enhancedMessage += `\n\n[CONTEXT: Found ${knowledgeContext.results.length} relevant platform documentation sections]\n\n${knowledgeContext.summary}`;
+      }
+      
+      // Call AI Router
+      const response = await aiRouter.route(enhancedMessage, {
+        systemPrompt,
+        maxTokens: 500,
+        task: 'jean_chat',
+        temperature: 0.7
+      });
+      
+      if (response?.text) {
+        logger.info(`[Jean] AI Router success (${response.provider}/${response.model}): ${response.text.substring(0, 100)}...`);
+        
+        // Determine quick replies based on intent and user
+        const quickReplies = this.getQuickReplies(intent, user);
+        
+        return {
+          message: response.text,
+          quickReplies,
+          intent,
+          knowledgeUsed: knowledgeContext?.hasResults || false,
+          aiProvider: response.provider,
+          aiModel: response.model
         };
       }
+    } catch (error) {
+      logger.error('[Jean] AI Router failed, falling back to templates:', error.message);
+      // Fall through to template-based fallback
     }
+
+    // FALLBACK: Use template-based responses if AI Router fails
+    logger.warn('[Jean] Using template fallback for intent:', intent);
 
     // Handle intent-based responses
     switch (intent) {
@@ -1426,6 +1490,77 @@ ${context}`;
     }
     
     return response;
+  }
+
+  /**
+   * Get contextual quick replies based on intent and user role
+   */
+  getQuickReplies(intent, user) {
+    // Greeting intent
+    if (intent === 'greeting') {
+      if (user) {
+        return user.role === 'employer'
+          ? ['Post a Job', 'View Applicants', 'My Jobs', 'Help']
+          : ['Search Jobs', 'My Applications', 'Update Profile', 'Build My CV'];
+      }
+      return ['Search Jobs', 'Browse Categories', 'Register', 'How Does It Work?'];
+    }
+    
+    // Farewell intent
+    if (intent === 'farewell') {
+      return user
+        ? ['Search Jobs', 'My Profile', 'Help']
+        : ['Browse Jobs', 'Register'];
+    }
+    
+    // Job search intent
+    if (intent === 'search_jobs') {
+      return user
+        ? ['Apply to Top Match', 'Save Search', 'Show More Results', 'Set Alert']
+        : ['Register to Apply', 'Show More Results'];
+    }
+    
+    // Check applications intent
+    if (intent === 'check_applications') {
+      return ['View All Applications', 'Search Jobs', 'Update Profile', 'Help'];
+    }
+    
+    // Job details intent
+    if (intent === 'job_details') {
+      return user
+        ? ['Apply Now', 'Save Job', 'Similar Jobs', 'Contact Employer']
+        : ['Register to Apply', 'Similar Jobs'];
+    }
+    
+    // Profile/CV intents
+    if (intent === 'profile' || intent === 'cv' || intent === 'resume') {
+      return ['Update Profile', 'Build CV', 'Search Jobs', 'Help'];
+    }
+    
+    // Help intent
+    if (intent === 'help' || intent === 'how_to') {
+      return user
+        ? ['Search Jobs', 'My Profile', 'My Applications', 'Contact Support']
+        : ['Browse Jobs', 'Register', 'Pricing', 'Contact Support'];
+    }
+    
+    // Employer-specific intents
+    if (user?.role === 'employer') {
+      if (intent === 'post_job' || intent === 'manage_jobs') {
+        return ['Post New Job', 'My Jobs', 'View Applicants', 'Pricing'];
+      }
+      
+      if (intent === 'view_applicants') {
+        return ['View All Applicants', 'Post Job', 'My Jobs', 'Help'];
+      }
+    }
+    
+    // Default quick replies
+    return user
+      ? ['Search Jobs', 'My Profile', 'My Applications', 'Help']
+      : ['Search Jobs', 'Browse Categories', 'Register', 'Pricing'];
+  }
+
   }
 
 }
