@@ -14,6 +14,8 @@ export default function JobseekerProfile() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('basic'); // basic, experience, showcase, settings
@@ -108,6 +110,66 @@ export default function JobseekerProfile() {
       console.error('Failed to load profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProfilePictureUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select an image file', 'error');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image must be less than 5MB', 'error');
+      return;
+    }
+    
+    setUploadingPhoto(true);
+    try {
+      const formDataToUpload = new FormData();
+      formDataToUpload.append('avatar', file);
+      
+      const response = await profileAPI.uploadProfilePicture(formDataToUpload);
+      setFormData({ ...formData, profile_photo_url: response.url });
+      showToast('Profile picture updated successfully!', 'success');
+    } catch (error) {
+      showToast('Upload failed: ' + error.message, 'error');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleBannerUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select an image file', 'error');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image must be less than 5MB', 'error');
+      return;
+    }
+    
+    setUploadingBanner(true);
+    try {
+      const formDataToUpload = new FormData();
+      formDataToUpload.append('banner', file);
+      
+      const response = await profileAPI.uploadBanner(formDataToUpload);
+      setFormData({ ...formData, profile_banner_url: response.url });
+      showToast('Banner image updated successfully!', 'success');
+    } catch (error) {
+      showToast('Upload failed: ' + error.message, 'error');
+    } finally {
+      setUploadingBanner(false);
     }
   };
 
@@ -427,17 +489,23 @@ export default function JobseekerProfile() {
                 {formData.profile_banner_url && (
                   <OptimizedImage src={formData.profile_banner_url} alt="Banner" className="w-full h-full object-cover" eager />
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = prompt('Enter banner image URL:', formData.profile_banner_url);
-                    if (url !== null) setFormData({ ...formData, profile_banner_url: url });
-                  }}
-                  className="absolute top-4 right-4 px-3 py-1.5 bg-white text-gray-700 rounded-lg text-sm font-medium flex items-center gap-1 hover:bg-gray-100"
-                >
-                  <Image className="w-4 h-4" />
-                  {formData.profile_banner_url ? 'Change' : 'Add'} Banner
-                </button>
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleBannerUpload(e.target.files[0])}
+                    className="hidden"
+                    id="banner-upload-input"
+                    disabled={uploadingBanner}
+                  />
+                  <label
+                    htmlFor="banner-upload-input"
+                    className="absolute top-4 right-4 px-3 py-1.5 bg-white text-gray-700 rounded-lg text-sm font-medium flex items-center gap-1 hover:bg-gray-100 cursor-pointer"
+                  >
+                    <Image className="w-4 h-4" />
+                    {uploadingBanner ? 'Uploading...' : (formData.profile_banner_url ? 'Change' : 'Add')} Banner
+                  </label>
+                </>
               </div>
 
               {/* Profile Photo + Header */}
@@ -481,16 +549,22 @@ export default function JobseekerProfile() {
                       )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = prompt('Enter profile photo URL:', formData.profile_photo_url);
-                      if (url !== null) setFormData({ ...formData, profile_photo_url: url });
-                    }}
-                    className="mt-16 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                  >
-                    Change Photo
-                  </button>
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleProfilePictureUpload(e.target.files[0])}
+                      className="hidden"
+                      id="profile-picture-upload-input"
+                      disabled={uploadingPhoto}
+                    />
+                    <label
+                      htmlFor="profile-picture-upload-input"
+                      className="mt-16 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium cursor-pointer"
+                    >
+                      {uploadingPhoto ? 'Uploading...' : 'Change Photo'}
+                    </label>
+                  </>
                 </div>
               </div>
             </div>

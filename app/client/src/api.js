@@ -153,6 +153,20 @@ export const profile = {
 
   getPublic: (userId) =>
     fetch(`${API_URL}/profile/${userId}`).then(handleResponse),
+
+  uploadProfilePicture: (formData) =>
+    fetch(`${API_URL}/uploads/avatar`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: formData,
+    }).then(handleResponse),
+
+  uploadBanner: (formData) =>
+    fetch(`${API_URL}/uploads/banner`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: formData,
+    }).then(handleResponse),
 };
 
 // Saved Jobs

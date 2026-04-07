@@ -161,15 +161,28 @@ router.post('/cv', authenticateToken, requireRole('jobseeker'), cvUpload.single(
   }
 });
 
-// POST /banner — Upload banner image (employer or admin)
+// POST /banner — Upload banner image (all authenticated users)
 router.post('/banner', authenticateToken, bannerUpload.single('banner'), uploadSecurity('banner'), handleMulterError, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    if (req.user.role !== 'employer' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Only employers and admins can upload banners' });
-    }
     
     const url = `/uploads/banners/${req.file.filename}`;
+    
+    // Delete old banner if exists
+    if (req.user.role === 'jobseeker') {
+      const profile = db.prepare('SELECT profile_banner_url FROM profiles_jobseeker WHERE user_id = ?').get(req.user.id);
+      deleteOldFile(profile?.profile_banner_url);
+      
+      // Update jobseeker profile
+      db.prepare('UPDATE profiles_jobseeker SET profile_banner_url = ? WHERE user_id = ?').run(url, req.user.id);
+    } else if (req.user.role === 'employer') {
+      const profile = db.prepare('SELECT banner_url FROM profiles_employer WHERE user_id = ?').get(req.user.id);
+      deleteOldFile(profile?.banner_url);
+      
+      // Update employer profile
+      db.prepare('UPDATE profiles_employer SET banner_url = ? WHERE user_id = ?').run(url, req.user.id);
+    }
+    
     res.json({ url, message: 'Banner uploaded successfully' });
   } catch (error) {
     logger.error('Banner upload error', { error: error.message });
