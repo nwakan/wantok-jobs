@@ -29,15 +29,19 @@ export default function EmployerOverview() {
         jobs.getMy(),
         profileAPI.get().catch(() => null)
       ]);
-      setMyJobs(jobsData);
+      
+      // Defensive coding: Ensure jobsData is always an array
+      setMyJobs(Array.isArray(jobsData) ? jobsData : []);
       setProfile(profileData?.profile);
 
-      if (jobsData.length > 0) {
+      if (Array.isArray(jobsData) && jobsData.length > 0) {
         const allApps = [];
         for (const job of jobsData.slice(0, 5)) {
           try {
             const apps = await applications.getForJob(job.id);
-            allApps.push(...apps.map(app => ({ ...app, job_title: job.title, job_id: job.id })));
+            // Defensive coding: Ensure apps is always an array
+            const appsArray = Array.isArray(apps) ? apps : [];
+            allApps.push(...appsArray.map(app => ({ ...app, job_title: job.title, job_id: job.id })));
           } catch (err) { /* skip */ }
         }
         allApps.sort((a, b) => new Date(b.applied_at) - new Date(a.applied_at));
@@ -45,6 +49,9 @@ export default function EmployerOverview() {
       }
     } catch (error) {
       console.error('Failed to load data:', error);
+      // Defensive coding: Ensure state is always arrays even on error
+      setMyJobs([]);
+      setRecentApplications([]);
     } finally {
       setLoading(false);
     }
