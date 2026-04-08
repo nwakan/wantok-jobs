@@ -1563,7 +1563,6 @@ ${context}`;
 
   }
 
-}
 
 const jean = new Jean();
 module.exports = jean;

@@ -418,4 +418,3 @@ module.exports = {
   getInstance,
   ResonantMemory,
 };
-  }
