@@ -98,7 +98,7 @@ export default function Layout() {
             {user ? (
               <div className="hidden md:flex items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('nav.signedInAs')} <strong className="text-gray-900 dark:text-white">{user.name}</strong>
+                  {t('nav.signedInAs')} <strong className="text-gray-900 dark:text-white">{user.name === 'Various Employers' ? 'Employer' : user.name}</strong>
                 </span>
                 <Link to={getDashboardLink(user)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                   📊 {t('nav.dashboard')}
