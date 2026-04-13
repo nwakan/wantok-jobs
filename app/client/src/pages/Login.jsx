@@ -143,8 +143,8 @@ export default function Login() {
               setGoogleLoading(false);
             }
           },
-          auto_select: false,
-          cancel_on_tap_outside: false,
+          auto_select: true,
+          cancel_on_tap_outside: true,
         });
 
         // Show One Tap prompt automatically
@@ -284,8 +284,8 @@ export default function Login() {
             setGoogleLoading(false);
           }
         },
-        auto_select: false,
-        cancel_on_tap_outside: false,
+        auto_select: true,
+        cancel_on_tap_outside: true,
       });
 
       // Now show the prompt with the fresh callback

@@ -139,7 +139,7 @@ export default function Register() {
               setOauthLoading(false);
             }
           },
-          auto_select: false,
+          auto_select: true,
           cancel_on_tap_outside: false,
         });
 
@@ -298,7 +298,7 @@ export default function Register() {
           setShowRoleDialog(true);
           setOauthLoading(false);
         },
-        auto_select: false,
+        auto_select: true,
         cancel_on_tap_outside: false,
       });
 
