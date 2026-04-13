@@ -23,7 +23,6 @@ const JeanContactLinks = () => {
           className="group flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all flex-1"
           aria-label="Chat with Jean on website"
         >
-          <span className="text-base">💬</span>
           <span className="text-sm font-semibold">Chat</span>
         </button>
 
@@ -33,7 +32,6 @@ const JeanContactLinks = () => {
           className="group flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition-all flex-1"
           aria-label="Chat with Jean on WhatsApp"
         >
-          <span className="text-base">📱</span>
           <span className="text-sm font-semibold">WhatsApp</span>
         </button>
       </div>
@@ -46,7 +44,6 @@ const JeanContactLinks = () => {
           className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full shadow-lg transition-all active:scale-95"
           aria-label="Chat with Jean"
         >
-          <span className="text-base">💬</span>
           <span className="text-sm font-semibold">Chat</span>
         </button>
 
@@ -56,7 +53,6 @@ const JeanContactLinks = () => {
           className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-full shadow-lg transition-all active:scale-95"
           aria-label="WhatsApp Jean"
         >
-          <span className="text-base">📱</span>
           <span className="text-sm font-semibold">WhatsApp</span>
         </button>
       </div>
