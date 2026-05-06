@@ -95,6 +95,7 @@ export default function AdminLayout({ children }) {
         { name: 'Jean AI', path: '/dashboard/admin/jean' },
         { name: 'Wallet Admin', path: '/dashboard/admin/wallet' },
         { name: 'Payment Management', path: '/dashboard/admin/payments' },
+        { name: 'WhatsApp Messages', path: '/dashboard/admin/whatsapp-messages' },
       ]
     },
   ];

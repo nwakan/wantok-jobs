@@ -464,6 +464,7 @@ app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/orders', require('./routes/orders'));
  app.use('/api/admin', require('./routes/admin-pricing'));
 app.use('/api/admin/whatsapp', require('./routes/admin-whatsapp'));
+app.use('/api/admin/whatsapp-messages', require('./routes/admin-whatsapp-messages'));
 app.use('/api/credits', require('./routes/credits'));
 app.use('/api/screening', require('./routes/screening'));
 app.use('/api/job-alerts', require('./routes/job-alerts'));

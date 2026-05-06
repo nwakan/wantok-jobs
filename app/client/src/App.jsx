@@ -133,6 +133,7 @@ const AdminRateLimits = lazy(() => import('./pages/dashboard/admin/RateLimits'))
 const AdminJeanSettings = lazy(() => import('./pages/dashboard/admin/JeanSettings'));
 const AdminWallet = lazy(() => import('./pages/dashboard/admin/WalletAdmin'));
 const AdminPayments = lazy(() => import('./pages/dashboard/admin/AdminPayments'));
+const AdminWhatsAppMessages = lazy(() => import('./pages/dashboard/admin/WhatsAppMessages'));
 const TwoFactorSetup = lazy(() => import('./pages/auth/TwoFactorSetup'));
 const AdminReviewManagement = lazy(() => import('./pages/dashboard/admin/ReviewManagement'));
 const AdminFeatureRequests = lazy(() => import('./pages/dashboard/admin/FeatureRequests'));
@@ -268,6 +269,7 @@ function App() {
                 <Route path="rate-limits" element={<Lazy component={AdminRateLimits} />} />
                 <Route path="wallet" element={<Lazy component={AdminWallet} />} />
                 <Route path="payments" element={<Lazy component={AdminPayments} />} />
+                <Route path="whatsapp-messages" element={<Lazy component={AdminWhatsAppMessages} />} />
                 <Route path="feature-requests" element={<Lazy component={AdminFeatureRequests} />} />
                 <Route path="marketing" element={<Lazy component={AdminMarketing} />} />
                 <Route path="employer-claims" element={<Lazy component={AdminEmployerClaims} />} />
