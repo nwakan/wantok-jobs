@@ -229,7 +229,8 @@ router.get('/', (req, res) => {
              COALESCE(j.company_display_name, pe.company_name) as company_name,
              COALESCE(j.logo_url, pe.logo_url) as logo_url,
              pe.industry as company_industry,
-             pe.company_size as company_size
+             pe.company_size as company_size,
+             (SELECT COUNT(*) FROM applications WHERE job_id = j.id AND status != 'withdrawn') as applications_count
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
@@ -535,7 +536,8 @@ router.get('/:id', (req, res) => {
              COALESCE(j.logo_url, pe.logo_url) as logo_url,
              pe.description as company_description,
              pe.location as company_location,
-             pe.verified as company_verified
+             pe.verified as company_verified,
+             (SELECT COUNT(*) FROM applications WHERE job_id = j.id AND status != 'withdrawn') as applications_count
       FROM jobs j
       JOIN users u ON j.employer_id = u.id
       LEFT JOIN profiles_employer pe ON u.id = pe.user_id
