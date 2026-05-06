@@ -359,6 +359,7 @@ async function completeRegistration(phone, data) {
       step: STEPS.COMPLETE,
       completed: true
     };
+  } catch (error) {
     console.error('[WhatsApp Registration] Error completing registration:', error);
     
     // Reset registration flow on error
