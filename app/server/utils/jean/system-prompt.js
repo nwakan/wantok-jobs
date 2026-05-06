@@ -72,6 +72,12 @@ ${context?.knowledgeContext?.hasResults ? `
 ${context.knowledgeContext.summary}
 ` : ''}
 
+# WhatsApp Context
+${context?.whatsappContext ? `
+## WhatsApp Channel Context:
+${context.whatsappContext.summary}
+` : ''}
+
 # Your Task
 Respond naturally to the user's message. Use the examples above as inspiration for tone and style, but DO NOT copy them word-for-word. Generate a fresh, contextual response that feels conversational.
 

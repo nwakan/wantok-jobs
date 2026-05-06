@@ -107,7 +107,7 @@ class Jean {
       return { message: getResponse('feature_disabled', 'jean_disabled') };
     }
 
-    const { userId, user, pageContext, file, channel, phoneNumber } = opts;
+    const { userId, user, pageContext, file, channel, phoneNumber, whatsappContext } = opts;
     const sessionToken = opts.sessionToken || crypto.randomBytes(16).toString('hex');
 
     // WhatsApp employer flow routing
@@ -160,7 +160,7 @@ class Jean {
     if (flowState) {
       response = await this.handleFlowInput(session, flowState, message, user);
     } else {
-      response = await this.handleNewMessage(session, message, user, pageContext);
+      response = await this.handleNewMessage(session, message, user, pageContext, whatsappContext);
     }
 
     // Apply mood-aware empathy prefix
@@ -276,12 +276,13 @@ class Jean {
    * Handle a new message (no active flow)
    * ENHANCED: AI Router integration for natural, contextual responses
    */
-  async handleNewMessage(session, message, user, pageContext) {
+  async handleNewMessage(session, message, user, pageContext, whatsappContext = null) {
     const context = {
       user,
       currentFlow: null,
       lastIntent: null,
       pageContext,
+      whatsappContext,
     };
 
     const { intent, confidence, params } = classify(message, context);
@@ -328,7 +329,7 @@ class Jean {
       const systemPrompt = generateSystemPrompt({
         user,
         intent,
-        context: { pageContext, knowledgeContext, databaseContext }
+        context: { pageContext, knowledgeContext, databaseContext, whatsappContext }
       });
       
       // Add real-time data context to user message

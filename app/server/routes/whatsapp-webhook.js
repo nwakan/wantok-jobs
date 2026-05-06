@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { getWhatsAppContext } = require('../lib/whatsapp-context');
 
 // ─── Database Setup ────────────────────────────────────────
 
@@ -877,6 +878,9 @@ async function handleIncomingMessage(msg) {
 
   // ─── Fallback to Jean AI ───────────────────────────────
   try {
+    // Enrich context with WhatsApp-specific data
+    const whatsappContext = getWhatsAppContext(phone, session, user);
+    
     const response = await jean.processMessage(messageText, {
       userId: user?.id || null,
       user: user || null,
@@ -884,6 +888,7 @@ async function handleIncomingMessage(msg) {
       pageContext: 'whatsapp',
       channel: 'whatsapp',
       phoneNumber: phone,
+      whatsappContext, // WhatsApp-specific context (registration, history, profile)
     });
 
     const formattedText = formatForWhatsApp(response.message);
