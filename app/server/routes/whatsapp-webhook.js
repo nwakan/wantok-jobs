@@ -13,6 +13,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { getWhatsAppContext } = require('../lib/whatsapp-context');
+const {
+  startRegistration,
+  processRegistrationStep,
+  isInRegistrationFlow
+} = require('../lib/whatsapp-registration');
 
 // ─── Database Setup ────────────────────────────────────────
 
@@ -873,6 +878,72 @@ async function handleIncomingMessage(msg) {
   const commandResult = await handleWhatsAppCommands(session, messageText, user, phone);
   if (commandResult.handled) {
     await sendWhatsAppMessage(phone, commandResult.message);
+    return;
+  }
+
+  // ─── WhatsApp Registration Flow ────────────────────────
+  // Check if user is in active registration flow
+  if (isInRegistrationFlow(session)) {
+    try {
+      const { message: response, completed } = await processRegistrationStep(
+        phone,
+        session,
+        messageText
+      );
+      
+      await sendWhatsAppMessage(phone, response);
+      
+      if (completed) {
+        // Refresh session to get newly registered user
+        const refreshedSession = getOrCreateSession(phone);
+        logger.info('WhatsApp user registered successfully', { phone, userId: refreshedSession.user_id });
+      }
+      
+      return;
+    } catch (error) {
+      logger.error('Registration flow error', { error: error.message, phone });
+      await sendWhatsAppMessage(phone, 
+        "Sorry, there was an error with registration. Please try again! 🙏"
+      );
+      return;
+    }
+  }
+
+  // Check for registration intent patterns
+  const registrationPatterns = [
+    /\b(register|sign up|create account|join)\b/i,
+    /\b(i want to register|help me register)\b/i,
+    /\b(new account|make account)\b/i,
+  ];
+  
+  const isRegistrationIntent = registrationPatterns.some(pattern => pattern.test(messageText));
+  
+  if (isRegistrationIntent && !user) {
+    try {
+      const { message: welcomeMsg } = await startRegistration(phone, session);
+      await sendWhatsAppMessage(phone, welcomeMsg);
+      return;
+    } catch (error) {
+      logger.error('Start registration error', { error: error.message, phone });
+      await sendWhatsAppMessage(phone, 
+        "Sorry, I had trouble starting registration. Please try again! 🙏"
+      );
+      return;
+    }
+  }
+
+  // Check for job application attempts by non-registered users
+  const jobApplicationPatterns = [
+    /\b(apply for|apply to|i want to apply)\b/i,
+    /\b(submit application|send application)\b/i,
+    /\b(interested in|apply now)\b/i,
+  ];
+  
+  const isJobApplicationIntent = jobApplicationPatterns.some(pattern => pattern.test(messageText));
+  
+  if (isJobApplicationIntent && !user) {
+    const gateMessage = `To apply for jobs, you need to register first. Would you like to register now? It only takes 2 minutes! 😊\n\nReply 'Yes' to start or 'Later' to browse jobs first.`;
+    await sendWhatsAppMessage(phone, gateMessage);
     return;
   }
 
