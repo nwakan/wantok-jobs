@@ -41,7 +41,7 @@ class Jean {
   /**
    * Get or create a chat session
    */
-  getSession(userId, sessionToken) {
+  getSession(userId, sessionToken, platform = 'web') {
     let session;
     if (userId) {
       session = db.prepare(
@@ -56,8 +56,8 @@ class Jean {
     if (!session || (Date.now() - new Date(session.updated_at).getTime() > 2 * 60 * 60 * 1000)) {
       const token = sessionToken || crypto.randomBytes(16).toString('hex');
       const result = db.prepare(
-        'INSERT INTO jean_sessions (user_id, session_token) VALUES (?, ?)'
-      ).run(userId || null, token);
+        'INSERT INTO jean_sessions (user_id, session_token, platform) VALUES (?, ?, ?)'
+      ).run(userId || null, token, platform);
       session = db.prepare('SELECT * FROM jean_sessions WHERE id = ?').get(result.lastInsertRowid);
     }
 
@@ -152,7 +152,8 @@ class Jean {
       return { message: getResponse('needs_login', 'default') };
     }
 
-    const session = this.getSession(userId, sessionToken);
+    const platform = channel === 'whatsapp' || phoneNumber ? 'whatsapp' : 'web';
+    const session = this.getSession(userId, sessionToken, platform);
     this.saveMessage(session.id, 'user', message, { pageContext });
 
     if (file) {
