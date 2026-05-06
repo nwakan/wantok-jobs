@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { jobs, applications, profile as profileAPI } from '../../../api';
+import { jobs, applications as applicationsAPI, profile as profileAPI } from '../../../api';
 import StatsCard from '../../../components/StatsCard';
 import EmailVerificationBanner from '../../../components/EmailVerificationBanner';
 import { useAuth } from '../../../context/AuthContext';
@@ -8,7 +8,7 @@ import {
   TrendingUp, Eye, Briefcase, Users, Clock, Target, Award,
   ChevronRight, AlertCircle, CheckCircle2, Building2, Search,
   Bell, DollarSign, BarChart3, Calendar, FileText, Sparkles,
-  MapPin, Star, MessageSquare, UserPlus
+  MapPin, Star, MessageSquare, UserPlus, ChevronDown, X, Check
 } from 'lucide-react';
 import OptimizedImage from '../../../components/OptimizedImage';
 import ReferralSection from '../../../components/ReferralSection';
@@ -20,6 +20,9 @@ export default function EmployerOverview() {
   const [recentApplications, setRecentApplications] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState({});
+  const [showStatusDropdown, setShowStatusDropdown] = useState({});
+  const [toast, setToast] = useState(null);
 
   useEffect(() => { loadData(); }, []);
 
