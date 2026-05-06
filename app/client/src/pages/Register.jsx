@@ -287,22 +287,15 @@ export default function Register() {
       return;
     }
 
-    try {
-      // Re-initialize with fresh callback for manual button clicks
-      // This prevents "Only one navigator.credentials.get request may be outstanding" error
-      window.google.accounts.id.initialize({
-        client_id: googleProvider.clientId,
-        callback: async (response) => {
-          setOauthLoading(true);
-          setPendingOauthData({ provider: 'google', credential: response.credential });
-          setShowRoleDialog(true);
-          setOauthLoading(false);
-        },
-        auto_select: true,
-        cancel_on_tap_outside: false,
-      });
+    // Check if SDK was initialized (by useEffect)
+    if (!googleInitialized.current) {
+      setError('Google registration is initializing. Please try again in a moment.');
+      setOauthLoading(false);
+      return;
+    }
 
-      // Now show the prompt with the fresh callback
+    try {
+      // Reuse existing SDK instance (no re-initialization!)
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setOauthLoading(false);

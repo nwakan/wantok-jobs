@@ -245,10 +245,10 @@ export default function Login() {
     setGoogleLoading(true);
 
     const googleProvider = oauthProviders?.google;
-    if (!googleProvider) { 
-      setError('Google login not configured'); 
-      setGoogleLoading(false); 
-      return; 
+    if (!googleProvider) {
+      setError('Google login not configured');
+      setGoogleLoading(false);
+      return;
     }
 
     // Check if Google SDK is loaded
@@ -258,37 +258,15 @@ export default function Login() {
       return;
     }
 
-    try {
-      // Re-initialize with fresh callback for manual button clicks
-      // This prevents "Only one navigator.credentials.get request may be outstanding" error
-      window.google.accounts.id.initialize({
-        client_id: googleProvider.clientId,
-        callback: async (response) => {
-          setGoogleLoading(true);
-          try {
-            const res = await fetch('/api/auth/oauth/google', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ credential: response.credential }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-              login(data.token, data.user);
-              navigate(searchParams.get('redirect') || `/dashboard/${data.user.role}`, { replace: true });
-            } else {
-              setError(data.message || 'Google sign-in failed');
-              setGoogleLoading(false);
-            }
-          } catch (err) {
-            setError('Network error during Google sign-in');
-            setGoogleLoading(false);
-          }
-        },
-        auto_select: true,
-        cancel_on_tap_outside: true,
-      });
+    // Check if SDK was initialized (by useEffect)
+    if (!googleInitialized.current) {
+      setError('Google login is initializing. Please try again in a moment.');
+      setGoogleLoading(false);
+      return;
+    }
 
-      // Now show the prompt with the fresh callback
+    try {
+      // Reuse existing SDK instance (no re-initialization!)
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setGoogleLoading(false);
