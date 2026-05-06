@@ -258,7 +258,7 @@ async function handlePostJob(session, message, user, phone) {
 
       if (min && max && min !== max) {
         salaryText = `\n💰 *Salary:* ${currency} ${min.toLocaleString()} - ${max.toLocaleString()} per ${period}`;
-      }      } else if (min || max) {
+      } else if (min || max) {
         salaryText = `\n💰 *Salary:* ${currency} ${(min || max).toLocaleString()} per ${period}`;
       }
     }
