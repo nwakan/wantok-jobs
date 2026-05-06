@@ -115,22 +115,10 @@ class Jean {
     if (isWhatsApp && phoneNumber) {
       const waHandler = require('./whatsapp-employer');
       
-      // Check if this is an employer or potential employer
+      // Check if this is an existing employer
       const employer = actions.getEmployerByPhone(db, phoneNumber);
       
-      // If no session but has phoneNumber, handle as WhatsApp employer
-      if (!userId && !employer) {
-        // New employer greeting/registration flow
-        const greeting = waHandler.handleEmployerGreeting(db, phoneNumber, null);
-        if (greeting.is_new) {
-          // Start registration flow
-          const flow = new FlowEngine(db, null, sessionToken);
-          const flowResult = await flow.start('wa-register-employer');
-          return { ...flowResult, sessionToken };
-        }
-      }
-      
-      // Existing employer — route through WhatsApp handler
+      // Existing employer — route through WhatsApp handler for job posting intents
       if (employer || (user && user.role === 'employer')) {
         const effectiveUserId = employer?.user_id || userId;
         // Check for hire/posting intents
@@ -138,7 +126,7 @@ class Jean {
         
         if (['hire_someone', 'need_worker'].includes(intent)) {
           // Start quick job posting
-          const session = this.getSession(effectiveUserId, sessionToken);
+          const session = this.getSession(effectiveUserId, sessionToken, 'whatsapp');
           const result = await waHandler.handleQuickJobPost(db, effectiveUserId, message, null);
           if (result.flowState) {
             this.updateFlow(session.id, 'wa-quick-post-active', result.flowState);
