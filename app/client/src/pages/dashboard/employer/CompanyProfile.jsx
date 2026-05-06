@@ -67,7 +67,10 @@ export default function CompanyProfile() {
     culture: '',
     founded_year: '',
     email: '',
-    contact_preference: 'email',
+      contact_preference: 'email',
+      tagline: '',
+      cover_photo_url: '',
+      company_video_url: '',
     benefits: [],
     photos: [],
     social_links: { facebook: '', linkedin: '', twitter: '' },
@@ -96,6 +99,9 @@ export default function CompanyProfile() {
           founded_year: data.profile.founded_year || '',
           email: data.profile.email || '',
           contact_preference: data.profile.contact_preference || 'email',
+          tagline: data.profile.tagline || '',
+          cover_photo_url: data.profile.cover_photo_url || '',
+          company_video_url: data.profile.company_video_url || '',
           benefits: data.profile.benefits ? JSON.parse(data.profile.benefits) : [],
           photos: data.profile.photos ? JSON.parse(data.profile.photos) : [],
           social_links: data.profile.social_links ? JSON.parse(data.profile.social_links) : { facebook: '', linkedin: '', twitter: '' },
@@ -111,7 +117,7 @@ export default function CompanyProfile() {
 
   const calculateCompleteness = () => {
     let score = 0;
-    const total = 12;
+      const total = 15;
     if (formData.company_name) score++;
     if (formData.industry) score++;
     if (formData.company_size) score++;
@@ -123,7 +129,10 @@ export default function CompanyProfile() {
     if (formData.benefits.length >= 3) score++;
     if (formData.culture && formData.culture.length > 30) score++;
     if (formData.social_links.facebook || formData.social_links.linkedin) score++;
-    if (formData.photos.length >= 1) score++;
+      if (formData.photos.length >= 1) score++;
+      if (formData.tagline) score++;
+      if (formData.cover_photo_url) score++;
+      if (formData.company_video_url) score++;
     return Math.round((score / total) * 100);
   };
 
@@ -499,6 +508,51 @@ export default function CompanyProfile() {
                       <option value="phone">Phone</option>
                       <option value="both">Both Email & Phone</option>
                     </select>
+                  </div>
+
+                  {/* Tagline */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Tagline/Slogan</label>
+                    <input
+                      type="text"
+                      value={formData.tagline}
+                      onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                      placeholder="Your company's motto or catchphrase (max 150 characters)"
+                      maxLength={150}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{formData.tagline.length}/150 characters</p>
+                  </div>
+
+                  {/* Cover Photo/Banner */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cover Photo/Banner URL</label>
+                    <div className="flex gap-4 items-start">
+                      <input
+                        type="url"
+                        value={formData.cover_photo_url}
+                        onChange={(e) => setFormData({ ...formData, cover_photo_url: e.target.value })}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                        placeholder="https://example.com/cover.jpg"
+                      />
+                      {formData.cover_photo_url && (
+                        <OptimizedImage src={formData.cover_photo_url} alt="Cover" height={48} className="h-12 w-auto border rounded" />
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Upload to an image host and paste the URL. Recommended: 1920×400px banner</p>
+                  </div>
+
+                  {/* Company Video */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Video URL</label>
+                    <input
+                      type="url"
+                      value={formData.company_video_url}
+                      onChange={(e) => setFormData({ ...formData, company_video_url: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                      placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">YouTube or Vimeo video URL to showcase your company</p>
                   </div>
                 </div>
 

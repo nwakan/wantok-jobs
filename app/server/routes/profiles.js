@@ -195,6 +195,9 @@ router.put('/', authenticateToken, (req, res) => {
         founded_year,
         email,
         contact_preference,
+        tagline,
+        cover_photo_url,
+        company_video_url,
       } = req.body;
 
       // Sanitize all text inputs
@@ -211,6 +214,9 @@ router.put('/', authenticateToken, (req, res) => {
       const safeCulture = culture ? stripHtml(culture) : null;
       const safeEmail = email ? sanitizeEmail(email) : null;
       const safeContactPreference = contact_preference ? stripHtml(contact_preference) : null;
+      const safeTagline = tagline ? stripHtml(tagline) : null;
+      const safeCoverPhotoUrl = cover_photo_url ? sanitizeUrl(cover_photo_url) : null;
+      const safeCompanyVideoUrl = company_video_url ? sanitizeUrl(company_video_url) : null;
 
       // Validate lengths
       if (safeCompanyName && !isValidLength(safeCompanyName, 200)) {
@@ -218,6 +224,9 @@ router.put('/', authenticateToken, (req, res) => {
       }
       if (safeDescription && !isValidLength(safeDescription, 5000)) {
         return res.status(400).json({ error: 'Description must be 5000 characters or less' });
+      }
+      if (safeTagline && !isValidLength(safeTagline, 150)) {
+        return res.status(400).json({ error: 'Tagline must be 150 characters or less' });
       }
 
       db.prepare(`
@@ -236,7 +245,10 @@ router.put('/', authenticateToken, (req, res) => {
           culture = COALESCE(?, culture),
           founded_year = COALESCE(?, founded_year),
           email = COALESCE(?, email),
-          contact_preference = COALESCE(?, contact_preference)
+          contact_preference = COALESCE(?, contact_preference),
+          tagline = COALESCE(?, tagline),
+          cover_photo_url = COALESCE(?, cover_photo_url),
+          company_video_url = COALESCE(?, company_video_url)
         WHERE user_id = ?
       `).run(
         safeCompanyName,
@@ -254,6 +266,9 @@ router.put('/', authenticateToken, (req, res) => {
         founded_year || null,
         safeEmail,
         safeContactPreference,
+        safeTagline,
+        safeCoverPhotoUrl,
+        safeCompanyVideoUrl,
         req.user.id
       );
 
