@@ -25,40 +25,61 @@ jobs:
             
             cd /opt/wantokjobs/app
             
-            echo "[1/7] Pulling latest code from GitHub..."
+            echo "[1/8] Pulling latest code from GitHub..."
             git pull origin main
             echo ""
             
-            echo "[2/7] Installing/updating dependencies..."
+            echo "[2/8] Installing/updating dependencies..."
             npm install
             echo ""
             
-            echo "[3/7] Running database migrations..."
+            echo "[3/8] Running database migrations..."
             npm run migrate || echo "⚠️  No migrations to run or migration failed (continuing...)"
             echo ""
             
-            echo "[4/7] Building frontend..."
+            echo "[4/8] Building frontend..."
             cd client
             npm install
             npm run build
             cd ..
             echo ""
             
-            echo "[5/7] Deploying frontend to server dist..."
+            echo "[5/8] Deploying frontend to server dist..."
             cp -r client/dist/. server/dist/
             echo ""
             
-            echo "[6/7] Restarting WantokJobs service..."
+            echo "[6/8] Restarting WantokJobs service..."
             systemctl restart wantokjobs.service
             sleep 5
             echo ""
             
-            echo "[7/7] Verifying deployment..."
+            echo "[7/8] Verifying deployment..."
             systemctl status wantokjobs.service --no-pager -n 5
             echo ""
             
             echo "Testing health endpoint..."
             curl -s http://localhost:3001/api/health || echo "❌ Health check failed"
+            echo ""
+            
+            echo "[8/8] Purging Cloudflare cache..."
+            CLOUDFLARE_EMAIL="${{ secrets.CLOUDFLARE_EMAIL }}"
+            CLOUDFLARE_GLOBAL_KEY="${{ secrets.CLOUDFLARE_GLOBAL_KEY }}"
+            CLOUDFLARE_ZONE_ID="${{ secrets.CLOUDFLARE_WANTOKJOBS_ZONE }}"
+            
+            PURGE_RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+              -H "X-Auth-Email: ${CLOUDFLARE_EMAIL}" \
+              -H "X-Auth-Key: ${CLOUDFLARE_GLOBAL_KEY}" \
+              -H "Content-Type: application/json" \
+              --data '{"purge_everything":true}')
+            
+            echo "${PURGE_RESPONSE}"
+            
+            if echo "${PURGE_RESPONSE}" | grep -q '"success":true'; then
+              echo "✅ Cloudflare cache purged successfully"
+            else
+              echo "⚠️  Cloudflare cache purge failed (users may see stale content)"
+              echo "Manual purge required: https://dash.cloudflare.com"
+            fi
             echo ""
             
             echo "===================================="
