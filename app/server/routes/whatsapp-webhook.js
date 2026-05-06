@@ -18,6 +18,10 @@ const {
   processRegistrationStep,
   isInRegistrationFlow
 } = require('../lib/whatsapp-registration');
+const {
+  handlePostJob,
+  handleViewMyJobs
+} = require('../lib/whatsapp-employer-actions');
 
 // ─── Database Setup ────────────────────────────────────────
 
@@ -365,7 +369,7 @@ async function handleAccountLinking(session, message, phone) {
     } else {
       return {
         handled: true,
-        message: `I couldn't find an account with that email. 😕\n\nWant to register? Visit https://wantokjobs.com/register\n\nAlready have an account? Double-check the email and try again!`
+        message: `I couldn't find an account with that email. 😕\n\nWant to register via WhatsApp? Just type "register" and I'll help you create an account in 2 minutes!\n\nOr visit https://wantokjobs.com/register\n\nAlready have an account? Double-check the email and try again!`
       };
     }
   }
@@ -373,7 +377,7 @@ async function handleAccountLinking(session, message, phone) {
   // First-time user greeting
   return {
     handled: true,
-    message: `Hi! I'm Jean from WantokJobs 🇵🇬\n\nI can help you find jobs, apply, and more.\n\nTo get started, link your WantokJobs account by replying with your *registered email address*.\n\n_Don't have an account? Register at https://wantokjobs.com/register_`
+    message: `Hi! I'm Jean from WantokJobs 🇵🇬\n\nI can help you find jobs, apply, and more.\n\nTo get started:\n• Type "register" to create a new account via WhatsApp (2 minutes!)\n• Or send me your registered email address to link your existing account\n\n_You can also register at https://wantokjobs.com/register_`
   };
 }
 
@@ -394,11 +398,18 @@ async function handleWhatsAppCommands(session, message, user, phone) {
 
 Here's what I can do:
 
+*For Job Seekers:*
 🔍 *Search* — "search accountant jobs in Lae"
 📝 *Apply* — "apply 1" (after search)
 📋 *Status* — "my applications"
 📄 *Resume* — Send me a PDF/Word document
 🔔 *Alerts* — "alert me for IT jobs"
+
+*For Employers:*
+📝 *Post Job* — "post job" or "I want to hire"
+📊 *My Jobs* — "my jobs" or "show my postings"
+
+*General:*
 💡 *Suggest* — "I have a feature request"
 ❓ *Help* — Show this menu
 
@@ -601,7 +612,45 @@ Just type naturally — I understand English and Tok Pisin! 🇵🇬`
     };
   }
   
-  // ─── Save Job ───────────────────────────────────────────
+  
+  // ─── Post Job (Employers) ──────────────────────────────
+  if (/\b(post|create|advertise)\b.*\bjob\b/i.test(lower) || /\b(i want to hire|hiring|recruit)\b/i.test(lower)) {
+    // Check if user is in active job posting flow
+    let flowState = {};
+    try {
+      flowState = JSON.parse(session.flow_state || '{}');
+    } catch (e) {}
+
+    if (flowState.job_posting_active) {
+      // User is in active job posting flow - continue processing
+      const result = await handlePostJob(session, message, user, phone);
+      return result;
+    } else {
+      // Start new job posting flow
+      const result = await handlePostJob(session, message, user, phone);
+      return result;
+    }
+  }
+
+  // ─── View My Jobs (Employers) ───────────────────────────
+  if (/\b(my|view|show)\b.*\bjobs?\b/i.test(lower) || /\b(job postings?|posted jobs?)\b/i.test(lower)) {
+    // Disambiguate from "my job applications" (jobseekers)
+    if (!user) {
+      return {
+        handled: true,
+        message: `Link your account first to see your jobs. Send me your registered email! 📧`
+      };
+    }
+
+    if (user.role === 'employer') {
+      const result = await handleViewMyJobs(user);
+      return result;
+    } else {
+      // Jobseeker - this is handled by "my applications" section above
+      return { handled: false };
+    }
+  }
+// ─── Save Job ───────────────────────────────────────────
   const saveMatch = lower.match(/\b(save|bookmark)\s+(\d+)\b/);
   if (saveMatch) {
     const index = parseInt(saveMatch[2]) - 1;

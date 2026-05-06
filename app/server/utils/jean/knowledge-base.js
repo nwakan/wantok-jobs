@@ -240,27 +240,54 @@ class KnowledgeBase {
   async getEmbedding(text) {
     try {
       // Truncate text if too long
-      const truncated = text.substring(0, 4000);
+      const truncated = text.substring(0, 8000); // OpenAI supports up to 8191 tokens
 
-      // Use Groq chat completion to generate embeddings
-      // Note: Groq doesn't have a dedicated embeddings endpoint,
-      // so we'll use a simple approach with the LLM
-      // For production, consider using OpenAI embeddings or a dedicated service
+      // Try OpenAI embeddings first (semantic understanding)
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const response = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              input: truncated,
+              model: 'text-embedding-3-small', // 1536 dimensions, $0.02/1M tokens
+            }),
+          });
 
-      // Simple hash-based embedding for now (placeholder)
-      // TODO: Replace with proper embeddings API
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.warn(`OpenAI embeddings API error (${response.status}): ${errorText}`);
+            throw new Error(`OpenAI API returned ${response.status}`);
+          }
+
+          const data = await response.json();
+          const embedding = data.data[0].embedding;
+          
+          console.log(`[Knowledge Base] Generated semantic embedding (${embedding.length} dimensions)`);
+          return embedding;
+        } catch (err) {
+          console.warn(`[Knowledge Base] OpenAI embeddings failed: ${err.message}, falling back to hash-based`);
+          // Fall through to hash-based fallback
+        }
+      }
+
+      // Fallback: Hash-based embedding (simpler, no API dependency)
+      console.log('[Knowledge Base] Using hash-based embeddings (consider adding OPENAI_API_KEY for better accuracy)');
       const hash = crypto.createHash('sha256').update(truncated).digest();
       const embedding = Array.from(hash).map(b => b / 255); // Normalize to 0-1
 
-      // Pad to standard dimension (256)
+      // Pad to standard dimension (256 for hash-based)
       while (embedding.length < 256) {
         embedding.push(0);
       }
 
       return embedding.slice(0, 256);
-    } catch (error) {
-      logger.error('[KnowledgeBase] Embedding failed:', error.message);
-      // Return zero vector on error
+    } catch (err) {
+      console.error('[Knowledge Base] Fatal error in getEmbedding:', err);
+      // Ultimate fallback: return zero vector
       return new Array(256).fill(0);
     }
   }
