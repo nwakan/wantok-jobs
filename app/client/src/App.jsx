@@ -38,6 +38,7 @@ const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Terms = lazy(() => import('./pages/Terms'));
+const DataDeletion = lazy(() => import('./pages/DataDeletion'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const HelpCenter = lazy(() => import('./pages/HelpCenter'));
@@ -162,6 +163,7 @@ function App() {
               <Route path="contact" element={<Lazy component={Contact} />} />
               <Route path="privacy" element={<Lazy component={Privacy} />} />
               <Route path="terms" element={<Lazy component={Terms} />} />
+              <Route path="data-deletion" element={<Lazy component={DataDeletion} />} />
               <Route path="pricing" element={<Lazy component={Pricing} />} />
               <Route path="subscriptions" element={<Lazy component={SubscriptionPlans} />} />
               <Route path="subscriptions/manage" element={<Lazy component={SubscriptionManagement} />} />

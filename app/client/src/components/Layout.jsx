@@ -202,6 +202,7 @@ export default function Layout() {
               <h3 className="font-bold text-lg mb-4 text-white">Legal & Support</h3>
               <ul className="space-y-2">
                 <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/data-deletion" className="text-gray-400 hover:text-white transition-colors">Data Deletion</Link></li>
                 <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
                 <li><Link to="/cookies" className="text-gray-400 hover:text-white transition-colors">Cookie Policy</Link></li>
                 <li><Link to="/faq" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>

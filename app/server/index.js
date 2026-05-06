@@ -435,6 +435,9 @@ app.use('/api/2fa', require('./routes/2fa'));
 app.use('/api/auth/oauth', require('./routes/oauth'));
 app.use('/api/auth', require('./routes/auth'));
 
+// Facebook Data Deletion Callback (GDPR compliance)
+app.use('/api/auth/facebook/data-deletion', require('./routes/facebook-data-deletion'));
+
 // Force password reset middleware — blocks all non-auth routes for fpr users
 const { checkForcePasswordReset } = require('./middleware/auth');
 app.use('/api', checkForcePasswordReset);
