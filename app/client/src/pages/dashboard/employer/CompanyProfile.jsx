@@ -5,7 +5,7 @@ import useLocationDetect from '../../../hooks/useLocationDetect';
 import {
   Building2, MapPin, Globe, Users, CheckCircle2, Image, Plus, X, Navigation,
   Eye, EyeOff, TrendingUp, Briefcase, Phone, Mail, Facebook, Linkedin,
-  Award, Star, Camera, FileText, Shield, Heart, Sparkles, ExternalLink
+  Award, Star, Camera, FileText, Shield, Heart, Sparkles, ExternalLink, Tag
 } from 'lucide-react';
 import OptimizedImage from '../../../components/OptimizedImage';
 
@@ -47,6 +47,29 @@ const SUGGESTED_BENEFITS = [
   'Company Vehicle', 'Phone Allowance', 'Relocation Package', 'Meal Allowance',
 ];
 
+const COMMON_SPECIALTIES = [
+  'Recruitment & Staffing',
+  'Mining & Resources',
+  'Oil & Gas',
+  'Construction & Infrastructure',
+  'Engineering Services',
+  'Healthcare & Medical',
+  'IT & Technology',
+  'Finance & Accounting',
+  'Legal Services',
+  'Education & Training',
+  'Agriculture & Fisheries',
+  'Hospitality & Tourism',
+  'Retail & Wholesale',
+  'Logistics & Supply Chain',
+  'Government Services',
+  'Security Services',
+  'Telecommunications',
+  'Energy & Utilities',
+  'Real Estate & Property',
+  'Manufacturing',
+];
+
 export default function CompanyProfile() {
   const { showToast } = useToast();
   const { location: detectedLocation, detecting: detectingLocation, detect: detectLocation } = useLocationDetect();
@@ -72,12 +95,14 @@ export default function CompanyProfile() {
       cover_photo_url: '',
       company_video_url: '',
     benefits: [],
+    specialties: [],
     photos: [],
     social_links: { facebook: '', linkedin: '', twitter: '' },
     verified: 0,
   });
   const [newBenefit, setNewBenefit] = useState('');
   const [newPhoto, setNewPhoto] = useState('');
+  const [newSpecialty, setNewSpecialty] = useState('');
 
   useEffect(() => { loadProfile(); }, []);
 
@@ -105,7 +130,7 @@ export default function CompanyProfile() {
           benefits: data.profile.benefits ? JSON.parse(data.profile.benefits) : [],
           photos: data.profile.photos ? JSON.parse(data.profile.photos) : [],
           social_links: data.profile.social_links ? JSON.parse(data.profile.social_links) : { facebook: '', linkedin: '', twitter: '' },
-          verified: data.profile.verified || 0,
+          specialties: data.profile.specialties ? JSON.parse(data.profile.specialties) : [],
         });
       }
     } catch (error) {
@@ -133,6 +158,7 @@ export default function CompanyProfile() {
       if (formData.tagline) score++;
       if (formData.cover_photo_url) score++;
       if (formData.company_video_url) score++;
+      if (formData.specialties.length >= 3) score++;
     return Math.round((score / total) * 100);
   };
 
@@ -144,7 +170,7 @@ export default function CompanyProfile() {
         ...formData,
         benefits: JSON.stringify(formData.benefits),
         photos: JSON.stringify(formData.photos),
-        social_links: JSON.stringify(formData.social_links),
+        specialties: JSON.stringify(formData.specialties),
       };
       await profileAPI.update(dataToSave);
       showToast('Company profile updated! 🎉', 'success');
@@ -176,6 +202,18 @@ export default function CompanyProfile() {
 
   const removePhoto = (index) => {
     setFormData({ ...formData, photos: formData.photos.filter((_, i) => i !== index) });
+  };
+
+  const addSpecialty = (specialty) => {
+    const s = (specialty || newSpecialty).trim();
+    if (s && !formData.specialties.includes(s) && formData.specialties.length < 10) {
+      setFormData({ ...formData, specialties: [...formData.specialties, s] });
+      setNewSpecialty('');
+    }
+  };
+
+  const removeSpecialty = (index) => {
+    setFormData({ ...formData, specialties: formData.specialties.filter((_, i) => i !== index) });
   };
 
   if (loading) {
@@ -326,6 +364,20 @@ export default function CompanyProfile() {
                       <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                       <span>{b}</span>
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Specialties */}
+            {formData.specialties.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-3">Specialties & Expertise</h2>
+                <div className="flex flex-wrap gap-2">
+                  {formData.specialties.map((specialty, i) => (
+                    <span key={i} className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      {specialty}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -661,6 +713,67 @@ export default function CompanyProfile() {
                   ))}
                   {formData.benefits.length === 0 && (
                     <p className="text-sm text-gray-500">No benefits added yet — add some to attract top talent!</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Specialties */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-blue-600" />
+                  Specialties & Expertise <span className="text-sm text-gray-500 font-normal">(max 10)</span>
+                </h2>
+
+                {/* Quick add suggestions */}
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Quick add:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {COMMON_SPECIALTIES.filter(s => !formData.specialties.includes(s)).slice(0, 10).map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => addSpecialty(s)}
+                        disabled={formData.specialties.length >= 10}
+                        className="px-3 py-1 border border-gray-300 text-gray-700 rounded-full text-sm hover:bg-blue-50 hover:border-blue-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        + {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={newSpecialty}
+                    onChange={(e) => setNewSpecialty(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                    placeholder="Or type a custom specialty..."
+                    maxLength={50}
+                    disabled={formData.specialties.length >= 10}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addSpecialty()}
+                    disabled={!newSpecialty.trim() || formData.specialties.length >= 10}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {formData.specialties.map((specialty, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      ✓ {specialty}
+                      <button type="button" onClick={() => removeSpecialty(idx)} className="ml-1 text-blue-600 hover:text-blue-900 font-bold">×</button>
+                    </span>
+                  ))}
+                  {formData.specialties.length === 0 && (
+                    <p className="text-sm text-gray-500">No specialties added yet — add some to showcase your expertise!</p>
+                  )}
+                  {formData.specialties.length >= 10 && (
+                    <p className="text-sm text-amber-600 font-medium">Maximum 10 specialties reached</p>
                   )}
                 </div>
               </div>

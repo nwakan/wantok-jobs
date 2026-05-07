@@ -197,7 +197,7 @@ router.put('/', authenticateToken, (req, res) => {
         contact_preference,
         tagline,
         cover_photo_url,
-        company_video_url,
+        specialties,
       } = req.body;
 
       // Sanitize all text inputs
@@ -216,7 +216,7 @@ router.put('/', authenticateToken, (req, res) => {
       const safeContactPreference = contact_preference ? stripHtml(contact_preference) : null;
       const safeTagline = tagline ? stripHtml(tagline) : null;
       const safeCoverPhotoUrl = cover_photo_url ? sanitizeUrl(cover_photo_url) : null;
-      const safeCompanyVideoUrl = company_video_url ? sanitizeUrl(company_video_url) : null;
+      const safeSpecialties = specialties ? JSON.stringify(specialties) : null;
 
       // Validate lengths
       if (safeCompanyName && !isValidLength(safeCompanyName, 200)) {
@@ -227,6 +227,10 @@ router.put('/', authenticateToken, (req, res) => {
       }
       if (safeTagline && !isValidLength(safeTagline, 150)) {
         return res.status(400).json({ error: 'Tagline must be 150 characters or less' });
+      }
+      // Validate specialties array
+      if (specialties && (!Array.isArray(specialties) || specialties.length > 10)) {
+        return res.status(400).json({ error: 'Specialties must be an array with maximum 10 items' });
       }
 
       db.prepare(`
@@ -248,7 +252,8 @@ router.put('/', authenticateToken, (req, res) => {
           contact_preference = COALESCE(?, contact_preference),
           tagline = COALESCE(?, tagline),
           cover_photo_url = COALESCE(?, cover_photo_url),
-          company_video_url = COALESCE(?, company_video_url)
+          company_video_url = COALESCE(?, company_video_url),
+          specialties = COALESCE(?, specialties)
         WHERE user_id = ?
       `).run(
         safeCompanyName,
@@ -269,6 +274,7 @@ router.put('/', authenticateToken, (req, res) => {
         safeTagline,
         safeCoverPhotoUrl,
         safeCompanyVideoUrl,
+        safeSpecialties,
         req.user.id
       );
 
