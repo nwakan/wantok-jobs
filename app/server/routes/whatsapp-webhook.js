@@ -374,10 +374,9 @@ async function handleAccountLinking(session, message, phone) {
     }
   }
   
-  // First-time user greeting
+  // First-time user - let AI Router handle naturally with context awareness
   return {
-    handled: true,
-    message: `Hi! I'm Jean from WantokJobs 🇵🇬\n\nI can help you find jobs, apply, and more.\n\nTo get started:\n• Type "register" to create a new account via WhatsApp (2 minutes!)\n• Or send me your registered email address to link your existing account\n\n_You can also register at https://wantokjobs.com/register_`
+    handled: false,
   };
 }
 
