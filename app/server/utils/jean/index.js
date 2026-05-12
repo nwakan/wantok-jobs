@@ -754,20 +754,27 @@ class Jean {
             };
           }
         } catch(llmErr) {
-          // LLM failed, fall through to static response
+          // LLM failed - log error and return minimal fallback
+          console.error('[Jean AI] LLM call failed in default handler:', {
+            error: llmErr.message,
+            intent,
+            hasUser: !!user,
+            userId: user?.id,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Return minimal error message instead of hardcoded menu
+          const name = user?.name?.split(' ')[0] || 'there';
+          const errorMsg = user
+            ? `Sori ${name}, I'm having trouble connecting right now. Please try again in a moment, or reply 'help' for assistance.`
+            : "I'm having trouble connecting right now. Please try again in a moment, or reply 'help' for assistance.";
+          
+          return {
+            message: personality.humanize(errorMsg),
+            quickReplies: ['Try Again', 'Help'],
+            intent: 'error',
+          };
         }
-        // Static fallback when LLM unavailable
-        const name = user?.name?.split(' ')[0] || 'there';
-        const fallback = user
-          ? `Sori ${name}, mi no klia long dispela. But no worries — I can help with:\n\n🔍 Finding jobs — just tell me what you're looking for\n👤 Your profile — I'll update it for you through chat\n📄 Your CV — I'll build it from scratch\n📨 Applying — I can apply to jobs for you\n💰 Pricing — I'll explain how it works\n\nJust tell me in your own words what you need — tokim mi tasol!`
-          : "Hmm, mi no klia long dispela — but no worries! Here's what I can do:\n\n🔍 **Find jobs** — tell me what you're looking for\n📂 **Browse by category** — mining, health, IT, and more\n💰 **Pricing** — it's free for job seekers!\n📝 **Sign up** — I'll walk you through it\n\nWhat would you like to do?";
-        return {
-          message: personality.humanize(fallback),
-          quickReplies: user
-            ? ['Search Jobs', 'My Profile', 'My Applications', 'Help']
-            : ['Search Jobs', 'Browse Categories', 'Register', 'Pricing'],
-          intent,
-        };
       }
     }
   }
