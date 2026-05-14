@@ -395,6 +395,7 @@ router.get('/', (req, res) => {
         params.push(...options);
       }
     }
+  }
 
     // Count total
     const countQuery = query.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(DISTINCT j.id) as total FROM');
