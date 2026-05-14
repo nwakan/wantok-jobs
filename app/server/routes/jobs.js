@@ -370,6 +370,7 @@ router.get('/', (req, res) => {
         )`;
         params.push(range[0], range[1], containsPattern(company_size));
       }
+    }
 
     // Benefits filter (Task 22: Advanced Search Filters)
     if (req.query.benefits) {
