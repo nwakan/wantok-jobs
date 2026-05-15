@@ -398,7 +398,9 @@ router.get('/', (req, res) => {
     }
 
     // Count total
-    const countQuery = query.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(DISTINCT j.id) as total FROM');
+    // Fix: Remove applications_count subquery before transformation to avoid extra closing parenthesis
+    const queryWithoutSubquery = query.replace(/\(SELECT COUNT\(\*\) FROM applications[^)]+\)[^,]*,?/g, '');
+    const countQuery = queryWithoutSubquery.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(DISTINCT j.id) as total FROM');
     const countResult = params.length > 0 ? db.prepare(countQuery).get(...params) : db.prepare(countQuery).get();
     const total = countResult ? countResult.total : 0;
 
@@ -419,12 +421,6 @@ router.get('/', (req, res) => {
     const limitNum = parseInt(limit);
     const offset = (parseInt(page) - 1) * limitNum;
     const paginatedParams = [...params, limitNum, offset];
-
-    // TEMPORARY DEBUG LOGGING - Remove after fixing SQL syntax error
-    console.log('=== DEBUG SQL QUERY ===');
-    console.log('Query:', query);
-    console.log('Params:', paginatedParams);
-    console.log('=== END DEBUG ===');
 
     const jobs = db.prepare(query).all(...paginatedParams);
 
