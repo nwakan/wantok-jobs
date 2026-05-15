@@ -420,6 +420,12 @@ router.get('/', (req, res) => {
     const offset = (parseInt(page) - 1) * limitNum;
     const paginatedParams = [...params, limitNum, offset];
 
+    // TEMPORARY DEBUG LOGGING - Remove after fixing SQL syntax error
+    console.log('=== DEBUG SQL QUERY ===');
+    console.log('Query:', query);
+    console.log('Params:', paginatedParams);
+    console.log('=== END DEBUG ===');
+
     const jobs = db.prepare(query).all(...paginatedParams);
 
     // Add pagination headers
