@@ -55,8 +55,8 @@ const employerQuery = `
     ROUND(CAST(COUNT(DISTINCT a.id) AS FLOAT) / NULLIF(COUNT(DISTINCT j.id), 0), 2) as avg_applications_per_job,
     
     -- Engagement metrics
-    MAX(a.created_at) as last_application_date,
-    ROUND((julianday('now') - julianday(MAX(a.created_at))), 0) as days_since_last_application,
+    MAX(a.applied_at) as last_application_date,
+    ROUND((julianday('now') - julianday(MAX(a.applied_at))), 0) as days_since_last_application,
     
     -- Email domain classification
     CASE 
