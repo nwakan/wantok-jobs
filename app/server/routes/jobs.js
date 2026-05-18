@@ -399,7 +399,7 @@ router.get('/', (req, res) => {
 
     // Count total
     // Fix: Remove applications_count subquery before transformation to avoid extra closing parenthesis
-    const queryWithoutSubquery = query.replace(/\(SELECT COUNT\(\*\) FROM applications[^)]+\)[^,]*,?/g, '');
+    const queryWithoutSubquery = query.replace(/,?\s*\(SELECT COUNT\(\*\) FROM applications[^)]+\)\s*(?:as\s+\w+)?/gi, '');
     const countQuery = queryWithoutSubquery.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(DISTINCT j.id) as total FROM');
     const countResult = params.length > 0 ? db.prepare(countQuery).get(...params) : db.prepare(countQuery).get();
     const total = countResult ? countResult.total : 0;
