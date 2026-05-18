@@ -67,7 +67,7 @@ const employerQuery = `
     END as email_type
     
   FROM users u
-  LEFT JOIN jobs j ON j.employer_id = u.id
+  LEFT JOIN jobs_archive j ON j.employer_id = u.id
   LEFT JOIN profiles_employer pe ON u.id = pe.user_id
   LEFT JOIN applications a ON a.job_id = j.id
   
