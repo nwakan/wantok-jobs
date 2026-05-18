@@ -40,7 +40,7 @@ const employerQuery = `
   SELECT 
     u.id as employer_id,
     u.email,
-    u.company_name,
+    pe.company_name,
     u.created_at as registered_at,
     
     -- Job posting metrics
@@ -68,6 +68,7 @@ const employerQuery = `
     
   FROM users u
   LEFT JOIN jobs j ON j.employer_id = u.id
+  LEFT JOIN profiles_employer pe ON u.id = pe.user_id
   LEFT JOIN applications a ON a.job_id = j.id
   
   WHERE u.role = 'employer'
@@ -75,7 +76,7 @@ const employerQuery = `
     AND u.email NOT LIKE '%@wantokjobs.com'  -- Exclude platform accounts
     AND u.email NOT LIKE 'import-%'  -- Exclude import placeholders
   
-  GROUP BY u.id, u.email, u.company_name, u.created_at
+  GROUP BY u.id, u.email, pe.company_name, u.created_at
   HAVING COUNT(DISTINCT j.id) > 0  -- Must have posted at least 1 job
   
   ORDER BY total_jobs_posted DESC, total_applications_received DESC;
