@@ -254,6 +254,20 @@ export const admin = {
     }).then(handleResponse);
   },
 
+  exportUsers: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetch(`${API_URL}/admin/export/users?${queryString}`, {
+      headers: getAuthHeader(),
+    });
+  },
+
+  importUsers: (formData) =>
+    fetch(`${API_URL}/admin/import/users`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: formData,
+    }).then(handleResponse),
+
   updateUser: (id, userData) =>
     fetch(`${API_URL}/admin/users/${id}`, {
       method: 'PUT',

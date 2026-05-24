@@ -3,6 +3,10 @@ const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const multer = require('multer');
+const { parse } = require('csv-parse/sync');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const cache = require('../lib/cache');
 const rateLimitMonitor = require('../lib/rate-limit-monitor');
@@ -774,13 +778,180 @@ function sendCSV(res, filename, headers, rows) {
 // GET /api/admin/export/users
 router.get('/export/users', (req, res) => {
   try {
-    const users = db.prepare('SELECT id, name, email, role, phone, created_at FROM users ORDER BY created_at DESC').all();
-    const headers = ['ID', 'Name', 'Email', 'Role', 'Phone', 'Registered At'];
-    const rows = users.map(u => [u.id, u.name, u.email, u.role, u.phone, u.created_at]);
-    sendCSV(res, `users_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+    const format = req.query.format || 'csv'; // 'csv' or 'json'
+    const role = req.query.role;
+    const search = req.query.search;
+
+    // Build WHERE clause based on filters
+    let whereClause = 'WHERE 1=1';
+    const params = [];
+    
+    if (role && role !== 'all') {
+      whereClause += ' AND role = ?';
+      params.push(role);
+    }
+    
+    if (search) {
+      whereClause += ' AND (name LIKE ? OR email LIKE ?)';
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern);
+    }
+
+    // Fetch users with additional fields
+    const users = db.prepare(`
+      SELECT id, name, email, role, phone, email_verified, 
+             COALESCE(lockout_until, '') as account_status,
+             last_login, created_at 
+      FROM users 
+      ${whereClause}
+      ORDER BY created_at DESC
+    `).all(...params);
+
+    if (format === 'json') {
+      // Send JSON format
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="users_${new Date().toISOString().slice(0,10)}.json"`);
+      res.json(users);
+    } else {
+      // Send CSV format
+      const headers = ['ID', 'Name', 'Email', 'Role', 'Phone', 'Email Verified', 'Account Status', 'Last Login', 'Registered At'];
+      const rows = users.map(u => [
+        u.id, 
+        u.name, 
+        u.email, 
+        u.role, 
+        u.phone, 
+        u.email_verified ? 'Yes' : 'No',
+        u.account_status ? 'Locked' : 'Active',
+        u.last_login || 'Never',
+        u.created_at
+      ]);
+      sendCSV(res, `users_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+    }
   } catch (error) {
     logger.error('Admin export users error', { error: error.message });
     res.status(500).json({ error: 'Failed to export users' });
+  }
+});
+
+// Configure multer for CSV upload
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+// POST /api/admin/import/users
+router.post('/import/users', csvUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const mode = req.body.mode || 'create'; // 'create' or 'update'
+    const csvContent = req.file.buffer.toString('utf-8');
+    
+    // Parse CSV
+    const records = parse(csvContent, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true
+    });
+
+    if (records.length === 0) {
+      return res.status(400).json({ error: 'CSV file is empty' });
+    }
+
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: []
+    };
+
+    const validRoles = ['jobseeker', 'employer', 'admin', 'trainer'];
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i];
+      const rowNum = i + 2; // +2 for header and 0-index
+
+      try {
+        // Extract and validate fields
+        const email = row.Email?.trim().toLowerCase();
+        const name = row.Name?.trim();
+        const role = row.Role?.trim().toLowerCase();
+        const phone = row.Phone?.trim() || null;
+
+        // Validation
+        if (!email || !name || !role) {
+          results.errors.push({ row: rowNum, error: 'Missing required fields (Email, Name, Role)' });
+          results.skipped++;
+          continue;
+        }
+
+        if (!emailRegex.test(email)) {
+          results.errors.push({ row: rowNum, error: `Invalid email format: ${email}` });
+          results.skipped++;
+          continue;
+        }
+
+        if (!validRoles.includes(role)) {
+          results.errors.push({ row: rowNum, error: `Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}` });
+          results.skipped++;
+          continue;
+        }
+
+        // Check if user exists
+        const existingUser = db.prepare('SELECT id, email FROM users WHERE email = ?').get(email);
+
+        // Prevent admin from modifying their own account via import
+        if (existingUser && existingUser.id === req.user.id) {
+          results.errors.push({ row: rowNum, error: 'Cannot modify your own account via import' });
+          results.skipped++;
+          continue;
+        }
+
+        if (existingUser) {
+          // User exists
+          if (mode === 'create') {
+            // Skip existing users in CREATE mode
+            results.skipped++;
+            continue;
+          } else {
+            // Update existing user in UPDATE mode
+            db.prepare('UPDATE users SET name = ?, role = ?, phone = ? WHERE id = ?')
+              .run(name, role, phone, existingUser.id);
+            results.updated++;
+          }
+        } else {
+          // Create new user
+          const password = crypto.randomBytes(16).toString('hex');
+          const hashedPassword = await bcrypt.hash(password, 10);
+          
+          db.prepare(
+            'INSERT INTO users (name, email, password, role, phone, email_verified, created_at) VALUES (?, ?, ?, ?, ?, 0, datetime("now"))'
+          ).run(name, email, hashedPassword, role, phone);
+          
+          results.created++;
+        }
+      } catch (error) {
+        logger.error('Import row error', { row: rowNum, error: error.message });
+        results.errors.push({ row: rowNum, error: error.message });
+        results.skipped++;
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    logger.error('Admin import users error', { error: error.message });
+    res.status(500).json({ error: 'Failed to import users: ' + error.message });
   }
 });
 

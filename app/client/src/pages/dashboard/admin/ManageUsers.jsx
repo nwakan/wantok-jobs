@@ -11,6 +11,12 @@ export default function ManageUsers() {
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importMode, setImportMode] = useState('create');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResults, setImportResults] = useState(null);
+  const [exportFormat, setExportFormat] = useState('csv');
 
   useEffect(() => {
     loadUsers();
@@ -97,6 +103,74 @@ export default function ManageUsers() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      // Build export params based on current filters
+      const params = {};
+      if (filter !== 'all') params.role = filter;
+      if (searchTerm) params.search = searchTerm;
+      params.format = exportFormat;
+
+      const response = await adminAPI.exportUsers(params);
+      
+      // Get the CSV data from response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link and trigger download
+      const fileExtension = exportFormat === 'json' ? 'json' : 'csv';
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `users_${new Date().toISOString().slice(0,10)}.${fileExtension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToast(`Users exported successfully as ${exportFormat.toUpperCase()}`, 'success');
+    } catch (error) {
+      showToast('Failed to export users: ' + error.message, 'error');
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      showToast('Please select a CSV file', 'error');
+      return;
+    }
+
+    setImportLoading(true);
+    setImportResults(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('mode', importMode);
+
+      const results = await adminAPI.importUsers(formData);
+      
+      setImportResults(results);
+      showToast(`Import complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped`, 'success');
+      
+      // Refresh user list if any users were created or updated
+      if (results.created > 0 || results.updated > 0) {
+        loadUsers();
+      }
+    } catch (error) {
+      showToast('Failed to import users: ' + error.message, 'error');
+      setImportResults({ created: 0, updated: 0, skipped: 0, errors: [{ error: error.message }] });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleCloseImportModal = () => {
+    setShowImportModal(false);
+    setImportFile(null);
+    setImportMode('create');
+    setImportResults(null);
+  };
+
   const filteredUsers = users.filter(user =>
     !searchTerm ||
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,6 +208,41 @@ export default function ManageUsers() {
           >
             📊 Table
           </button>
+        </div>
+      </div>
+
+      {/* Export/Import Actions */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex flex-wrap gap-3">
+          {/* Export Format Selector */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Format:</label>
+            <select
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center gap-2"
+          >
+            📥 Export Users
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+          >
+            📤 Import Users
+          </button>
+          <span className="text-sm text-gray-500 flex items-center">
+            {filter !== 'all' && `Filtered by: ${filter}`}
+            {searchTerm && ` | Search: "${searchTerm}"`}
+          </span>
         </div>
       </div>
 
@@ -487,6 +596,135 @@ export default function ManageUsers() {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Import Users</h2>
+                <button
+                  onClick={handleCloseImportModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* File Upload */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CSV File
+                </label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setImportFile(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                />
+                {importFile && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Selected: {importFile.name} ({(importFile.size / 1024).toFixed(2)} KB)
+                  </p>
+                )}
+              </div>
+
+              {/* Mode Selector */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Import Mode
+                </label>
+                <select
+                  value={importMode}
+                  onChange={(e) => setImportMode(e.target.value)}
+                  className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="create">Create Only (Skip Existing)</option>
+                  <option value="update">Update Existing, Create New</option>
+                </select>
+                <p className="mt-2 text-sm text-gray-500">
+                  {importMode === 'create'
+                    ? 'Only create new users. Existing users will be skipped.'
+                    : 'Update existing users by email and create new ones.'}
+                </p>
+              </div>
+
+              {/* CSV Format Info */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">CSV Format Requirements:</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Headers: ID, Name, Email, Role, Phone</li>
+                  <li>• Required fields: Name, Email, Role</li>
+                  <li>• Valid roles: jobseeker, employer, admin, trainer</li>
+                  <li>• Email must be valid format</li>
+                </ul>
+              </div>
+
+              {/* Import Results */}
+              {importResults && (
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Import Results</h3>
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="text-2xl font-bold text-green-700">{importResults.created}</div>
+                      <div className="text-sm text-green-600">Created</div>
+                    </div>
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-700">{importResults.updated}</div>
+                      <div className="text-sm text-blue-600">Updated</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-700">{importResults.skipped}</div>
+                      <div className="text-sm text-gray-600">Skipped</div>
+                    </div>
+                  </div>
+
+                  {/* Errors */}
+                  {importResults.errors.length > 0 && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <h4 className="font-semibold text-red-900 mb-2">
+                        Errors ({importResults.errors.length}):
+                      </h4>
+                      <div className="max-h-40 overflow-y-auto">
+                        {importResults.errors.map((err, idx) => (
+                          <div key={idx} className="text-sm text-red-700 mb-1">
+                            {err.row ? `Row ${err.row}: ` : ''}{err.error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={handleCloseImportModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={!importFile || importLoading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {importLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Importing...
+                    </>
+                  ) : (
+                    '📤 Import'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

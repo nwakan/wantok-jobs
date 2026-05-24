@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-16T22:08:03.354Z",
+  "timestamp": "2026-05-24T04:00:01.854Z",
   "tasks": [
     {
       "name": "Fix Corrupted Admin Accounts",
@@ -15,66 +15,18 @@
         },
         {
           "action": "Found users with invalid emails",
-          "count": 100,
+          "count": 2,
           "sample": [
             {
-              "id": 12,
-              "email": "2022-01-26 22:21:09",
-              "name": "3 Yes",
+              "id": 59530,
+              "email": "urn:li:member:1219447384",
+              "name": "Damien Wala",
               "role": "jobseeker"
             },
             {
-              "id": 13,
-              "email": "2022-01-30 23:43:59",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 14,
-              "email": "2022-01-31 02:24:38",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 15,
-              "email": "2022-01-31 04:34:29",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 16,
-              "email": "2022-01-31 06:05:02",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 17,
-              "email": "2022-01-31 07:46:37",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 18,
-              "email": "2022-01-31 09:14:41",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 19,
-              "email": "2022-02-01 02:45:08",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 20,
-              "email": "2022-02-16 06:36:34",
-              "name": "3 Yes",
-              "role": "jobseeker"
-            },
-            {
-              "id": 21,
-              "email": "2022-02-16 17:11:25",
-              "name": "2 Yes",
+              "id": 60604,
+              "email": "urn:li:member:1489215616",
+              "name": "Michael SILA",
               "role": "jobseeker"
             }
           ]
@@ -83,7 +35,7 @@
           "action": "Verified legitimate admin",
           "admin": {
             "id": 1,
-            "email": "admin@wantokjobs.com",
+            "email": "nick.wakan@gmail.com",
             "role": "admin"
           }
         }
@@ -92,68 +44,68 @@
     {
       "name": "Legacy Password Audit",
       "stats": {
-        "totalUsers": 61669,
-        "bcryptUsers": 41,
-        "legacyUsers": 61628,
-        "legacyPercentage": "99.93",
+        "totalUsers": 30971,
+        "bcryptUsers": 72,
+        "legacyUsers": 30899,
+        "legacyPercentage": "99.77",
         "sampleLegacyFormats": [
           {
-            "id": 12,
-            "email": "2022-01-26 22:21:09",
+            "id": 30703,
+            "email": "select2007@gmail.com",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 13,
-            "email": "2022-01-30 23:43:59",
+            "id": 30704,
+            "email": "matrixpng002@gmail.com",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 14,
-            "email": "2022-01-31 02:24:38",
+            "id": 30705,
+            "email": "matrixpng@gmail.com",
+            "pwd_prefix": "legac",
+            "last_login": "2026-02-24 09:29:00"
+          },
+          {
+            "id": 30706,
+            "email": "sp_patnaik2003@yahoo.co.in",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 15,
-            "email": "2022-01-31 04:34:29",
+            "id": 30707,
+            "email": "pngtok@gmail.com",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 16,
-            "email": "2022-01-31 06:05:02",
+            "id": 30708,
+            "email": "pngtok1@gmail.com",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 17,
-            "email": "2022-01-31 07:46:37",
+            "id": 30709,
+            "email": "pngtok2@gmail.com",
+            "pwd_prefix": "legac",
+            "last_login": "2026-04-07 00:20:06"
+          },
+          {
+            "id": 30710,
+            "email": "freddytepe58@gmail.com",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 18,
-            "email": "2022-01-31 09:14:41",
+            "id": 30711,
+            "email": "williesolomonessy@gmail.com",
             "pwd_prefix": "legac",
             "last_login": null
           },
           {
-            "id": 19,
-            "email": "2022-02-01 02:45:08",
-            "pwd_prefix": "legac",
-            "last_login": null
-          },
-          {
-            "id": 20,
-            "email": "2022-02-16 06:36:34",
-            "pwd_prefix": "legac",
-            "last_login": null
-          },
-          {
-            "id": 21,
-            "email": "2022-02-16 17:11:25",
+            "id": 30712,
+            "email": "naivaluvea_e@usp.ac.fj",
             "pwd_prefix": "legac",
             "last_login": null
           }
@@ -165,25 +117,19 @@
       "removals": [
         {
           "type": "test_users",
-          "count": 42,
+          "count": 23,
           "sample": [
             {
               "id": 46401,
               "email": "katyafakesss@gmail.com",
-              "name": "3 No",
+              "name": "???? ?o?po?o ?pe?e?? cy?o?.O?o?e e352lj",
               "role": "jobseeker"
             },
             {
               "id": 53110,
               "email": "testovv54@gmail.com",
-              "name": "3 No",
+              "name": "???? ?o?poe ??po.Y?e?o???e? Bac  ddtll3",
               "role": "jobseeker"
-            },
-            {
-              "id": 61554,
-              "email": "bhtesting4242@gmail.com",
-              "name": "Bluehost",
-              "role": "employer"
             },
             {
               "id": 61723,
@@ -192,22 +138,10 @@
               "role": "jobseeker"
             },
             {
-              "id": 61724,
-              "email": "e1771211843740@t.com",
-              "name": "TestEmp",
-              "role": "employer"
-            },
-            {
               "id": 61725,
               "email": "js1771212034037@t.com",
               "name": "TestJS",
               "role": "jobseeker"
-            },
-            {
-              "id": 61726,
-              "email": "e1771212034037@t.com",
-              "name": "TestEmp",
-              "role": "employer"
             },
             {
               "id": 61727,
@@ -216,14 +150,32 @@
               "role": "jobseeker"
             },
             {
-              "id": 61728,
-              "email": "e1771212194149@t.com",
-              "name": "TestEmp",
-              "role": "employer"
-            },
-            {
               "id": 61729,
               "email": "js1771212204048@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61731,
+              "email": "js1771213696194@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61733,
+              "email": "js1771213726077@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61735,
+              "email": "js1771213818737@t.com",
+              "name": "TestJS",
+              "role": "jobseeker"
+            },
+            {
+              "id": 61737,
+              "email": "js1771213829180@t.com",
               "name": "TestJS",
               "role": "jobseeker"
             }
