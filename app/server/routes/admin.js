@@ -758,20 +758,25 @@ router.put('/reports/:id', (req, res) => {
 
 // --- CSV Export endpoints ---
 const BOM = '\uFEFF';
-function escapeCSV(value) {
+function escapeCSV(value, delimiter = ',') {
   if (value == null) return '';
   const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+  const needsQuoting = str.includes(delimiter) || str.includes('"') || str.includes('\n') || str.includes('\r');
+  if (needsQuoting) {
     return '"' + str.replace(/"/g, '""') + '"';
   }
   return str;
 }
-function csvRow(fields) { return fields.map(escapeCSV).join(','); }
-function sendCSV(res, filename, headers, rows) {
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  let csv = BOM + csvRow(headers) + '\n';
-  for (const row of rows) csv += csvRow(row) + '\n';
+function csvRow(fields, delimiter = ',') { 
+  return fields.map(f => escapeCSV(f, delimiter)).join(delimiter); 
+}
+function sendCSV(res, filename, headers, rows, delimiter = ',') {
+  const ext = delimiter === '\t' ? '.tsv' : '.csv';
+  const contentType = delimiter === '\t' ? 'text/tab-separated-values' : 'text/csv';
+  res.setHeader('Content-Type', `${contentType}; charset=utf-8`);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename.replace('.csv', ext)}"`);
+  let csv = BOM + csvRow(headers, delimiter) + '\n';
+  for (const row of rows) csv += csvRow(row, delimiter) + '\n';
   res.send(csv);
 }
 
@@ -779,6 +784,9 @@ function sendCSV(res, filename, headers, rows) {
 router.get('/export/users', (req, res) => {
   try {
     const format = req.query.format || 'csv'; // 'csv' or 'json'
+    const delimiterParam = req.query.delimiter;
+    const delimiter = delimiterParam === 'semicolon' ? ';' : 
+                      delimiterParam === 'tab' ? '\t' : ',';
     const role = req.query.role;
     const search = req.query.search;
 
@@ -820,13 +828,13 @@ router.get('/export/users', (req, res) => {
         u.name, 
         u.email, 
         u.role, 
-        u.phone, 
+        u.phone ? `="${u.phone}"` : '', 
         u.email_verified ? 'Yes' : 'No',
         u.account_status ? 'Locked' : 'Active',
         u.last_login || 'Never',
         u.created_at
       ]);
-      sendCSV(res, `users_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+      sendCSV(res, `users_${new Date().toISOString().slice(0,10)}.csv`, headers, rows, delimiter);
     }
   } catch (error) {
     logger.error('Admin export users error', { error: error.message });

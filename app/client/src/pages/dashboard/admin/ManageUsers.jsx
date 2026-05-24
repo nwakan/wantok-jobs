@@ -17,6 +17,7 @@ export default function ManageUsers() {
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [exportFormat, setExportFormat] = useState('csv');
+  const [exportDelimiter, setExportDelimiter] = useState('comma');
 
   useEffect(() => {
     loadUsers();
@@ -110,6 +111,7 @@ export default function ManageUsers() {
       if (filter !== 'all') params.role = filter;
       if (searchTerm) params.search = searchTerm;
       params.format = exportFormat;
+      if (exportFormat === 'csv') params.delimiter = exportDelimiter;
 
       const response = await adminAPI.exportUsers(params);
       
@@ -226,6 +228,22 @@ export default function ManageUsers() {
               <option value="json">JSON</option>
             </select>
           </div>
+
+          {/* Delimiter Selector (CSV only) */}
+          {exportFormat === 'csv' && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Delimiter:</label>
+              <select
+                value={exportDelimiter}
+                onChange={(e) => setExportDelimiter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="comma">Comma (,) - Standard</option>
+                <option value="semicolon">Semicolon (;) - Excel Europe</option>
+                <option value="tab">Tab (\t) - TSV</option>
+              </select>
+            </div>
+          )}
 
           <button
             onClick={handleExport}
