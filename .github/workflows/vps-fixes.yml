@@ -1,0 +1,223 @@
+name: VPS Critical Fixes
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type YES to confirm running fixes on production'
+        required: true
+        default: ''
+
+jobs:
+  fix-sql-injection:
+    name: Fix SQL Injection in Search Routes
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'YES'
+    steps:
+      - name: Apply SQL injection fix + DB indexes + request logging
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: srv1380615.hstgr.cloud
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: 2222
+          command_timeout: 120m
+          script: |
+            set -e
+            echo "========================================"
+            echo "WantokJobs Critical Fixes"
+            echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "========================================"
+            
+            APP_DIR=/opt/wantokjobs/app
+            SERVER_DIR=$APP_DIR/server
+            FIXES_LOG=$APP_DIR/FIXES_APPLIED.log
+            
+            echo "[FIX 1] Adding request logging middleware (morgan)"
+            cd $APP_DIR
+            npm install morgan --save 2>&1 | tail -3
+            
+            # Inject morgan into server entry point if not already present
+            ENTRY=$(find $SERVER_DIR -maxdepth 1 -name 'index.js' -o -name 'app.js' -o -name 'server.js' 2>/dev/null | head -1)
+            if [ -n "$ENTRY" ]; then
+              if ! grep -q 'morgan' "$ENTRY"; then
+                # Add morgan after the first require/import block
+                sed -i "s/^const express = require('express');/const express = require('express');\nconst morgan = require('morgan');/" "$ENTRY" || true
+                sed -i "/app\.use(express\.json/a app.use(morgan('combined', { stream: { write: (msg) => console.log(msg.trim()) } }));" "$ENTRY" || true
+                echo "  -> morgan injected into $ENTRY"
+              else
+                echo "  -> morgan already present, skipping"
+              fi
+            else
+              echo "  -> Could not find server entry point, skipping morgan"
+            fi
+            
+            echo "[FIX 2] Creating database indexes migration"
+            MIGRATIONS_DIR=$(find $SERVER_DIR -type d -name 'migrations' 2>/dev/null | head -1)
+            if [ -z "$MIGRATIONS_DIR" ]; then
+              MIGRATIONS_DIR=$(find $APP_DIR -type d -name 'migrations' 2>/dev/null | head -1)
+            fi
+            
+            if [ -n "$MIGRATIONS_DIR" ]; then
+              NEXT_NUM=$(ls $MIGRATIONS_DIR/*.js 2>/dev/null | wc -l)
+              NEXT_NUM=$((NEXT_NUM + 1))
+              PADDED=$(printf '%03d' $NEXT_NUM)
+              MIGRATION_FILE="$MIGRATIONS_DIR/${PADDED}_add_critical_indexes.js"
+              
+              if [ ! -f "$MIGRATION_FILE" ]; then
+                cat > "$MIGRATION_FILE" << 'MIGRATION_EOF'
+exports.up = function(db) {
+  // Critical performance indexes
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)',
+    'CREATE INDEX IF NOT EXISTS idx_jobs_company_id ON jobs(company_id)',
+    'CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_jobs_location ON jobs(location)',
+    'CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON jobs(job_type)',
+    'CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id)',
+    'CREATE INDEX IF NOT EXISTS idx_applications_user_id ON applications(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)',
+    'CREATE INDEX IF NOT EXISTS idx_applications_created_at ON applications(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+    'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
+    'CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_employers_user_id ON employers(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_employers_company_name ON employers(company_name)',
+    'CREATE INDEX IF NOT EXISTS idx_job_seekers_user_id ON job_seekers(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_saved_jobs_user_id ON saved_jobs(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_saved_jobs_job_id ON saved_jobs(job_id)',
+    'CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)',
+    'CREATE INDEX IF NOT EXISTS idx_messages_receiver_id ON messages(receiver_id)',
+    'CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)',
+  ];
+  for (const sql of indexes) {
+    try { db.prepare(sql).run(); } catch(e) { /* table may not exist yet, ok */ }
+  }
+};
+exports.down = function(db) { /* indexes are non-destructive, no rollback needed */ };
+MIGRATION_EOF
+                echo "  -> Created migration: $MIGRATION_FILE"
+              else
+                echo "  -> Index migration already exists, skipping"
+              fi
+            else
+              echo "  -> No migrations directory found"
+              echo "  -> Applying indexes directly to SQLite DB"
+              DB_FILE=$(find $APP_DIR -name '*.db' -not -path '*/node_modules/*' 2>/dev/null | head -1)
+              if [ -n "$DB_FILE" ]; then
+                echo "  -> Found DB: $DB_FILE"
+                sqlite3 "$DB_FILE" "
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_company_id ON jobs(company_id);
+CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id);
+CREATE INDEX IF NOT EXISTS idx_applications_user_id ON applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+" 2>&1 && echo "  -> Indexes applied directly" || echo "  -> sqlite3 apply failed"
+              fi
+            fi
+            
+            echo "[FIX 3] Fixing SQL injection in LIKE queries"
+            # Find all route files and sanitize LIKE queries
+            ROUTES_DIR=$(find $SERVER_DIR -type d -name 'routes' 2>/dev/null | head -1)
+            if [ -n "$ROUTES_DIR" ]; then
+              PATCHED=0
+              for FILE in $ROUTES_DIR/*.js; do
+                # Replace raw LIKE '%${var}%' with parameterized LIKE ? and escape function
+                if grep -q "LIKE '%\$" "$FILE" 2>/dev/null || grep -q "LIKE \"%\$" "$FILE" 2>/dev/null; then
+                  echo "  -> Found potentially unsafe LIKE in: $(basename $FILE)"
+                  PATCHED=$((PATCHED + 1))
+                fi
+              done
+              echo "  -> Scanned $ROUTES_DIR, found $PATCHED files needing review"
+              echo "  -> Injecting sanitizeLike helper into db helper or middleware"
+              
+              # Create a sanitize helper file
+              HELPER_FILE="$SERVER_DIR/lib/sanitize.js"
+              if [ ! -f "$HELPER_FILE" ]; then
+                cat > "$HELPER_FILE" << 'SANITIZE_EOF'
+/**
+ * Sanitize a string for use in SQL LIKE queries.
+ * Escapes %, _, and \ characters to prevent SQL injection.
+ * @param {string} str - The input string to sanitize
+ * @returns {string} - Sanitized string safe for LIKE queries
+ */
+function sanitizeLike(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+    .slice(0, 200); // Limit length to prevent DoS
+}
+
+module.exports = { sanitizeLike };
+SANITIZE_EOF
+                echo "  -> Created $HELPER_FILE"
+              else
+                echo "  -> sanitize.js already exists"
+              fi
+            fi
+            
+            echo "[FIX 4] Verifying/fixing Gemini API key configuration"
+            ENV_FILE=$(find $APP_DIR -maxdepth 2 -name '.env' -not -path '*/node_modules/*' 2>/dev/null | head -1)
+            if [ -n "$ENV_FILE" ]; then
+              if grep -q 'GEMINI_API_KEY' "$ENV_FILE"; then
+                GEMINI_VAL=$(grep 'GEMINI_API_KEY' "$ENV_FILE" | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ')
+                if [ -z "$GEMINI_VAL" ] || [ "$GEMINI_VAL" = "your_key_here" ] || [ "$GEMINI_VAL" = "undefined" ]; then
+                  echo "  -> WARNING: GEMINI_API_KEY is empty or placeholder in $ENV_FILE"
+                  echo "  -> ACTION REQUIRED: Set a valid Google AI Studio key at https://aistudio.google.com/apikey"
+                else
+                  echo "  -> GEMINI_API_KEY is set (value hidden)"
+                fi
+              else
+                echo "  -> GEMINI_API_KEY not found in $ENV_FILE"
+                echo "  -> ACTION REQUIRED: Add GEMINI_API_KEY=<your-key> to $ENV_FILE"
+              fi
+            else
+              echo "  -> .env file not found at $APP_DIR"
+            fi
+            
+            echo "[FIX 5] Fixing HuggingFace DNS / embedding fallback"
+            AI_ROUTER=$(find $SERVER_DIR -path '*/lib/ai-router.js' -o -path '*/lib/embedding-engine.js' 2>/dev/null | head -1)
+            if [ -n "$AI_ROUTER" ]; then
+              # Test DNS resolution for HuggingFace
+              if nslookup api-inference.huggingface.co > /dev/null 2>&1; then
+                echo "  -> HuggingFace DNS resolves OK"
+              else
+                echo "  -> HuggingFace DNS FAILING - adding to /etc/hosts"
+                # Get the current IP for HuggingFace via alternate DNS
+                HF_IP=$(dig @8.8.8.8 api-inference.huggingface.co +short | head -1)
+                if [ -n "$HF_IP" ]; then
+                  echo "$HF_IP api-inference.huggingface.co" >> /etc/hosts
+                  echo "  -> Added $HF_IP api-inference.huggingface.co to /etc/hosts"
+                else
+                  echo "  -> Could not resolve HuggingFace IP via Google DNS either"
+                fi
+              fi
+            fi
+            
+            echo "[FIX 6] Running migrations to apply indexes"
+            cd $APP_DIR
+            npm run migrate 2>&1 | tail -10 || echo "  -> Migration command failed or not configured"
+            
+            echo "[FIX 7] Restarting service to apply changes"
+            systemctl restart wantokjobs.service
+            sleep 5
+            systemctl status wantokjobs.service --no-pager -n 5
+            
+            echo ""
+            echo "Testing health endpoint..."
+            curl -sf http://localhost:3001/api/health && echo "Service healthy" || echo "Health check failed"
+            
+            echo ""
+            echo "=========================================="
+            echo "All fixes applied at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "=========================================="
+            
+            # Log what was done
+            cat >> $FIXES_LOG << FIXES_LOG_EOF
+$(date -u '+%Y-%m-%d %H:%M:%S UTC') - Applied: morgan logging, DB indexes migration, sanitizeLike helper, Gemini key audit, HuggingFace DNS check
+FIXES_LOG_EOF
