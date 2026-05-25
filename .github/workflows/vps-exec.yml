@@ -6,14 +6,14 @@ on:
         description: 'Shell command to run on VPS'
         required: true
       run_id_tag:
-        description: 'Unique tag to identify this run'
+        description: 'Unique tag'
         required: false
 
 jobs:
   exec:
     runs-on: ubuntu-latest
     steps:
-      - name: Execute on VPS
+      - name: Execute on VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: srv1380615.hstgr.cloud
@@ -22,6 +22,19 @@ jobs:
           port: 2222
           command_timeout: 5m
           script: |
-            echo "=== VPSEXEC_START ==="
-            ${{ github.event.inputs.command }}
-            echo "=== VPSEXEC_END ==="
+            set -e
+            OUTPUT=$(${{ github.event.inputs.command }} 2>&1)
+            echo "${OUTPUT}" > /tmp/vps_cmd_output.txt
+
+      - name: Retrieve output from VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: srv1380615.hstgr.cloud
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: 2222
+          command_timeout: 1m
+          script: |
+            echo "=== VPSEXEC_OUTPUT_START ==="
+            cat /tmp/vps_cmd_output.txt 2>/dev/null || echo "(no output)"
+            echo "=== VPSEXEC_OUTPUT_END ==="
