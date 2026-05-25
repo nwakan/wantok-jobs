@@ -22,7 +22,6 @@ jobs:
           port: 2222
           command_timeout: 5m
           script: |
-            set -e
             OUTPUT=$(${{ github.event.inputs.command }} 2>&1)
             echo "${OUTPUT}" > /tmp/vps_cmd_output.txt
 
