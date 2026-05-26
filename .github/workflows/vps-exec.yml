@@ -35,11 +35,11 @@ jobs:
           port: 2222
           command_timeout: 1m
           script: |
-            echo "=== VPSEXEC_OUTPUT_START ==="
+            echo '=== VPSEXEC_OUTPUT_START ==='
             if [ -f /tmp/vps_large_output.txt ]; then
               cat /tmp/vps_large_output.txt
               rm -f /tmp/vps_large_output.txt
             else
-              cat /tmp/vps_cmd_output.txt 2>/dev/null || echo "(no output)"
+              cat /tmp/vps_cmd_output.txt 2>/dev/null || echo no_output
             fi
-            echo "=== VPSEXEC_OUTPUT_END ==="
+            echo '=== VPSEXEC_OUTPUT_END ==='
