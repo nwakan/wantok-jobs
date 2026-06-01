@@ -1,4 +1,4 @@
-# v3 - large output via vps_large_output.txt
+# v4 - multi-domain support
 name: VPS Exec
 on:
   workflow_dispatch:
@@ -22,24 +22,4 @@ jobs:
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: 2222
           command_timeout: 5m
-          script: |
-            rm -f /tmp/vps_large_output.txt
-            echo '${{ github.event.inputs.command }}' | base64 -d | bash > /tmp/vps_cmd_output.txt 2>&1
-
-      - name: Retrieve output from VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: srv1380615.hstgr.cloud
-          username: root
-          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          port: 2222
-          command_timeout: 1m
-          script: |
-            echo '=== VPSEXEC_OUTPUT_START ==='
-            if [ -f /tmp/vps_large_output.txt ]; then
-              cat /tmp/vps_large_output.txt
-              rm -f /tmp/vps_large_output.txt
-            else
-              cat /tmp/vps_cmd_output.txt 2>/dev/null || echo no_output
-            fi
-            echo '=== VPSEXEC_OUTPUT_END ==='
+          script: ${{ github.event.inputs.command }}
